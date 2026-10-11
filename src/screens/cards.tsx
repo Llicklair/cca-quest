@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import * as feel from '../feel.ts';
 import { DOMAINS, dayKey, deckDue, deckSession, MASTERED, type Flashcard, type Lang, type Level, type Progress } from '../game.ts';
 import { FLASHCARDS } from '../flashcards.ts';
+import { STR } from '../i18n.ts';
 import { Bar, Btn, Cmd, LangToggle, Panel, Pop, Rich, Tag, Txt, Typer } from '../term.tsx';
 import { c, domainColor } from '../theme.ts';
 
@@ -23,6 +24,7 @@ export function Cards({
   const [run, setRun] = useState<Run | null>(null);
   const today = dayKey(new Date());
   const L = p.lang;
+  const T = STR[L];
 
   const start = () => {
     feel.tap();
@@ -52,7 +54,7 @@ export function Cards({
             </Txt>
           </Pressable>
           <Txt bold>
-            card {run.i + 1}/{run.cards.length}
+            {T.card} {run.i + 1}/{run.cards.length}
           </Txt>
           <Bar value={run.i / run.cards.length} width={10} />
           <View style={{ flex: 1 }} />
@@ -69,7 +71,7 @@ export function Cards({
                 </View>
               ) : (
                 <Txt color={c.muted} size={12} style={{ marginTop: 18 }}>
-                  {L === 'es' ? '// piensa la respuesta y toca para girar' : '// think of the answer, then tap to flip'}
+                  {T.flipHint}
                 </Txt>
               )}
             </Panel>
@@ -78,11 +80,11 @@ export function Cards({
         <View style={s.bottom}>
           {run.flipped ? (
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <Btn kind="danger" label={L === 'es' ? '↺ OTRA VEZ' : '↺ AGAIN'} onPress={() => grade(false)} style={{ flex: 1 }} />
-              <Btn kind="good" label={L === 'es' ? '✓ ME LA SÉ' : '✓ KNEW IT'} onPress={() => grade(true)} style={{ flex: 1 }} />
+              <Btn kind="danger" label={T.again} onPress={() => grade(false)} style={{ flex: 1 }} />
+              <Btn kind="good" label={T.knew} onPress={() => grade(true)} style={{ flex: 1 }} />
             </View>
           ) : (
-            <Btn kind="primary" label={L === 'es' ? '⟲ GIRAR' : '⟲ FLIP'} onPress={() => setRun({ ...run, flipped: true })} />
+            <Btn kind="primary" label={T.flip} onPress={() => setRun({ ...run, flipped: true })} />
           )}
         </View>
         {run.i > 0 && <Pop key={`pop-${run.i}`} text={`+${run.gain} XP`} color={c.amber} />}
@@ -94,23 +96,21 @@ export function Cards({
     return (
       <ScrollView contentContainerStyle={[s.page, { flexGrow: 1, justifyContent: 'center' }]}>
         <Typer text="$ cards --summary" bold color={c.green} />
-        <Panel title="deck done">
+        <Panel title={T.deckDone}>
           <Txt bold color={c.green}>
-            {run.knew} {L === 'es' ? 'sabidas' : 'knew'}
+            {T.knewN(run.knew)}
             <Txt color={c.muted}> · </Txt>
-            <Txt color={c.amber}>
-              {run.again} {L === 'es' ? 'para repasar' : 'again'}
-            </Txt>
+            <Txt color={c.amber}>{T.againN(run.again)}</Txt>
           </Txt>
           <Txt bold color={c.amber}>
             +{run.xp} xp
           </Txt>
           <Txt size={12} color={c.muted} style={{ marginTop: 6 }}>
-            {L === 'es' ? '// las que fallaste vuelven mañana' : '// the ones you missed come back tomorrow'}
+            {T.missedTomorrow}
           </Txt>
         </Panel>
         <View style={{ gap: 10, marginTop: 14 }}>
-          <Btn kind="primary" label="▶ ANOTHER DECK" onPress={start} />
+          <Btn kind="primary" label={T.anotherDeck} onPress={start} />
           <Btn label="$ cd ~/cards" onPress={stop} />
         </View>
       </ScrollView>
@@ -127,23 +127,20 @@ export function Cards({
         <Typer text="$ cards --status" bold color={c.green} />
         <LangToggle lang={L} onChange={onLang} />
       </View>
-      <Panel title="deck">
+      <Panel title={T.deck}>
         <Txt>
           <Txt color={due > 0 ? c.amber : c.muted} bold>
-            {due} due
+            {T.dueWord(due)}
           </Txt>
-          <Txt color={c.muted}>
-            {' '}
-            · {FLASHCARDS.length - seen} new · {mastered} mastered · {FLASHCARDS.length} total
-          </Txt>
+          <Txt color={c.muted}>{T.deckLine(FLASHCARDS.length - seen, mastered, FLASHCARDS.length)}</Txt>
         </Txt>
         <View style={{ marginTop: 8 }}>
           <Bar value={FLASHCARDS.length ? mastered / FLASHCARDS.length : 0} width={24} />
         </View>
       </Panel>
-      <Btn kind="primary" label={`▶ START DECK (${Math.min(10, FLASHCARDS.length)})`} onPress={start} disabled={FLASHCARDS.length === 0} />
+      <Btn kind="primary" label={T.startDeck(Math.min(10, FLASHCARDS.length))} onPress={start} disabled={FLASHCARDS.length === 0} />
 
-      <Panel title="by domain">
+      <Panel title={T.byDomain}>
         {DOMAINS.map((d) => {
           const deck = FLASHCARDS.filter((f) => f.ts.startsWith(`${d.n}.`));
           const m = deck.length ? deck.reduce((n, f) => n + (p.cards[f.id]?.box ?? 0), 0) / (deck.length * MASTERED) : 0;
@@ -159,7 +156,7 @@ export function Cards({
       </Panel>
       <Cmd size={12}>
         <Txt size={12} color={c.muted}>
-          {L === 'es' ? 'toca para girar, sé sincero al puntuar' : 'tap to flip, grade yourself honestly'}
+          {T.gradeHint}
         </Txt>
       </Cmd>
     </ScrollView>

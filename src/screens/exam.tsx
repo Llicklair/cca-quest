@@ -16,6 +16,7 @@ import {
   type Progress,
   type Question,
 } from '../game.ts';
+import { STR } from '../i18n.ts';
 import { QUESTIONS } from '../questions.ts';
 import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer } from '../term.tsx';
 import { c, domainColor } from '../theme.ts';
@@ -52,6 +53,7 @@ export function Exam({
   const [elapsed, setElapsed] = useState(0);
   const runRef = useRef<Run | null>(null);
   const elapsedRef = useRef(0);
+  const T = STR[p.lang];
 
   const draftOf = (r: Run, secs: number): ExamDraft => ({
     label: r.label,
@@ -148,62 +150,65 @@ export function Exam({
         <Typer text="$ cca-quest exam --list" bold color={c.green} />
 
         {d && (
-          <Panel title="in progress" color={c.amber} titleColor={c.amber}>
+          <Panel title={T.inProgress} color={c.amber} titleColor={c.amber}>
             <Txt bold color={c.amber}>
-              {d.label} · q {d.i + 1}/{d.ids.length} · {d.picked.filter((x) => x !== null).length} answered
+              {T.draftLine(T.examLabel(d.label), d.i + 1, d.ids.length, d.picked.filter((x) => x !== null).length)}
             </Txt>
-            <Txt color={c.muted}>⏱ {clock(Math.max(0, d.limit - d.elapsed))} left · clock paused</Txt>
+            <Txt color={c.muted}>{T.leftPaused(clock(Math.max(0, d.limit - d.elapsed)))}</Txt>
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-              <Btn kind="amber" label="▶ RESUME" onPress={() => resume(d)} style={{ flex: 2 }} />
-              <Btn kind="danger" label="DISCARD" onPress={() => onSaveDraft(null)} style={{ flex: 1 }} />
+              <Btn kind="amber" label={T.resume} onPress={() => resume(d)} style={{ flex: 2 }} />
+              <Btn kind="danger" label={T.discard} onPress={() => onSaveDraft(null)} style={{ flex: 1 }} />
             </View>
           </Panel>
         )}
 
-        <Panel title={`full mock · 60 q · ${clock(60 * EXAM.secsPerQuestion)}`}>
+        <Panel title={T.fullMock(clock(60 * EXAM.secsPerQuestion))}>
           <Txt size={12} color={c.muted} style={{ marginBottom: 6 }}>
-            {'// like the real one: 4 of 6 scenarios, 15 questions each, no feedback until you submit. you can pause.'}
+            {T.fullNote}
           </Txt>
           {FIXED.map((qs, n) => {
             const label = `exam ${n + 1}`;
             return (
               <ExamRow
                 key={label}
-                title={label}
+                title={T.examLabel(label)}
                 sub={FIXED_EXAMS[n].join(' · ')}
                 best={bestScore(p, label)}
+                bestLabel={T.bestPct}
                 disabled={Boolean(d) || qs.length === 0}
                 onPress={() => begin(label, qs, EXAM.perScenario)}
               />
             );
           })}
           <ExamRow
-            title="random"
-            sub="4 random scenarios · new every time"
+            title={T.examLabel('random')}
+            sub={T.randomSub}
             best={bestScore(p, 'random')}
+            bestLabel={T.bestPct}
             disabled={Boolean(d)}
             onPress={() => begin('random', buildExam(QUESTIONS, Math.random, EXAM.scenarios, EXAM.perScenario), EXAM.perScenario)}
           />
         </Panel>
 
-        <Panel title={`quick · 20 q · ${clock(20 * EXAM.secsPerQuestion)}`}>
+        <Panel title={T.quickTitle(clock(20 * EXAM.secsPerQuestion))}>
           <ExamRow
-            title="quick"
-            sub="4 random scenarios · 5 questions each"
+            title={T.examLabel('quick')}
+            sub={T.quickSub}
             best={bestScore(p, 'quick')}
+            bestLabel={T.bestPct}
             disabled={Boolean(d)}
             onPress={() => begin('quick', buildExam(QUESTIONS, Math.random, EXAM.scenarios, EXAM.quickPerScenario), EXAM.quickPerScenario)}
           />
         </Panel>
         {d && (
           <Txt size={12} color={c.muted}>
-            {'// finish or discard the exam in progress to start another'}
+            {T.finishFirst}
           </Txt>
         )}
 
-        <Panel title="history">
+        <Panel title={T.history}>
           {p.exams.length === 0 ? (
-            <Txt color={c.muted}>no attempts yet</Txt>
+            <Txt color={c.muted}>{T.noAttempts}</Txt>
           ) : (
             p.exams.slice(0, 8).map((e, k) => {
               const score = pct(e.right, e.total);
@@ -213,7 +218,7 @@ export function Exam({
                   <Txt color={c.muted} style={{ width: 52 }}>
                     {e.day.slice(5)}
                   </Txt>
-                  <Txt style={{ width: 64 }}>{e.label}</Txt>
+                  <Txt style={{ width: 82 }}>{T.examLabel(e.label)}</Txt>
                   <Bar value={e.right / e.total} width={8} color={ok ? c.green : c.amber} />
                   <Txt bold color={ok ? c.green : c.amber}>
                     {String(score).padStart(3)}%
@@ -223,7 +228,7 @@ export function Exam({
             })
           )}
           <Txt size={11} color={c.muted} style={{ marginTop: 6 }}>
-            {`// target ≈ ${EXAM.target * 100}% right. rough guide: the real pass mark is a scaled 720/1000`}
+            {T.targetNote(EXAM.target * 100)}
           </Txt>
         </Panel>
         <Btn label="$ cd ~" onPress={onExit} />
@@ -252,14 +257,14 @@ export function Exam({
           <View style={{ flex: 1 }} />
           <Pressable onPress={pause} hitSlop={10}>
             <Txt bold color={c.muted}>
-              [⏸ pause]
+              {T.pause}
             </Txt>
           </Pressable>
         </View>
         <ScrollView contentContainerStyle={[s.page, { paddingBottom: 170 }]} key={run.i}>
           {slot.q.setting && (
             <Txt bold size={12} color={firstOfScenario ? c.amber : c.muted}>
-              ── {run.label} · scenario {scenarioIdx + 1}/{Math.ceil(run.slots.length / run.per)}: {SETTINGS[slot.q.setting].name.toLowerCase()} ──
+              {T.scenarioOf(T.examLabel(run.label), scenarioIdx + 1, Math.ceil(run.slots.length / run.per), SETTINGS[slot.q.setting].name.toLowerCase())}
             </Txt>
           )}
           <Panel color={c.lineHi}>
@@ -300,14 +305,14 @@ export function Exam({
             ))}
           </View>
           <Txt size={11} color={c.muted} style={{ textAlign: 'center' }}>
-            {answered}/{run.slots.length} answered
+            {T.answeredN(answered, run.slots.length)}
           </Txt>
           <View style={{ flexDirection: 'row', gap: 10 }}>
-            <Btn label="◀ PREV" onPress={() => go(Math.max(0, run.i - 1))} disabled={run.i === 0} style={{ flex: 1 }} />
+            <Btn label={T.prev} onPress={() => go(Math.max(0, run.i - 1))} disabled={run.i === 0} style={{ flex: 1 }} />
             {last ? (
-              <Btn kind="amber" label="SUBMIT ✓" onPress={finish} style={{ flex: 1 }} />
+              <Btn kind="amber" label={T.submit} onPress={finish} style={{ flex: 1 }} />
             ) : (
-              <Btn kind="primary" label="NEXT ▶" onPress={() => go(run.i + 1)} style={{ flex: 1 }} />
+              <Btn kind="primary" label={T.next} onPress={() => go(run.i + 1)} style={{ flex: 1 }} />
             )}
           </View>
         </View>
@@ -325,19 +330,17 @@ export function Exam({
     <ScrollView contentContainerStyle={s.page}>
       <Typer text={`$ cca-quest exam --report "${result.label}"`} bold color={c.green} />
       <BounceIn>
-        <Panel title="score" color={passed ? c.green : c.amber} titleColor={passed ? c.green : c.amber}>
+        <Panel title={T.score} color={passed ? c.green : c.amber} titleColor={passed ? c.green : c.amber}>
           <Txt bold size={34} color={passed ? c.green : c.amber}>
             {score}%
           </Txt>
-          <Txt>
-            {result.right}/{result.total} right · {clock(result.secs)} · +{gained} xp
-          </Txt>
+          <Txt>{T.scoreLine(result.right, result.total, clock(result.secs), gained)}</Txt>
           <Txt size={12} color={passed ? c.green : c.amber} style={{ marginTop: 4 }}>
-            {passed ? '// on track. keep the streak going.' : `// below the ~${EXAM.target * 100}% target. review the misses below.`}
+            {passed ? T.onTrack : T.below(EXAM.target * 100)}
           </Txt>
         </Panel>
       </BounceIn>
-      <Panel title="by domain">
+      <Panel title={T.byDomain}>
         {DOMAINS.map((d) => {
           const [r, t] = result.byDomain[d.id] ?? [0, 0];
           if (!t) return null;
@@ -363,13 +366,13 @@ export function Exam({
         <Panel key={x.q.id} color={c.line}>
           <Rich text={x.q.scenario.length > 150 ? `${x.q.scenario.slice(0, 150).trimEnd()}…` : x.q.scenario} size={12} color={c.muted} />
           <Rich text={x.q.ask} bold color={c.green} style={{ marginTop: 4 }} />
-          <Rich text={`- ${x.picked === null ? '(no answer)' : x.q.options[x.picked]}`} size={13} color={c.red} style={{ marginTop: 6 }} />
+          <Rich text={`- ${x.picked === null ? T.noAnswer : x.q.options[x.picked]}`} size={13} color={c.red} style={{ marginTop: 6 }} />
           <Rich text={`+ ${x.q.options[x.q.answer]}`} size={13} color={c.green} style={{ marginTop: 4 }} />
           <Rich text={`└ ${x.q.why[x.q.answer]}`} size={12} color={c.muted} style={{ marginTop: 4 }} />
         </Panel>
       ))}
       <View style={{ gap: 10, marginTop: 6 }}>
-        <Btn kind="amber" label="▶ EXAM LIST" onPress={() => setPhase({ kind: 'menu' })} />
+        <Btn kind="amber" label={T.examList} onPress={() => setPhase({ kind: 'menu' })} />
         <Btn label="$ cd ~" onPress={onExit} />
       </View>
     </ScrollView>
@@ -380,12 +383,14 @@ function ExamRow({
   title,
   sub,
   best,
+  bestLabel,
   disabled,
   onPress,
 }: {
   title: string;
   sub: string;
   best: number | null;
+  bestLabel: (pct: number) => string;
   disabled?: boolean;
   onPress: () => void;
 }) {
@@ -401,7 +406,7 @@ function ExamRow({
         </Txt>
       </View>
       <Txt bold color={best === null ? c.muted : ok ? c.green : c.amber}>
-        {best === null ? '—' : `best ${Math.round(best * 100)}%`}
+        {best === null ? '—' : bestLabel(Math.round(best * 100))}
       </Txt>
     </Pressable>
   );

@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { DOMAINS, mastery, type Lang, type Lesson, type Progress } from '../game.ts';
+import { STR } from '../i18n.ts';
 import { LESSONS } from '../lessons.ts';
 import { QUESTIONS } from '../questions.ts';
 import { Bar, Btn, Cmd, LangToggle, Rich, Txt, Typer } from '../term.tsx';
@@ -18,6 +19,7 @@ export function LessonList({
   onLang: (l: Lang) => void;
 }) {
   const read = Object.keys(p.lessons).length;
+  const T = STR[p.lang];
   return (
     <ScrollView contentContainerStyle={s.page}>
       <View style={s.head}>
@@ -26,7 +28,7 @@ export function LessonList({
       </View>
       <Txt color={c.muted} size={12}>
         {'> '}
-        {read}/{LESSONS.length} read · one lesson per task statement of the official guide
+        {T.lessonsLine(read, LESSONS.length)}
       </Txt>
       <View style={{ marginTop: 6 }}>
         <Bar value={LESSONS.length ? read / LESSONS.length : 0} width={24} />
@@ -84,6 +86,7 @@ export function LessonView({
   const domain = DOMAINS.find((d) => lesson.ts.startsWith(`${d.n}.`))!;
   const nQs = QUESTIONS.filter((q) => q.ts === lesson.ts).length;
   const read = p.lessons[lesson.ts];
+  const T = STR[L];
 
   return (
     <ScrollView contentContainerStyle={s.page}>
@@ -104,11 +107,11 @@ export function LessonView({
         </Txt>
       </Section>
 
-      <Section name="TL;DR">
+      <Section name={T.sections.tldr}>
         <Rich text={lesson.tldr[L]} size={15} />
       </Section>
 
-      <Section name={L === 'es' ? 'IDEAS CLAVE' : 'KEY IDEAS'}>
+      <Section name={T.sections.ideas}>
         {lesson.ideas.map((idea, i) => (
           <View key={i} style={s.item}>
             <Txt bold color={c.green}>
@@ -119,7 +122,7 @@ export function LessonView({
         ))}
       </Section>
 
-      <Section name={L === 'es' ? 'TRAMPAS' : 'TRAPS'}>
+      <Section name={T.sections.traps}>
         {lesson.traps.map((trap, i) => (
           <View key={i} style={s.item}>
             <Txt bold color={c.red}>
@@ -130,7 +133,7 @@ export function LessonView({
         ))}
       </Section>
 
-      <Section name={L === 'es' ? 'EJEMPLO' : 'EXAMPLE'}>
+      <Section name={T.sections.example}>
         <View style={s.example}>
           <Rich text={lesson.example[L]} color={c.text} />
         </View>
@@ -139,13 +142,12 @@ export function LessonView({
       <View style={{ gap: 10, marginTop: 10 }}>
         {read ? (
           <Txt size={12} color={c.green}>
-            {'// read on '}
-            {read}
+            {T.readOn(read)}
           </Txt>
         ) : (
-          <Btn kind="amber" label={L === 'es' ? '✓ LEÍDA  +15 XP' : '✓ MARK AS READ  +15 XP'} onPress={onRead} />
+          <Btn kind="amber" label={T.markRead} onPress={onRead} />
         )}
-        {nQs > 0 && <Btn kind="primary" label={`▶ PRACTICE ${lesson.ts} · ${Math.min(nQs, 5)} q`} onPress={onPractice} />}
+        {nQs > 0 && <Btn kind="primary" label={T.practice(lesson.ts, Math.min(nQs, 5))} onPress={onPractice} />}
       </View>
     </ScrollView>
   );

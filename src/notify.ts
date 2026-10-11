@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-import type { Progress, Question } from './game.ts';
+import type { Lang, Progress, Question } from './game.ts';
 import { plan } from './remind.ts';
 
 // Solo notificaciones locales: nada de servidor ni de cuenta de Expo.
@@ -53,10 +53,15 @@ export async function reschedule(qs: Question[], p: Progress): Promise<void> {
   }
 }
 
-export async function testNotification(): Promise<boolean> {
+const TEST = {
+  en: { title: '🔥 This is how reminders look', body: 'Five questions a day keeps the exam at bay.' },
+  es: { title: '🔥 Así se ven los recordatorios', body: 'Cinco preguntas al día y el examen, controlado.' },
+};
+
+export async function testNotification(lang: Lang = 'en'): Promise<boolean> {
   if (!(await ensurePermission())) return false;
   await Notifications.scheduleNotificationAsync({
-    content: { title: '🔥 This is how reminders look', body: 'Five questions a day keeps the exam at bay.' },
+    content: TEST[lang],
     trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(Date.now() + 5000), channelId: CHANNEL },
   });
   return true;

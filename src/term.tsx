@@ -302,8 +302,8 @@ export function LangToggle({ lang, onChange }: { lang: Lang; onChange: (l: Lang)
   return (
     <View style={s.toggle}>
       {(['en', 'es'] as const).map((l) => (
-        <Pressable key={l} onPress={() => onChange(l)} hitSlop={6} style={[s.toggleItem, lang === l && { backgroundColor: c.green }]}>
-          <Txt size={12} bold color={lang === l ? c.bg : c.muted}>
+        <Pressable key={l} onPress={() => onChange(l)} hitSlop={10} style={[s.toggleItem, lang === l && { backgroundColor: c.green }]}>
+          <Txt size={14} bold color={lang === l ? c.bg : c.muted}>
             {l.toUpperCase()}
           </Txt>
         </Pressable>
@@ -328,7 +328,7 @@ const s = StyleSheet.create({
   btnSmall: { paddingVertical: 7, paddingHorizontal: 10 },
   pop: { position: 'absolute', alignSelf: 'center', top: '40%', fontSize: 30, fontFamily: font.bold },
   toggle: { flexDirection: 'row', borderWidth: 1, borderColor: c.lineHi, borderRadius: 3, overflow: 'hidden' },
-  toggleItem: { paddingHorizontal: 8, paddingVertical: 2 },
+  toggleItem: { paddingHorizontal: 14, paddingVertical: 6, minWidth: 48, alignItems: 'center' },
 });
 
 // Rótulo en letras de caja (estilo “Calvin S”), compuesto glifo a glifo para que no se descuadre.
@@ -356,8 +356,17 @@ const HEAT = [c.line, '#1E5A37', c.greenDim, '#3CC873', c.green];
 const heatLevel = (n: number) => (n === 0 ? 0 : n < 5 ? 1 : n < 10 ? 2 : n < 20 ? 3 : 4);
 
 /** Mapa de actividad estilo GitHub: filas lunes→domingo, columnas semanas. */
-export function Heatmap({ weeks }: { weeks: (number | null)[][] }) {
-  const labels = ['mon', '', 'wed', '', 'fri', '', 'sun'];
+export function Heatmap({
+  weeks,
+  labels = ['mon', '', 'wed', '', 'fri', '', 'sun'],
+  less = 'less',
+  more = 'more',
+}: {
+  weeks: (number | null)[][];
+  labels?: string[];
+  less?: string;
+  more?: string;
+}) {
   return (
     <View>
       {labels.map((label, day) => (
@@ -376,13 +385,13 @@ export function Heatmap({ weeks }: { weeks: (number | null)[][] }) {
         </View>
       ))}
       <Text style={{ fontFamily: font.regular, fontSize: 11, color: c.muted, marginTop: 4 }}>
-        less{' '}
+        {less}{' '}
         {HEAT.map((col, i) => (
           <Text key={i} style={{ color: col }}>
             ■{' '}
           </Text>
         ))}
-        more
+        {more}
       </Text>
     </View>
   );

@@ -1,6 +1,7 @@
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { Lang, Progress } from '../game.ts';
+import { STR } from '../i18n.ts';
 import { Btn, Cmd, LangToggle, Panel, Txt, Typer } from '../term.tsx';
 import { c } from '../theme.ts';
 
@@ -25,22 +26,23 @@ export function Config({
     onReminder({ hour: Math.floor(total / 60), minute: total % 60 });
   };
   const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  const T = STR[p.lang];
 
   return (
     <ScrollView contentContainerStyle={s.page}>
       <Typer text="$ cca-quest config" bold color={c.green} />
 
-      <Panel title="reminders">
+      <Panel title={T.reminders}>
         <View style={s.row}>
           <Txt color={c.muted} style={s.key}>
-            daily
+            {T.daily}
           </Txt>
           <Btn small kind={on ? 'good' : 'ghost'} label={on ? '[ON]' : '[OFF]'} onPress={() => onReminder({ on: !on })} />
         </View>
         {on && (
           <View style={s.row}>
             <Txt color={c.muted} style={s.key}>
-              at
+              {T.at}
             </Txt>
             <Txt bold size={18} color={c.green}>
               {time}
@@ -55,12 +57,12 @@ export function Config({
           </View>
         )}
         <Txt size={12} color={c.muted} style={{ marginTop: 8 }}>
-          {'// plus a last call at 22:00 if the streak is at risk'}
+          {T.lastCall}
         </Txt>
         <Btn small label="$ notify --test  (5s)" onPress={onTest} style={{ marginTop: 10 }} />
       </Panel>
 
-      <Panel title="theory language">
+      <Panel title={T.language}>
         <View style={s.row}>
           <Txt color={c.muted} style={s.key}>
             lang
@@ -68,15 +70,15 @@ export function Config({
           <LangToggle lang={p.lang} onChange={onLang} />
         </View>
         <Txt size={12} color={c.muted} style={{ marginTop: 8 }}>
-          {'// lessons, cards and glossary. questions stay in english, like the exam'}
+          {T.languageNote}
         </Txt>
       </Panel>
 
-      <Panel title="exam">
-        <Txt>60 questions · 120 min</Txt>
-        <Txt>4 of 6 scenarios · pass 720/1000</Txt>
+      <Panel title={T.exam}>
+        <Txt>{T.examFacts1}</Txt>
+        <Txt>{T.examFacts2}</Txt>
         <Txt size={12} color={c.muted} style={{ marginTop: 6 }}>
-          {'// every item here is tagged with its domain and the task statement it practices'}
+          {T.examNote}
         </Txt>
         <Btn small label="$ open official-page ↗" onPress={() => Linking.openURL(GUIDE_URL)} style={{ marginTop: 10 }} />
       </Panel>
@@ -87,10 +89,10 @@ export function Config({
             rm -rf ~/.progress
           </Txt>
         </Cmd>
-        <Btn kind="danger" label="RESET PROGRESS" onPress={onReset} style={{ marginTop: 6 }} />
+        <Btn kind="danger" label={T.reset} onPress={onReset} style={{ marginTop: 6 }} />
       </View>
       <Txt size={11} color={c.muted} style={{ textAlign: 'center', marginTop: 10 }}>
-        cca-quest v1.1
+        cca-quest v1.2
       </Txt>
     </ScrollView>
   );

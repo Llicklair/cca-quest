@@ -3,6 +3,7 @@ import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { DOMAINS, type Domain, type Lang, type Progress } from '../game.ts';
 import { TERMS } from '../glossary.ts';
+import { STR } from '../i18n.ts';
 import { LangToggle, Rich, Tag, Txt } from '../term.tsx';
 import { c, domainColor, font } from '../theme.ts';
 
@@ -12,6 +13,7 @@ export function Glossary({ p, onLang }: { p: Progress; onLang: (l: Lang) => void
   const [query, setQuery] = useState('');
   const [domain, setDomain] = useState<Domain | null>(null);
   const L = p.lang;
+  const T = STR[L];
   const q = norm(query.trim());
   const list = TERMS.filter(
     (t) => (!domain || t.domain === domain) && (!q || norm(t.term).includes(q) || norm(t.def[L]).includes(q)),
@@ -27,7 +29,7 @@ export function Glossary({ p, onLang }: { p: Progress; onLang: (l: Lang) => void
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder={L === 'es' ? 'buscar término…' : 'search term…'}
+            placeholder={T.search}
             placeholderTextColor={c.muted}
             autoCapitalize="none"
             autoCorrect={false}
@@ -38,14 +40,14 @@ export function Glossary({ p, onLang }: { p: Progress; onLang: (l: Lang) => void
           <LangToggle lang={L} onChange={onLang} />
         </View>
         <View style={s.chips}>
-          <Chip label="all" on={!domain} color={c.text} onPress={() => setDomain(null)} />
+          <Chip label={T.all} on={!domain} color={c.text} onPress={() => setDomain(null)} />
           {DOMAINS.map((d) => (
             <Chip key={d.id} label={`d${d.n}`} on={domain === d.id} color={domainColor[d.id]} onPress={() => setDomain(domain === d.id ? null : d.id)} />
           ))}
         </View>
         <Txt size={12} color={c.muted}>
           {'> '}
-          {list.length} {L === 'es' ? 'términos' : 'terms'}
+          {T.termsN(list.length)}
         </Txt>
       </View>
       <FlatList

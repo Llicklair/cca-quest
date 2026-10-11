@@ -321,3 +321,11 @@ test('mejor nota de cada simulacro', () => {
   assert.equal(bestScore(p, 'exam 1'), 0.75);
   assert.equal(bestScore(p, 'exam 2'), null);
 });
+
+test('los recordatorios salen en el idioma elegido', () => {
+  const p = { ...fresh(HOY), lang: 'es' as const, streak: 3, best: 3, goalDay: '2026-10-10', answered: 1 };
+  const r = plan([], p, new Date(2026, 9, 11, 9, 0), 1);
+  assert.equal(r[0].title, '🔥 Te espera el día 4');
+  assert.equal(r[1].title, '⚠️ Tu racha de 3 días acaba a medianoche');
+  assert.equal(r[1].body, '4 preguntas mantienen viva la llama.');
+});

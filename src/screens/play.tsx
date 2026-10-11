@@ -14,6 +14,7 @@ import {
   readiness,
   shuffle,
   todo,
+  type Lang,
   type Level,
   type Progress,
   type Question,
@@ -22,6 +23,7 @@ import { FLASHCARDS } from '../flashcards.ts';
 import { LESSONS } from '../lessons.ts';
 import { QUESTIONS } from '../questions.ts';
 import { TERMS } from '../glossary.ts';
+import { STR } from '../i18n.ts';
 import { Banner, Bar, BounceIn, Btn, Cmd, Heatmap, Panel, Pop, Pulse, Rich, Tag, Txt, Typer } from '../term.tsx';
 import { c, domainColor } from '../theme.ts';
 
@@ -85,40 +87,41 @@ export function Status({
   const atRisk = streak > 0 && !doneToday;
   const tasks = todo(p, t, LESSONS, FLASHCARDS);
   const lastExam = p.exams[0];
+  const T = STR[p.lang];
 
   return (
     <ScrollView contentContainerStyle={s.page}>
       <View style={{ alignItems: 'center', marginTop: 4 }}>
         <Banner text="CCA QUEST" />
         <Txt size={11} color={c.muted}>
-          claude certified architect · foundations
+          {T.tagline}
         </Txt>
       </View>
       <Typer text="$ cca-quest status" bold color={c.green} />
 
-      <Panel title="player">
+      <Panel title={T.player}>
         <Txt bold size={16}>
           lvl {pad2(lvl.n)} <Txt color={c.muted}>::</Txt> <Txt color={c.green}>{handle(lvl.title)}</Txt>
         </Txt>
-        <Row k="xp">
+        <Row k={T.xp}>
           <Bar value={lvl.to ? (p.xp - lvl.from) / (lvl.to - lvl.from) : 1} color={c.amber} width={14} />
-          <Txt color={c.muted}> {lvl.to ? `${p.xp}/${lvl.to}` : `${p.xp} max`}</Txt>
+          <Txt color={c.muted}> {lvl.to ? `${p.xp}/${lvl.to}` : `${p.xp} ${T.max}`}</Txt>
         </Row>
-        <Row k="streak">
+        <Row k={T.streak}>
           <Pulse on={atRisk}>
             <Txt bold color={streak > 0 ? c.amber : c.muted}>
               {pad2(streak)}d{streak > 0 ? ' ▲' : ''}
             </Txt>
           </Pulse>
-          <Txt color={c.muted}>  best {pad2(p.best)}d</Txt>
+          <Txt color={c.muted}>  {T.best} {pad2(p.best)}d</Txt>
         </Row>
-        <Row k="today">
+        <Row k={T.today}>
           <Bar value={todayCount / GOAL} width={GOAL} color={doneToday ? c.green : c.amber} />
-          <Txt color={doneToday ? c.green : c.muted}> {todayCount}/{GOAL}{doneToday ? ' goal ✓' : ''}</Txt>
+          <Txt color={doneToday ? c.green : c.muted}> {todayCount}/{GOAL}{doneToday ? T.goalTick : ''}</Txt>
         </Row>
         {atRisk && (
           <Txt color={c.amber} size={12} style={{ marginTop: 6 }}>
-            !! play today or the streak resets at midnight
+            {T.atRisk}
           </Txt>
         )}
       </Panel>
@@ -127,23 +130,24 @@ export function Status({
         <Cmd>cca-quest next</Cmd>
         <Txt color={c.muted}>
           {'> '}
-          <Txt color={due > 0 ? c.amber : c.muted}>{due} due</Txt> · {unseen} new · {QUESTIONS.length} total
+          <Txt color={due > 0 ? c.amber : c.muted}>{T.dueWord(due)}</Txt>
+          {T.restLine(unseen, QUESTIONS.length)}
         </Txt>
-        <Btn kind="primary" label={doneToday ? '▶ BONUS ROUND' : '▶ START ROUND'} onPress={onPlay} />
+        <Btn kind="primary" label={doneToday ? T.bonusRound : T.startRound} onPress={onPlay} />
       </View>
 
-      <Panel title="todo">
+      <Panel title={T.todo}>
         {tasks.map((task) => {
           const done = task.kind === 'round' && task.done;
           const lesson = task.kind === 'lesson' ? LESSONS.find((l) => l.ts === task.ts) : undefined;
           const text =
             task.kind === 'round'
               ? task.done
-                ? 'daily round · streak safe'
-                : `daily round · ${task.left} question${task.left === 1 ? '' : 's'} left`
+                ? T.roundSafe
+                : T.roundLeft(task.left)
               : task.kind === 'lesson'
                 ? `man ${task.ts} · ${lesson?.title[p.lang] ?? ''}`
-                : `review ${task.due} card${task.due === 1 ? '' : 's'}`;
+                : T.reviewCards(task.due);
           const go = task.kind === 'round' ? onPlay : task.kind === 'lesson' ? () => onLesson(task.ts) : onCards;
           return (
             <Pressable key={task.kind} onPress={go} disabled={done} style={({ pressed }) => [s.todo, pressed && { backgroundColor: c.greenBg }]}>
@@ -164,8 +168,8 @@ export function Status({
           </Txt>
           <Txt size={12} color={c.muted}>
             {p.examDraft
-              ? `${p.examDraft.label} in progress · ${p.examDraft.picked.filter((x) => x !== null).length}/${p.examDraft.ids.length} answered`
-              : `4 full mocks · 60 q · 2h${lastExam ? ` · last ${Math.round((100 * lastExam.right) / lastExam.total)}%` : ''}`}
+              ? T.examDraftSub(T.examLabel(p.examDraft.label), p.examDraft.picked.filter((x) => x !== null).length, p.examDraft.ids.length)
+              : T.examSub(lastExam ? Math.round((100 * lastExam.right) / lastExam.total) : null)}
           </Txt>
         </View>
         <Txt bold color={c.amber}>
@@ -173,11 +177,11 @@ export function Status({
         </Txt>
       </Pressable>
 
-      <Panel title="activity · 16 weeks">
-        <Heatmap weeks={heatmap(p, t, 16)} />
+      <Panel title={T.activity}>
+        <Heatmap weeks={heatmap(p, t, 16)} labels={T.days} less={T.less} more={T.more} />
       </Panel>
 
-      <Panel title="mastery · exam weights">
+      <Panel title={T.mastery}>
         {DOMAINS.map((d) => {
           const m = mastery(QUESTIONS, p, d.id);
           return (
@@ -192,18 +196,18 @@ export function Status({
         })}
         <View style={[s.domRow, { marginTop: 8 }]}>
           <Txt bold style={{ width: 100 }}>
-            ready
+            {T.ready}
           </Txt>
           <Bar value={readiness(QUESTIONS, p)} width={10} />
           <Txt bold> {String(Math.round(readiness(QUESTIONS, p) * 100)).padStart(3)}%</Txt>
         </View>
         <Txt size={11} color={c.muted} style={{ marginTop: 6 }}>
-          a question is mastered after 4 right answers spread over days
+          {T.masteryNote}
         </Txt>
       </Panel>
 
       <Txt size={11} color={c.muted} style={{ textAlign: 'center', marginTop: 4 }}>
-        {QUESTIONS.length} questions · {LESSONS.length} lessons · {FLASHCARDS.length} cards · {TERMS.length} terms
+        {T.footer(QUESTIONS.length, LESSONS.length, FLASHCARDS.length, TERMS.length)}
       </Txt>
     </ScrollView>
   );
@@ -222,16 +226,16 @@ function Row({ k, children }: { k: string; children: React.ReactNode }) {
 
 // --- Ronda ---
 
-const PRAISE = ['correct.', 'nice.', 'on fire.', 'unstoppable.', 'ARCHITECT MODE.'];
-
 export function RoundView({
   round,
+  lang,
   onPick,
   onNext,
   onQuit,
   onLesson,
 }: {
   round: Round;
+  lang: Lang;
   onPick: (pos: number) => void;
   onNext: () => void;
   onQuit: () => void;
@@ -244,6 +248,7 @@ export function RoundView({
   const dom = DOMAINS.find((d) => d.id === q.domain)!;
   const last = round.i + 1 === round.items.length;
   const hasLesson = q.ts && LESSONS.some((l) => l.ts === q.ts);
+  const T = STR[lang];
 
   return (
     <View style={s.fill}>
@@ -319,21 +324,21 @@ export function RoundView({
         </View>
 
         {answered && (
-          <Panel title="remember" color={c.amber} titleColor={c.amber}>
+          <Panel title={T.remember} color={c.amber} titleColor={c.amber}>
             <Rich text={q.rule} bold color={c.amber} />
           </Panel>
         )}
-        {answered && hasLesson && <Btn small label={`$ man ${q.ts}  → read the lesson`} onPress={() => onLesson(q.ts!)} />}
+        {answered && hasLesson && <Btn small label={T.readLesson(q.ts!)} onPress={() => onLesson(q.ts!)} />}
       </ScrollView>
 
       {answered && (
         <View style={[s.bottom, { borderTopColor: ok ? c.green : c.red }]}>
           <Txt bold size={16} color={ok ? c.green : c.red}>
             {'> '}
-            {ok ? PRAISE[Math.min(round.combo, PRAISE.length) - 1] : 'wrong. read why ↑'}
+            {ok ? T.praise[Math.min(round.combo, T.praise.length) - 1] : T.wrong}
             {ok && round.combo >= 2 ? `  combo x${round.combo}` : ''}
           </Txt>
-          <Btn kind={ok ? 'good' : 'amber'} label={last ? '▶ RESULTS' : '▶ CONTINUE'} onPress={onNext} />
+          <Btn kind={ok ? 'good' : 'amber'} label={last ? T.results : T.continue} onPress={onNext} />
         </View>
       )}
       {answered && <Pop key={`pop-${round.i}`} text={`+${round.gain} XP`} color={ok ? c.amber : c.muted} />}
@@ -347,7 +352,8 @@ export function Done({ round, p, onAgain, onHome }: { round: Round; p: Progress;
   const total = round.items.length;
   const perfect = round.right === total;
   const streak = liveStreak(p, dayKey(new Date()));
-  const banner = perfect ? 'PERFECT ROUND' : 'ROUND COMPLETE';
+  const T = STR[p.lang];
+  const banner = perfect ? T.perfect : T.complete;
   const line = '═'.repeat(banner.length + 2);
 
   return (
@@ -358,31 +364,31 @@ export function Done({ round, p, onAgain, onHome }: { round: Round; p: Progress;
           {`╔${line}╗\n║ ${banner} ║\n╚${line}╝`}
         </Txt>
       </BounceIn>
-      <Panel title="result">
-        <Row k="correct">
+      <Panel title={T.result}>
+        <Row k={T.correct}>
           <Txt bold color={perfect ? c.green : c.text}>
             {round.right}/{total}
           </Txt>
           <Txt color={c.muted}>  </Txt>
           <Bar value={round.right / total} width={total} />
         </Row>
-        <Row k="xp">
+        <Row k={T.xp}>
           <Txt bold color={c.amber}>
             +{round.xp}
           </Txt>
         </Row>
-        <Row k="combo">
+        <Row k={T.combo}>
           <Txt bold>x{round.best}</Txt>
         </Row>
-        <Row k="streak">
+        <Row k={T.streak}>
           <Txt bold color={c.amber}>
-            {pad2(streak)}d{round.goalMet ? ' ▲ goal done' : ''}
+            {pad2(streak)}d{round.goalMet ? T.goalDone : ''}
           </Txt>
         </Row>
       </Panel>
       {round.levelUp && (
         <BounceIn delay={400}>
-          <Panel title="level up" color={c.amber} titleColor={c.amber}>
+          <Panel title={T.levelUp} color={c.amber} titleColor={c.amber}>
             <Txt bold size={16} color={c.amber}>
               lvl {pad2(round.levelUp.n)} :: {handle(round.levelUp.title)}
             </Txt>
@@ -391,11 +397,11 @@ export function Done({ round, p, onAgain, onHome }: { round: Round; p: Progress;
       )}
       {!perfect && (
         <Txt size={12} color={c.muted} style={{ marginTop: 8 }}>
-          {'// missed questions come back tomorrow. that is how they stick.'}
+          {T.missedBack}
         </Txt>
       )}
       <View style={{ gap: 10, marginTop: 16 }}>
-        <Btn kind="primary" label="▶ ANOTHER ROUND" onPress={onAgain} />
+        <Btn kind="primary" label={T.anotherRound} onPress={onAgain} />
         <Btn label="$ cd ~" onPress={onHome} />
       </View>
     </ScrollView>

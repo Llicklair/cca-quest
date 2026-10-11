@@ -25,6 +25,7 @@ import {
 } from './src/game';
 import { FLASHCARDS } from './src/flashcards';
 import { TERMS } from './src/glossary';
+import { STR } from './src/i18n';
 import { LESSONS } from './src/lessons';
 import { ensurePermission, reschedule, testNotification } from './src/notify';
 import { QUESTIONS } from './src/questions';
@@ -44,13 +45,13 @@ const TABS: Tab[] = ['play', 'learn', 'cards', 'grep', 'config'];
 
 const today = () => dayKey(new Date());
 
-function confirmAction(title: string, message: string, action: string, onConfirm: () => void) {
+function confirmAction(title: string, message: string, action: string, cancel: string, onConfirm: () => void) {
   if (Platform.OS === 'web') {
     if (window.confirm(`${title}\n\n${message}`)) onConfirm();
     return;
   }
   Alert.alert(title, message, [
-    { text: 'Cancel', style: 'cancel' },
+    { text: cancel, style: 'cancel' },
     { text: action, style: 'destructive', onPress: onConfirm },
   ]);
 }
@@ -80,13 +81,7 @@ function Main() {
   const bootLines = useMemo(() => {
     if (!p) return [];
     const lvl = levelOf(p.xp);
-    return [
-      'cca-quest v1.1 · claude certified architect trainer',
-      `[ ok ] ${QUESTIONS.length} questions · 6 scenarios · 30 task statements`,
-      `[ ok ] ${LESSONS.length} lessons · ${FLASHCARDS.length} cards · ${TERMS.length} terms`,
-      `[ ok ] progress: lvl ${lvl.n} · ${p.xp} xp · streak ${liveStreak(p, today())}d`,
-      '> ready',
-    ];
+    return STR[p.lang].boot(QUESTIONS.length, LESSONS.length, FLASHCARDS.length, TERMS.length, lvl.n, p.xp, liveStreak(p, today()));
     // solo al arrancar: no hace falta rehacerlo cuando cambia el progreso
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p === null]);
@@ -184,8 +179,10 @@ function Main() {
     if (done.right === done.items.length || done.levelUp || done.goalMet) celebrate();
   };
 
+  const T = STR[p.lang];
+
   const quit = () =>
-    confirmAction('Leave this round?', 'Answers so far are already saved.', 'Leave', () => {
+    confirmAction(T.leaveTitle, T.leaveBody, T.leave, T.cancel, () => {
       reschedule(QUESTIONS, p);
       setView('status');
     });
@@ -204,7 +201,11 @@ function Main() {
     return r;
   };
 
-  const setLang = (lang: Lang) => commit({ ...p, lang });
+  const setLang = (lang: Lang) => {
+    const next = { ...p, lang };
+    commit(next);
+    reschedule(QUESTIONS, next); // los avisos ya programados pasan al idioma nuevo
+  };
 
   // El simulacro cuenta como práctica: cada respuesta pasa por el mismo sistema de cajas y XP.
   const finishExam = (slots: Slot[], secs: number, label: string) => {
@@ -257,6 +258,7 @@ function Main() {
         {tab === 'play' && view === 'round' && round && (
           <RoundView
             round={round}
+            lang={p.lang}
             onPick={pick}
             onNext={next}
             onQuit={quit}
@@ -291,10 +293,10 @@ function Main() {
             onReminder={updateReminder}
             onLang={setLang}
             onTest={async () => {
-              if (!(await testNotification())) Alert.alert('Notifications are off', 'Allow notifications for CCA Quest in Android settings.');
+              if (!(await testNotification(p.lang))) Alert.alert(T.notifOffTitle, T.notifOffBody);
             }}
             onReset={() =>
-              confirmAction('Reset all progress?', 'XP, streak, lessons and every answer will be deleted.', 'Reset', async () => {
+              confirmAction(T.resetTitle, T.resetBody, T.resetAction, T.cancel, async () => {
                 await wipe();
                 const blank = await load(today());
                 commit(blank);
@@ -312,7 +314,7 @@ function Main() {
         <View style={s.tabs}>
           {TABS.map((t) => {
             const on = tab === t;
-            const label = t === 'play' && view === 'round' && round ? '▶ play' : t;
+            const label = t === 'play' && view === 'round' && round ? `▶ ${T.tabs.play}` : T.tabs[t];
             return (
               <Pressable
                 key={t}
