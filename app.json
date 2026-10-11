@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "CCA Quest",
+    "slug": "cca-quest",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0F1222",
+    "android": {
+      "package": "com.llicklair.ccaquest",
+      "adaptiveIcon": {
+        "backgroundColor": "#0F1222",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#FF8A3D",
+          "defaultChannel": "reminders"
+        }
+      ]
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+# Compila el APK instalable en cada push (sin cuenta de Expo): prebuild + Gradle.
+# Se descarga con: gh run download --name CCAQuest
+name: APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      # npm ci falla con el lock hecho en Windows (le faltan las opcionales @emnapi/* de Linux)
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - run: npx tsc --noEmit
+
+      - name: Generar el proyecto Android
+        run: |
+          npx expo prebuild -p android --no-install
+          sed -i 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g/' android/gradle.properties
+
+      # Solo ARM (todos los móviles Android reales). Release firmado con la debug.keystore
+      # de la plantilla, que es siempre la misma, así que cada versión se instala encima
+      # de la anterior sin perder el progreso.
+      - name: Compilar
+        working-directory: android
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a --no-daemon
+
+      - run: cp android/app/build/outputs/apk/release/app-release.apk CCAQuest.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CCAQuest
+          path: CCAQuest.apk
