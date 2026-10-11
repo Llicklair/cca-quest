@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
-import { DOMAINS, type Domain, type Lang, type Progress } from '../game.ts';
+import { DOMAINS, type Domain, type Progress } from '../game.ts';
 import { TERMS } from '../glossary.ts';
 import { STR } from '../i18n.ts';
-import { LangToggle, Rich, Tag, Txt } from '../term.tsx';
+import { Rich, Tag, Txt } from '../term.tsx';
 import { c, domainColor, font } from '../theme.ts';
 
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
-export function Glossary({ p, onLang }: { p: Progress; onLang: (l: Lang) => void }) {
+export function Glossary({ p }: { p: Progress }) {
   const [query, setQuery] = useState('');
   const [domain, setDomain] = useState<Domain | null>(null);
   const L = p.lang;
@@ -37,7 +37,6 @@ export function Glossary({ p, onLang }: { p: Progress; onLang: (l: Lang) => void
             cursorColor={c.green}
             selectionColor={c.greenDim}
           />
-          <LangToggle lang={L} onChange={onLang} />
         </View>
         <View style={s.chips}>
           <Chip label={T.all} on={!domain} color={c.text} onPress={() => setDomain(null)} />

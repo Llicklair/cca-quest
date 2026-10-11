@@ -94,8 +94,6 @@ const en = {
   daily: 'daily',
   at: 'at',
   lastCall: '// plus a last call at 22:00 if the streak is at risk',
-  language: 'language',
-  languageNote: '// everything except the questions, which stay in english like the exam',
   exam: 'exam',
   examFacts1: '60 questions · 120 min',
   examFacts2: '4 of 6 scenarios · pass 720/1000',
@@ -106,6 +104,17 @@ const en = {
   resetAction: 'Reset',
   notifOffTitle: 'Notifications are off',
   notifOffBody: 'Allow notifications for CCA Quest in Android settings.',
+
+  // actualizaciones
+  update: 'update',
+  checking: 'checking github…',
+  upToDate: (b: number) => `up to date · build ${b}`,
+  newBuild: (cur: number, latest: number) => `build ${latest} available (you have ${cur})`,
+  offline: 'could not reach github',
+  checkNow: '$ cca-quest update --check',
+  download: '▶ DOWNLOAD UPDATE',
+  updateHint: '// downloads the apk; open it to install over this one. progress is kept.',
+  updateBanner: (latest: number) => `!! new version available (build ${latest}) · tap to update`,
 
   // simulacros
   inProgress: 'in progress',
@@ -232,8 +241,6 @@ const es: Strings = {
   daily: 'diario',
   at: 'hora',
   lastCall: '// y un último aviso a las 22:00 si la racha peligra',
-  language: 'idioma',
-  languageNote: '// todo menos las preguntas, que van en inglés como en el examen',
   exam: 'examen',
   examFacts1: '60 preguntas · 120 min',
   examFacts2: '4 de 6 escenarios · aprobado 720/1000',
@@ -244,6 +251,16 @@ const es: Strings = {
   resetAction: 'Borrar',
   notifOffTitle: 'Las notificaciones están desactivadas',
   notifOffBody: 'Permite las notificaciones de CCA Quest en los ajustes de Android.',
+
+  update: 'actualizar',
+  checking: 'consultando github…',
+  upToDate: (b) => `estás al día · build ${b}`,
+  newBuild: (cur, latest) => `hay build ${latest} (tienes la ${cur})`,
+  offline: 'no se pudo conectar con github',
+  checkNow: '$ cca-quest update --check',
+  download: '▶ DESCARGAR ACTUALIZACIÓN',
+  updateHint: '// descarga la apk; ábrela para instalarla encima. el progreso se conserva.',
+  updateBanner: (latest) => `!! hay versión nueva (build ${latest}) · toca para actualizar`,
 
   inProgress: 'a medias',
   draftLine: (label, i, total, done) => `${label} · pregunta ${i}/${total} · ${done} contestadas`,

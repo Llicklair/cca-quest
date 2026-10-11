@@ -1,10 +1,10 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { DOMAINS, mastery, type Lang, type Lesson, type Progress } from '../game.ts';
+import { DOMAINS, mastery, type Lesson, type Progress } from '../game.ts';
 import { STR } from '../i18n.ts';
 import { LESSONS } from '../lessons.ts';
 import { QUESTIONS } from '../questions.ts';
-import { Bar, Btn, Cmd, LangToggle, Rich, Txt, Typer } from '../term.tsx';
+import { Bar, Btn, Cmd, Rich, Txt, Typer } from '../term.tsx';
 import { c, domainColor } from '../theme.ts';
 
 // --- Índice de lecciones ---
@@ -12,11 +12,9 @@ import { c, domainColor } from '../theme.ts';
 export function LessonList({
   p,
   onOpen,
-  onLang,
 }: {
   p: Progress;
   onOpen: (ts: string) => void;
-  onLang: (l: Lang) => void;
 }) {
   const read = Object.keys(p.lessons).length;
   const T = STR[p.lang];
@@ -24,7 +22,6 @@ export function LessonList({
     <ScrollView contentContainerStyle={s.page}>
       <View style={s.head}>
         <Typer text="$ ls ~/lessons" bold color={c.green} />
-        <LangToggle lang={p.lang} onChange={onLang} />
       </View>
       <Txt color={c.muted} size={12}>
         {'> '}
@@ -73,14 +70,12 @@ export function LessonView({
   onBack,
   onRead,
   onPractice,
-  onLang,
 }: {
   lesson: Lesson;
   p: Progress;
   onBack: () => void;
   onRead: () => void;
   onPractice: () => void;
-  onLang: (l: Lang) => void;
 }) {
   const L = p.lang;
   const domain = DOMAINS.find((d) => lesson.ts.startsWith(`${d.n}.`))!;
@@ -96,7 +91,6 @@ export function LessonView({
             [‹ ls]
           </Txt>
         </Pressable>
-        <LangToggle lang={L} onChange={onLang} />
       </View>
       <Cmd>man {lesson.ts}</Cmd>
 

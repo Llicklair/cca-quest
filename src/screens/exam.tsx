@@ -18,6 +18,7 @@ import {
 } from '../game.ts';
 import { STR } from '../i18n.ts';
 import { QUESTIONS } from '../questions.ts';
+import { QUESTIONS_ES } from '../questions-es.ts';
 import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer } from '../term.tsx';
 import { c, domainColor } from '../theme.ts';
 
@@ -54,6 +55,7 @@ export function Exam({
   const runRef = useRef<Run | null>(null);
   const elapsedRef = useRef(0);
   const T = STR[p.lang];
+  const text = (q: Question) => (p.lang === 'es' && QUESTIONS_ES[q.id]) || q; // la pregunta en el idioma elegido
 
   const draftOf = (r: Run, secs: number): ExamDraft => ({
     label: r.label,
@@ -271,10 +273,10 @@ export function Exam({
             <View style={s.tags}>
               <Tag label={`d${dom.n} ${dom.short.toLowerCase()}`} color={domainColor[slot.q.domain]} />
             </View>
-            <Rich text={slot.q.scenario} size={15} />
+            <Rich text={text(slot.q).scenario} size={15} />
           </Panel>
           <Txt bold size={15} color={c.green}>
-            ? {slot.q.ask}
+            ? {text(slot.q).ask}
           </Txt>
           {slot.order.map((orig, pos) => {
             const on = slot.picked === orig;
@@ -288,7 +290,7 @@ export function Exam({
                   <Txt bold color={on ? c.amber : c.muted}>
                     [{on ? '●' : 'ABCD'[pos]}]
                   </Txt>
-                  <Rich text={slot.q.options[orig]} style={{ flex: 1 }} />
+                  <Rich text={text(slot.q).options[orig]} style={{ flex: 1 }} />
                 </View>
               </Pressable>
             );
@@ -364,11 +366,11 @@ export function Exam({
       )}
       {wrong.map((x) => (
         <Panel key={x.q.id} color={c.line}>
-          <Rich text={x.q.scenario.length > 150 ? `${x.q.scenario.slice(0, 150).trimEnd()}…` : x.q.scenario} size={12} color={c.muted} />
-          <Rich text={x.q.ask} bold color={c.green} style={{ marginTop: 4 }} />
-          <Rich text={`- ${x.picked === null ? T.noAnswer : x.q.options[x.picked]}`} size={13} color={c.red} style={{ marginTop: 6 }} />
-          <Rich text={`+ ${x.q.options[x.q.answer]}`} size={13} color={c.green} style={{ marginTop: 4 }} />
-          <Rich text={`└ ${x.q.why[x.q.answer]}`} size={12} color={c.muted} style={{ marginTop: 4 }} />
+          <Rich text={text(x.q).scenario.length > 150 ? `${text(x.q).scenario.slice(0, 150).trimEnd()}…` : text(x.q).scenario} size={12} color={c.muted} />
+          <Rich text={text(x.q).ask} bold color={c.green} style={{ marginTop: 4 }} />
+          <Rich text={`- ${x.picked === null ? T.noAnswer : text(x.q).options[x.picked]}`} size={13} color={c.red} style={{ marginTop: 6 }} />
+          <Rich text={`+ ${text(x.q).options[x.q.answer]}`} size={13} color={c.green} style={{ marginTop: 4 }} />
+          <Rich text={`└ ${text(x.q).why[x.q.answer]}`} size={12} color={c.muted} style={{ marginTop: 4 }} />
         </Panel>
       ))}
       <View style={{ gap: 10, marginTop: 6 }}>

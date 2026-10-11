@@ -329,3 +329,12 @@ test('los recordatorios salen en el idioma elegido', () => {
   assert.equal(r[1].title, '⚠️ Tu racha de 3 días acaba a medianoche');
   assert.equal(r[1].body, '4 preguntas mantienen viva la llama.');
 });
+
+test('actualizaciones: solo avisa si la release es más nueva que la instalada', async () => {
+  const { compare, parseBuild } = await import('../src/update.ts');
+  assert.equal(parseBuild('build-12'), 12);
+  assert.equal(parseBuild('v1.2'), null);
+  assert.deepEqual(compare(10, 'build-12'), { current: 10, latest: 12, available: true });
+  assert.deepEqual(compare(12, 'build-12'), { current: 12, latest: 12, available: false });
+  assert.equal(compare(12, 'latest'), null);
+});

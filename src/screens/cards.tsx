@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import * as feel from '../feel.ts';
-import { DOMAINS, dayKey, deckDue, deckSession, MASTERED, type Flashcard, type Lang, type Level, type Progress } from '../game.ts';
+import { DOMAINS, dayKey, deckDue, deckSession, MASTERED, type Flashcard, type Level, type Progress } from '../game.ts';
 import { FLASHCARDS } from '../flashcards.ts';
 import { STR } from '../i18n.ts';
-import { Bar, Btn, Cmd, LangToggle, Panel, Pop, Rich, Tag, Txt, Typer } from '../term.tsx';
+import { Bar, Btn, Cmd, Panel, Pop, Rich, Tag, Txt, Typer } from '../term.tsx';
 import { c, domainColor } from '../theme.ts';
 
 type Run = { cards: Flashcard[]; i: number; flipped: boolean; knew: number; again: number; xp: number; gain: number };
@@ -13,12 +13,10 @@ type Run = { cards: Flashcard[]; i: number; flipped: boolean; knew: number; agai
 export function Cards({
   p,
   onReview,
-  onLang,
   onRunning,
 }: {
   p: Progress;
   onReview: (id: string, knew: boolean) => { gained: number; levelUp: Level | null };
-  onLang: (l: Lang) => void;
   onRunning: (running: boolean) => void;
 }) {
   const [run, setRun] = useState<Run | null>(null);
@@ -58,7 +56,6 @@ export function Cards({
           </Txt>
           <Bar value={run.i / run.cards.length} width={10} />
           <View style={{ flex: 1 }} />
-          <LangToggle lang={L} onChange={onLang} />
         </View>
         <ScrollView contentContainerStyle={[s.page, { flexGrow: 1 }]}>
           <Pressable onPress={() => !run.flipped && setRun({ ...run, flipped: true })} style={{ flexGrow: 1 }}>
@@ -125,7 +122,6 @@ export function Cards({
     <ScrollView contentContainerStyle={s.page}>
       <View style={s.head}>
         <Typer text="$ cards --status" bold color={c.green} />
-        <LangToggle lang={L} onChange={onLang} />
       </View>
       <Panel title={T.deck}>
         <Txt>

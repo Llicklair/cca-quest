@@ -28,6 +28,7 @@ import { TERMS } from './src/glossary';
 import { STR } from './src/i18n';
 import { LESSONS } from './src/lessons';
 import { ensurePermission, reschedule, testNotification } from './src/notify';
+import { checkUpdate, type UpdateInfo } from './src/update';
 import { QUESTIONS } from './src/questions';
 import { Cards } from './src/screens/cards';
 import { Config } from './src/screens/config';
@@ -36,7 +37,7 @@ import { Glossary } from './src/screens/glossary';
 import { LessonList, LessonView } from './src/screens/learn';
 import { Done, RoundView, Status, newRound, type Round } from './src/screens/play';
 import { load, save, wipe } from './src/storage';
-import { Boot, Rain, Txt } from './src/term';
+import { Boot, LangToggle, Rain, Txt } from './src/term';
 import { c } from './src/theme';
 
 type Tab = 'play' | 'learn' | 'cards' | 'grep' | 'config';
@@ -77,6 +78,8 @@ function Main() {
   const [examRunning, setExamRunning] = useState(false);
   const [booted, setBooted] = useState(false);
   const [boom, setBoom] = useState(0);
+  const [update, setUpdate] = useState<UpdateInfo | null | undefined>(undefined);
+  const [checking, setChecking] = useState(false);
   const endBoot = useCallback(() => setBooted(true), []);
   const bootLines = useMemo(() => {
     if (!p) return [];
@@ -91,6 +94,11 @@ function Main() {
       setP(loaded);
       if (loaded.reminder.on) ensurePermission().then(() => reschedule(QUESTIONS, loaded));
     });
+  }, []);
+
+  // Al arrancar se mira si hay una APK más nueva en las releases del repo.
+  useEffect(() => {
+    checkUpdate().then(setUpdate);
   }, []);
 
   // Al volver a la app puede ser otro día: se ponen a cero los contadores de hoy.
@@ -232,10 +240,19 @@ function Main() {
 
   return (
     <View style={[s.fill, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+      {/* Un único botón de idioma, siempre arriba a la derecha: cambia toda la app. */}
+      <View style={s.header}>
+        <Txt size={12} color={c.muted}>
+          ~/cca-quest
+        </Txt>
+        <LangToggle lang={p.lang} onChange={setLang} />
+      </View>
       <View style={s.fill}>
         {tab === 'play' && view === 'status' && (
           <Status
             p={p}
+            update={update?.available ? update.latest : null}
+            onUpdate={() => setTab('config')}
             onPlay={() => start()}
             onExam={() => setView('exam')}
             onLesson={(ts) => {
@@ -280,18 +297,25 @@ function Main() {
               onBack={() => setLesson(null)}
               onRead={() => markRead(open.ts)}
               onPractice={() => practice(open.ts)}
-              onLang={setLang}
             />
           ) : (
-            <LessonList p={p} onOpen={setLesson} onLang={setLang} />
+            <LessonList p={p} onOpen={setLesson} />
           ))}
-        {tab === 'cards' && <Cards p={p} onReview={gradeCard} onLang={setLang} onRunning={setDeckRunning} />}
-        {tab === 'grep' && <Glossary p={p} onLang={setLang} />}
+        {tab === 'cards' && <Cards p={p} onReview={gradeCard} onRunning={setDeckRunning} />}
+        {tab === 'grep' && <Glossary p={p} />}
         {tab === 'config' && (
           <Config
             p={p}
             onReminder={updateReminder}
-            onLang={setLang}
+            update={update}
+            checking={checking}
+            onCheck={() => {
+              setChecking(true);
+              checkUpdate().then((u) => {
+                setUpdate(u);
+                setChecking(false);
+              });
+            }}
             onTest={async () => {
               if (!(await testNotification(p.lang))) Alert.alert(T.notifOffTitle, T.notifOffBody);
             }}
@@ -340,6 +364,15 @@ function Main() {
 
 const s = StyleSheet.create({
   fill: { flex: 1, backgroundColor: c.bg },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: c.line,
+  },
   tabs: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: c.lineHi, backgroundColor: c.panel, paddingHorizontal: 6, paddingVertical: 6, gap: 4 },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 3 },
 });

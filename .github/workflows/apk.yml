@@ -1,11 +1,15 @@
-# Compila el APK instalable en cada push (sin cuenta de Expo): prebuild + Gradle.
-# Se descarga con: gh run download --name CCAQuest
+# Compila el APK instalable en cada push (sin cuenta de Expo): prebuild + Gradle,
+# y lo publica como release build-N. La app mira la última release para avisar de
+# actualizaciones y la descarga de releases/latest/download/CCAQuest.apk.
 name: APK
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: write # para crear la release
 
 jobs:
   apk:
@@ -30,6 +34,10 @@ jobs:
       - run: npm test
       - run: npx tsc --noEmit
 
+      # La app compara este número con la última release para saber si hay versión nueva.
+      - name: Número de compilación
+        run: echo "export const BUILD = ${{ github.run_number }}; // lo escribe el workflow de la APK" > src/build.ts
+
       - name: Generar el proyecto Android
         run: |
           npx expo prebuild -p android --no-install
@@ -48,3 +56,10 @@ jobs:
         with:
           name: CCAQuest
           path: CCAQuest.apk
+
+      - name: Publicar la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git log -1 --pretty=%B > notes.txt
+          gh release create "build-${{ github.run_number }}" CCAQuest.apk --title "CCA Quest · build ${{ github.run_number }}" --notes-file notes.txt --latest

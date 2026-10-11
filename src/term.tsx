@@ -432,3 +432,4 @@ export function Boot({ lines, onDone }: { lines: string[]; onDone: () => void })
     </Pressable>
   );
 }
+

@@ -1,8 +1,10 @@
 import { Linking, ScrollView, StyleSheet, View } from 'react-native';
 
-import type { Lang, Progress } from '../game.ts';
+import type { Progress } from '../game.ts';
+import { BUILD } from '../build.ts';
 import { STR } from '../i18n.ts';
-import { Btn, Cmd, LangToggle, Panel, Txt, Typer } from '../term.tsx';
+import { APK_URL, type UpdateInfo } from '../update.ts';
+import { Btn, Cmd, Panel, Txt, Typer } from '../term.tsx';
 import { c } from '../theme.ts';
 
 export const GUIDE_URL = 'https://anthropic-partners.skilljar.com/claude-certified-architect-foundations-certification';
@@ -10,13 +12,17 @@ export const GUIDE_URL = 'https://anthropic-partners.skilljar.com/claude-certifi
 export function Config({
   p,
   onReminder,
-  onLang,
+  update,
+  checking,
+  onCheck,
   onTest,
   onReset,
 }: {
   p: Progress;
   onReminder: (change: Partial<Progress['reminder']>) => void;
-  onLang: (l: Lang) => void;
+  update: UpdateInfo | null | undefined; // undefined = sin comprobar, null = sin conexión
+  checking: boolean;
+  onCheck: () => void;
   onTest: () => void;
   onReset: () => void;
 }) {
@@ -62,15 +68,25 @@ export function Config({
         <Btn small label="$ notify --test  (5s)" onPress={onTest} style={{ marginTop: 10 }} />
       </Panel>
 
-      <Panel title={T.language}>
-        <View style={s.row}>
-          <Txt color={c.muted} style={s.key}>
-            lang
-          </Txt>
-          <LangToggle lang={p.lang} onChange={onLang} />
-        </View>
-        <Txt size={12} color={c.muted} style={{ marginTop: 8 }}>
-          {T.languageNote}
+      <Panel title={T.update} color={update?.available ? c.amber : c.lineHi} titleColor={update?.available ? c.amber : c.muted}>
+        <Txt bold color={update?.available ? c.amber : c.text}>
+          {checking
+            ? T.checking
+            : update === undefined
+              ? `build ${BUILD}`
+              : update === null
+                ? T.offline
+                : update.available
+                  ? T.newBuild(update.current, update.latest)
+                  : T.upToDate(update.current)}
+        </Txt>
+        {update?.available ? (
+          <Btn kind="amber" label={T.download} onPress={() => Linking.openURL(APK_URL)} style={{ marginTop: 10 }} />
+        ) : (
+          <Btn small label={T.checkNow} onPress={onCheck} disabled={checking} style={{ marginTop: 10 }} />
+        )}
+        <Txt size={11} color={c.muted} style={{ marginTop: 6 }}>
+          {T.updateHint}
         </Txt>
       </Panel>
 
@@ -92,7 +108,7 @@ export function Config({
         <Btn kind="danger" label={T.reset} onPress={onReset} style={{ marginTop: 6 }} />
       </View>
       <Txt size={11} color={c.muted} style={{ textAlign: 'center', marginTop: 10 }}>
-        cca-quest v1.2
+        cca-quest v1.3 · build {BUILD}
       </Txt>
     </ScrollView>
   );

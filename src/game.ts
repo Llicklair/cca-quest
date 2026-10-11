@@ -90,6 +90,9 @@ export const GOAL = 5; // preguntas al día para mantener la racha
 
 export type Lang = 'en' | 'es';
 
+/** Lo traducible de una pregunta. */
+export type QuestionText = { scenario: string; ask: string; options: string[]; why: string[]; rule: string };
+
 /** Texto en los dos idiomas: inglés como el examen, español para cuando algo no se entienda. */
 export type Bi = { en: string; es: string };
 

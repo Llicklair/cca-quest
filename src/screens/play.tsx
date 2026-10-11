@@ -22,6 +22,7 @@ import {
 import { FLASHCARDS } from '../flashcards.ts';
 import { LESSONS } from '../lessons.ts';
 import { QUESTIONS } from '../questions.ts';
+import { QUESTIONS_ES } from '../questions-es.ts';
 import { TERMS } from '../glossary.ts';
 import { STR } from '../i18n.ts';
 import { Banner, Bar, BounceIn, Btn, Cmd, Heatmap, Panel, Pop, Pulse, Rich, Tag, Txt, Typer } from '../term.tsx';
@@ -66,12 +67,16 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 
 export function Status({
   p,
+  update,
+  onUpdate,
   onPlay,
   onExam,
   onLesson,
   onCards,
 }: {
   p: Progress;
+  update: number | null; // build nueva disponible, si la hay
+  onUpdate: () => void;
   onPlay: () => void;
   onExam: () => void;
   onLesson: (ts: string) => void;
@@ -97,6 +102,13 @@ export function Status({
           {T.tagline}
         </Txt>
       </View>
+      {update !== null && (
+        <Pressable onPress={onUpdate} style={({ pressed }) => [s.update, pressed && { backgroundColor: '#2A2110' }]}>
+          <Txt bold size={13} color={c.amber}>
+            {T.updateBanner(update)}
+          </Txt>
+        </Pressable>
+      )}
       <Typer text="$ cca-quest status" bold color={c.green} />
 
       <Panel title={T.player}>
@@ -249,6 +261,7 @@ export function RoundView({
   const last = round.i + 1 === round.items.length;
   const hasLesson = q.ts && LESSONS.some((l) => l.ts === q.ts);
   const T = STR[lang];
+  const tx = (lang === 'es' && QUESTIONS_ES[q.id]) || q; // la pregunta en el idioma elegido
 
   return (
     <View style={s.fill}>
@@ -283,10 +296,10 @@ export function RoundView({
             {q.ts && <Tag label={`task ${q.ts}`} />}
             {round.label !== 'daily' && <Tag label={round.label} color={c.amber} />}
           </View>
-          <Rich text={q.scenario} size={15} />
+          <Rich text={tx.scenario} size={15} />
         </Panel>
         <Txt bold size={15} color={c.green}>
-          ? {q.ask}
+          ? {tx.ask}
         </Txt>
 
         <View style={{ gap: 8 }}>
@@ -313,10 +326,10 @@ export function RoundView({
                   <Txt bold color={answered && right ? c.green : answered && mine ? c.red : c.muted}>
                     [{mark}]
                   </Txt>
-                  <Rich text={q.options[orig]} style={{ flex: 1 }} />
+                  <Rich text={tx.options[orig]} style={{ flex: 1 }} />
                 </View>
                 {answered && (
-                  <Rich text={`└ ${q.why[orig]}`} size={12} color={right ? c.text : c.muted} style={{ marginLeft: 36 }} />
+                  <Rich text={`└ ${tx.why[orig]}`} size={12} color={right ? c.text : c.muted} style={{ marginLeft: 36 }} />
                 )}
               </Pressable>
             );
@@ -325,7 +338,7 @@ export function RoundView({
 
         {answered && (
           <Panel title={T.remember} color={c.amber} titleColor={c.amber}>
-            <Rich text={q.rule} bold color={c.amber} />
+            <Rich text={tx.rule} bold color={c.amber} />
           </Panel>
         )}
         {answered && hasLesson && <Btn small label={T.readLesson(q.ts!)} onPress={() => onLesson(q.ts!)} />}
@@ -413,6 +426,7 @@ const s = StyleSheet.create({
   page: { padding: 16, gap: 12 },
   row: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   domRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
+  update: { borderWidth: 1, borderColor: c.amber, borderRadius: 4, padding: 12 },
   todo: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
   exam: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: c.amber, borderRadius: 4, padding: 14, marginTop: 4 },
   top: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line },
