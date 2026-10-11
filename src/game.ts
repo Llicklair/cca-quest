@@ -88,9 +88,20 @@ export function review(card: Card | undefined, correct: boolean, today: string):
 
 export const GOAL = 5; // preguntas al día para mantener la racha
 
+export type Lang = 'en' | 'es';
+
+/** Texto en los dos idiomas: inglés como el examen, español para cuando algo no se entienda. */
+export type Bi = { en: string; es: string };
+
+export type Lesson = { ts: string; title: Bi; tldr: Bi; ideas: Bi[]; traps: Bi[]; example: Bi };
+export type Flashcard = { id: string; ts: string; front: Bi; back: Bi };
+export type Term = { term: string; domain: Domain; def: Bi };
+
 export type Progress = {
   xp: number;
-  cards: Record<string, Card>;
+  cards: Record<string, Card>; // preguntas y fichas, cada una por su id
+  lessons: Record<string, string>; // task statement → día en que se leyó la lección
+  lang: Lang;
   streak: number; // días seguidos cumpliendo la meta, hasta goalDay
   best: number;
   goalDay: string | null; // último día en que se cumplió la meta
@@ -99,12 +110,26 @@ export type Progress = {
   correct: number;
   bestCombo: number;
   reminder: { on: boolean; hour: number; minute: number };
+  history: Record<string, number>; // día → preguntas y fichas contestadas (para el mapa de actividad)
+  exams: ExamResult[]; // simulacros, el más reciente primero
+  examDraft: ExamDraft | null; // simulacro a medias, para seguir otro rato
+};
+
+export type ExamResult = {
+  label: string; // 'exam 1'…'exam 4', 'random' o 'quick'
+  day: string;
+  right: number;
+  total: number;
+  secs: number;
+  byDomain: Partial<Record<Domain, [number, number]>>; // [aciertos, preguntas]
 };
 
 export function fresh(today: string): Progress {
   return {
     xp: 0,
     cards: {},
+    lessons: {},
+    lang: 'en',
     streak: 0,
     best: 0,
     goalDay: null,
@@ -113,8 +138,14 @@ export function fresh(today: string): Progress {
     correct: 0,
     bestCombo: 0,
     reminder: { on: true, hour: 19, minute: 30 },
+    history: {},
+    exams: [],
+    examDraft: null,
   };
 }
+
+/** Suma actividad al día de hoy (para el mapa de actividad). */
+const bump = (h: Record<string, number>, day: string) => ({ ...h, [day]: (h[day] ?? 0) + 1 });
 
 /** Al cambiar de día se ponen a cero los contadores de hoy. */
 export function rollDay(p: Progress, today: string): Progress {
@@ -130,7 +161,18 @@ export const goalDone = (p: Progress, today: string) => p.day === today && p.ans
 
 // --- XP y niveles ---
 
-export const XP = { right: 10, combo3: 5, combo5: 10, wrong: 2, goal: 25, session: 10, perfect: 30 };
+export const XP = {
+  right: 10,
+  combo3: 5,
+  combo5: 10,
+  wrong: 2,
+  goal: 25,
+  session: 10,
+  perfect: 30,
+  lesson: 15, // la primera vez que se lee hasta el final
+  knew: 3, // ficha que ya se sabía
+  again: 1, // ficha que hay que repasar
+};
 
 export const LEVELS = [
   'Prompt Rookie',
@@ -190,6 +232,7 @@ export function answer(p0: Progress, id: string, correct: boolean, combo: number
     streak,
     best,
     goalDay,
+    history: bump(p.history, today),
   };
   return { progress, gained, combo: nextCombo, goalJustMet, levelUp: levelChange(p.xp, progress.xp) };
 }
@@ -262,11 +305,56 @@ export function buildSession(
   return shuffle(picked, rand);
 }
 
+// --- Lecciones y fichas ---
+
+/** Marca una lección como leída; solo da XP la primera vez. */
+export function readLesson(p: Progress, ts: string, today: string): { progress: Progress; gained: number; levelUp: Level | null } {
+  if (p.lessons[ts]) return { progress: p, gained: 0, levelUp: null };
+  const { progress, levelUp } = addXp({ ...p, lessons: { ...p.lessons, [ts]: today } }, XP.lesson);
+  return { progress, gained: XP.lesson, levelUp };
+}
+
+/** Repaso de una ficha: “me la sabía” la sube de caja, “otra vez” la trae mañana. */
+export function reviewCard(p: Progress, id: string, knew: boolean, today: string) {
+  const gained = knew ? XP.knew : XP.again;
+  const { progress, levelUp } = addXp(
+    { ...p, cards: { ...p.cards, [id]: review(p.cards[id], knew, today) }, history: bump(p.history, today) },
+    gained,
+  );
+  return { progress, gained, levelUp };
+}
+
+/** Las fichas de un mazo: primero las que tocan, luego nuevas, y si faltan, repasos adelantados. */
+export function deckSession<T extends { id: string }>(
+  deck: T[],
+  p: Progress,
+  today: string,
+  size = 10,
+  rand: () => number = Math.random,
+): T[] {
+  const card = (c: T) => p.cards[c.id];
+  const due = deck
+    .filter((c) => card(c) && card(c).due <= today)
+    .sort((a, b) => card(a).due.localeCompare(card(b).due) || card(a).box - card(b).box);
+  const unseen = shuffle(
+    deck.filter((c) => !card(c)),
+    rand,
+  );
+  const early = deck
+    .filter((c) => card(c) && card(c).due > today)
+    .sort((a, b) => card(a).box - card(b).box || card(a).due.localeCompare(card(b).due));
+  return shuffle([...due, ...unseen, ...early].slice(0, size), rand);
+}
+
+export function deckDue(deck: { id: string }[], p: Progress, day: string): number {
+  return deck.filter((c) => p.cards[c.id] && p.cards[c.id].due <= day).length;
+}
+
 // --- Dominio y preparación ---
 
 /** De 0 a 1: media de la caja de cada pregunta sobre la caja de dominada. */
-export function mastery(qs: Question[], p: Progress, domain?: Domain): number {
-  const list = domain ? qs.filter((q) => q.domain === domain) : qs;
+export function mastery(qs: Question[], p: Progress, domain?: Domain, ts?: string): number {
+  const list = qs.filter((q) => (!domain || q.domain === domain) && (!ts || q.ts === ts));
   if (list.length === 0) return 0;
   return list.reduce((s, q) => s + (p.cards[q.id]?.box ?? 0), 0) / (list.length * MASTERED);
 }
@@ -278,4 +366,125 @@ export function readiness(qs: Question[], p: Progress): number {
 
 export function dueCount(qs: Question[], p: Progress, day: string): number {
   return qs.filter((q) => p.cards[q.id] && p.cards[q.id].due <= day).length;
+}
+
+// --- Qué hacer ahora ---
+
+export type Todo =
+  | { kind: 'round'; done: boolean; left: number }
+  | { kind: 'lesson'; ts: string }
+  | { kind: 'cards'; due: number };
+
+/** La lista de tareas del día: la ronda, la siguiente lección sin leer y las fichas pendientes. */
+export function todo(p: Progress, today: string, lessons: { ts: string }[], deck: { id: string }[]): Todo[] {
+  const list: Todo[] = [{ kind: 'round', done: goalDone(p, today), left: Math.max(0, GOAL - (p.day === today ? p.answered : 0)) }];
+  const unread = lessons.find((l) => !p.lessons[l.ts]);
+  if (unread) list.push({ kind: 'lesson', ts: unread.ts });
+  const due = deckDue(deck, p, today);
+  if (due > 0) list.push({ kind: 'cards', due });
+  return list;
+}
+
+/** Actividad de las últimas `weeks` semanas: una columna por semana (lunes a domingo); null = futuro. */
+export function heatmap(p: Progress, today: string, weeks = 12): (number | null)[][] {
+  const [y, m, d] = today.split('-').map(Number);
+  const weekday = (new Date(y, m - 1, d).getDay() + 6) % 7; // 0 = lunes
+  const monday = addDays(today, -weekday - 7 * (weeks - 1));
+  return Array.from({ length: weeks }, (_, w) =>
+    Array.from({ length: 7 }, (_, i) => {
+      const day = addDays(monday, w * 7 + i);
+      return day > today ? null : (p.history[day] ?? 0);
+    }),
+  );
+}
+
+// --- Simulacros de examen ---
+
+// Como el real: 60 preguntas en 120 minutos, 4 escenarios de 6 con 15 preguntas cada uno.
+export const EXAM = { scenarios: 4, perScenario: 15, quickPerScenario: 5, secsPerQuestion: 120, target: 0.72 };
+
+// Los cuatro simulacros fijos, para poder repetirlos y comparar. Cada escenario sale en 2 o 3.
+export const FIXED_EXAMS: Setting[][] = [
+  ['support', 'codegen', 'research', 'ci'],
+  ['devprod', 'extraction', 'support', 'research'],
+  ['codegen', 'ci', 'extraction', 'devprod'],
+  ['research', 'support', 'extraction', 'codegen'],
+];
+
+/** Generador repetible (para que los simulacros fijos sean siempre los mismos). */
+export function seeded(seed: number): () => number {
+  let s = seed >>> 0 || 1;
+  return () => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return s / 2 ** 32;
+  };
+}
+
+/**
+ * Los simulacros fijos. Se eligen las preguntas de una en una, turnándose entre los
+ * escenarios del examen: primero las que menos han salido en los anteriores (así se
+ * repite lo mínimo) y, entre esas, las del dominio que más se aleja de su peso.
+ */
+export function fixedExams(qs: Question[], per = EXAM.perScenario): Question[][] {
+  const used = new Map<string, number>();
+  return FIXED_EXAMS.map((settings, n) => {
+    const total = settings.length * per;
+    const count = new Map<Domain, number>();
+    const deficit = (d: Domain) => (total * (DOMAINS.find((x) => x.id === d)!.weight / 100)) - (count.get(d) ?? 0);
+    const pools = settings.map((setting, k) => shuffle(qs.filter((q) => q.setting === setting), seeded(1000 * (n + 1) + k)));
+    const picked: Question[][] = settings.map(() => []);
+    for (let round = 0; round < per; round++) {
+      pools.forEach((pool, k) => {
+        const left = pool.filter((q) => !picked[k].includes(q));
+        if (left.length === 0) return;
+        const best = left.reduce((a, b) => {
+          const reuse = (used.get(a.id) ?? 0) - (used.get(b.id) ?? 0);
+          if (reuse !== 0) return reuse > 0 ? b : a;
+          return deficit(b.domain) > deficit(a.domain) ? b : a;
+        });
+        picked[k].push(best);
+        count.set(best.domain, (count.get(best.domain) ?? 0) + 1);
+      });
+    }
+    for (const q of picked.flat()) used.set(q.id, (used.get(q.id) ?? 0) + 1);
+    return picked.flatMap((group, k) => shuffle(group, seeded(7 * (n + 1) + k)));
+  });
+}
+
+/** Simulacro al azar: escenarios al azar y sus preguntas, agrupadas por escenario. */
+export function buildExam(qs: Question[], rand: () => number = Math.random, scenarios = EXAM.scenarios, perScenario = EXAM.perScenario): Question[] {
+  const settings = shuffle(Object.keys(SETTINGS) as Setting[], rand)
+    .filter((s) => qs.filter((q) => q.setting === s).length >= perScenario)
+    .slice(0, scenarios);
+  return settings.flatMap((s) => shuffle(qs.filter((q) => q.setting === s), rand).slice(0, perScenario));
+}
+
+/** Simulacro a medias: lo justo para retomarlo donde se dejó. */
+export type ExamDraft = {
+  label: string;
+  ids: string[];
+  orders: number[][]; // orden en que se muestran las opciones de cada pregunta
+  picked: (number | null)[]; // índice original elegido
+  i: number;
+  elapsed: number; // segundos consumidos
+  limit: number; // segundos totales
+};
+
+/** Nota de un simulacro. `picked` es el índice original elegido o null si se quedó sin contestar. */
+export function examResult(items: { q: Question; picked: number | null }[], day: string, secs: number, label = 'quick'): ExamResult {
+  const byDomain: ExamResult['byDomain'] = {};
+  let right = 0;
+  for (const { q, picked } of items) {
+    const ok = picked === q.answer;
+    if (ok) right++;
+    const [r, t] = byDomain[q.domain] ?? [0, 0];
+    byDomain[q.domain] = [r + (ok ? 1 : 0), t + 1];
+  }
+  return { label, day, right, total: items.length, secs, byDomain };
+}
+
+/** Mejor nota (de 0 a 1) de un simulacro concreto, o null si no se ha hecho. */
+export function bestScore(p: Progress, label: string): number | null {
+  const mine = p.exams.filter((e) => e.label === label);
+  return mine.length ? Math.max(...mine.map((e) => e.right / e.total)) : null;
 }

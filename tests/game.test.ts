@@ -3,19 +3,32 @@ import assert from 'node:assert/strict';
 import {
   GOAL,
   XP,
+  EXAM,
+  FIXED_EXAMS,
   addDays,
   answer,
+  bestScore,
+  buildExam,
   buildSession,
   daysBetween,
+  deckDue,
+  deckSession,
   dueCount,
+  examResult,
+  fixedExams,
   fresh,
+  heatmap,
   levelOf,
   liveStreak,
   mastery,
+  readLesson,
   readiness,
+  seeded,
   review,
+  reviewCard,
   sessionBonus,
   shuffle,
+  todo,
   type Progress,
   type Question,
 } from '../src/game.ts';
@@ -23,11 +36,6 @@ import { plan } from '../src/remind.ts';
 
 const HOY = '2026-10-11';
 
-// Generador repetible para que las rondas sean deterministas en los tests.
-function seeded(seed: number) {
-  let s = seed;
-  return () => ((s = (s * 1103515245 + 12345) % 2 ** 31) / 2 ** 31);
-}
 
 const q = (id: string, domain: Question['domain']): Question => ({
   id,
@@ -190,4 +198,126 @@ test('recordatorios: racha en peligro y nada en el pasado', () => {
   assert.equal(r[0].title, '⚠️ Your 6-day streak ends at midnight');
   assert.equal(r[0].body, '3 questions keep the flame alive.');
   assert.deepEqual(plan([], { ...p, reminder: { ...p.reminder, on: false } }, night), []);
+});
+
+test('una lección da XP solo la primera vez', () => {
+  const first = readLesson(fresh(HOY), '1.4', HOY);
+  assert.equal(first.gained, XP.lesson);
+  assert.equal(first.progress.lessons['1.4'], HOY);
+  const again = readLesson(first.progress, '1.4', '2026-10-12');
+  assert.equal(again.gained, 0);
+  assert.equal(again.progress.lessons['1.4'], HOY);
+});
+
+test('fichas: sabérsela sube de caja, no sabérsela vuelve mañana', () => {
+  const ok = reviewCard(fresh(HOY), 'f-1.1-x', true, HOY);
+  assert.equal(ok.gained, XP.knew);
+  assert.equal(ok.progress.cards['f-1.1-x'].box, 2);
+  const miss = reviewCard(ok.progress, 'f-1.1-x', false, HOY);
+  assert.equal(miss.gained, XP.again);
+  assert.equal(miss.progress.cards['f-1.1-x'].due, '2026-10-12');
+});
+
+test('el mazo empieza por las fichas que tocan y no mezcla preguntas', () => {
+  const deck = ['f1', 'f2', 'f3', 'f4'].map((id) => ({ id }));
+  const p = fresh(HOY);
+  p.cards = {
+    f1: { box: 3, due: '2026-10-20', seen: 2, right: 2 },
+    f2: { box: 1, due: HOY, seen: 1, right: 0 },
+    'a-refund-cap': { box: 1, due: HOY, seen: 1, right: 0 },
+  };
+  assert.equal(deckDue(deck, p, HOY), 1);
+  const two = deckSession(deck, p, HOY, 2, seeded(5)).map((c) => c.id);
+  assert.ok(two.includes('f2'));
+  assert.ok(two.includes('f3') || two.includes('f4'));
+  const all = deckSession(deck, p, HOY, 10, seeded(5)).map((c) => c.id).sort();
+  assert.deepEqual(all, ['f1', 'f2', 'f3', 'f4']);
+});
+
+test('el historial cuenta preguntas y fichas por día', () => {
+  let p = answer(fresh(HOY), 'q1', true, 0, HOY).progress;
+  p = answer(p, 'q2', false, 0, HOY).progress;
+  p = reviewCard(p, 'f-1.1-x', true, HOY).progress;
+  p = answer(p, 'q3', true, 0, '2026-10-12').progress;
+  assert.deepEqual(p.history, { [HOY]: 3, '2026-10-12': 1 });
+});
+
+test('mapa de actividad: semanas de lunes a domingo, sin futuro', () => {
+  const p = { ...fresh(HOY), history: { '2026-10-05': 4, [HOY]: 7, '2026-09-28': 1 } };
+  const map = heatmap(p, HOY, 2); // HOY es domingo 11-oct
+  assert.equal(map.length, 2);
+  assert.deepEqual(map[1], [4, 0, 0, 0, 0, 0, 7]); // semana del 5 al 11
+  assert.deepEqual(map[0], [1, 0, 0, 0, 0, 0, 0]); // semana del 28-sep al 4-oct
+  // un miércoles: lunes y martes pasados, hoy cuenta, de jueves en adelante es futuro
+  assert.deepEqual(heatmap(p, '2026-10-07', 1)[0], [4, 0, 0, null, null, null, null]);
+});
+
+test('lista de tareas: ronda, siguiente lección sin leer y fichas pendientes', () => {
+  const p = fresh(HOY);
+  p.lessons = { '1.1': HOY };
+  p.cards = { f1: { box: 1, due: HOY, seen: 1, right: 0 } };
+  assert.deepEqual(todo(p, HOY, [{ ts: '1.1' }, { ts: '1.2' }], [{ id: 'f1' }, { id: 'f2' }]), [
+    { kind: 'round', done: false, left: GOAL },
+    { kind: 'lesson', ts: '1.2' },
+    { kind: 'cards', due: 1 },
+  ]);
+});
+
+test('el simulacro saca 4 escenarios con 5 preguntas cada uno, agrupadas', () => {
+  const settings = ['support', 'codegen', 'research', 'devprod', 'ci', 'extraction'] as const;
+  const qs = settings.flatMap((s) =>
+    Array.from({ length: 6 }, (_, i) => ({ ...q(`${s}-${i}`, 'agentic'), setting: s })),
+  );
+  const exam = buildExam(qs, seeded(9), EXAM.scenarios, 5);
+  assert.equal(exam.length, 20);
+  const order = exam.map((x) => x.setting);
+  const groups = order.filter((s, i) => i === 0 || s !== order[i - 1]);
+  assert.equal(groups.length, 4);
+  assert.equal(new Set(groups).size, 4);
+  assert.equal(new Set(exam.map((x) => x.id)).size, 20);
+});
+
+test('nota del simulacro por dominio, lo no contestado cuenta como fallo', () => {
+  const items = [
+    { q: q('a1', 'agentic'), picked: 0 },
+    { q: q('a2', 'agentic'), picked: 2 },
+    { q: q('t1', 'tools'), picked: null },
+  ];
+  assert.deepEqual(examResult(items, HOY, 300, 'exam 2'), {
+    label: 'exam 2',
+    day: HOY,
+    right: 1,
+    total: 3,
+    secs: 300,
+    byDomain: { agentic: [1, 2], tools: [0, 1] },
+  });
+});
+
+test('simulacros fijos: siempre iguales, 4 escenarios y lo mínimo repetido', () => {
+  const settings = ['support', 'codegen', 'research', 'devprod', 'ci', 'extraction'] as const;
+  const qs = settings.flatMap((s) => Array.from({ length: 42 }, (_, i) => ({ ...q(`${s}-${i}`, 'agentic'), setting: s })));
+  const exams = fixedExams(qs, EXAM.perScenario);
+  assert.equal(exams.length, FIXED_EXAMS.length);
+  assert.deepEqual(fixedExams(qs, EXAM.perScenario), exams); // repetible
+  exams.forEach((exam, n) => {
+    assert.equal(exam.length, 60);
+    assert.equal(new Set(exam.map((x) => x.id)).size, 60);
+    const order = exam.map((x) => x.setting);
+    assert.deepEqual(order.filter((s, i) => i === 0 || s !== order[i - 1]), FIXED_EXAMS[n]);
+  });
+  // solo se repite lo inevitable: un escenario que sale 3 veces pide 45 preguntas y hay 42
+  const all = exams.flat().map((x) => x.id);
+  const minimum = settings.reduce((n, s) => n + Math.max(0, FIXED_EXAMS.flat().filter((x) => x === s).length * 15 - 42), 0);
+  assert.equal(all.length - new Set(all).size, minimum);
+});
+
+test('mejor nota de cada simulacro', () => {
+  const p = fresh(HOY);
+  p.exams = [
+    { label: 'exam 1', day: HOY, right: 40, total: 60, secs: 1, byDomain: {} },
+    { label: 'exam 1', day: HOY, right: 45, total: 60, secs: 1, byDomain: {} },
+    { label: 'quick', day: HOY, right: 20, total: 20, secs: 1, byDomain: {} },
+  ];
+  assert.equal(bestScore(p, 'exam 1'), 0.75);
+  assert.equal(bestScore(p, 'exam 2'), null);
 });

@@ -1,26 +1,45 @@
 # CCA Quest
 
 App Android para preparar el examen **Claude Certified Architect – Foundations** (CCAR-F) de Anthropic
-jugando un rato cada día. En inglés, como el examen.
+jugando un rato cada día. Preguntas en inglés, como el examen; la teoría, también en español.
 
-- **Rondas de 5 preguntas de escenario**, al estilo de las de muestra de la guía oficial: cada una se
-  enmarca en uno de los 6 escenarios del examen y practica un *task statement* concreto (1.1 – 5.6).
+Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pestañas como comandos:
+
+- **`play`**: rondas de 5 preguntas de escenario al estilo de las de muestra de la guía oficial. Cada una
+  se enmarca en uno de los 6 escenarios del examen y practica un *task statement* concreto (1.1 – 5.6).
   Al responder, cada opción dice por qué es buena o mala, y queda una regla para recordar.
-- **Repetición espaciada**: las falladas vuelven al día siguiente; las acertadas a los 3, 7 y 16 días.
-- **Juego**: XP, combos por aciertos seguidos, niveles (de *Prompt Rookie* a *Certified Legend*),
-  racha diaria con meta de 5 preguntas, vibración y confeti.
+  En el inicio, una lista `todo` dice qué toca hoy (ronda, siguiente lección, fichas pendientes) y un
+  mapa de actividad de 16 semanas, estilo GitHub, enseña la constancia.
+- **Simulacros** (`$ cca-quest exam --mock`), como el examen real: 60 preguntas en 2 horas, 4 de los 6
+  escenarios con 15 preguntas cada uno y sin correcciones hasta entregar. Hay 4 fijos (Exam 1–4, para
+  repetirlos y ver si mejoras; cada uno respeta los pesos por dominio y entre ellos casi no se repiten
+  preguntas), uno aleatorio de 60 y uno rápido de 20. Se pueden pausar y retomar con el reloj parado. Al
+  final, nota por dominio, repaso de los fallos e historial de intentos.
+- **`learn`**: una lección por *task statement* (30), como una página de `man`: resumen, ideas clave,
+  trampas típicas del examen y un ejemplo. Desde cada una se practican sus preguntas.
+- **`cards`**: 140 fichas para girar y puntuarse uno mismo, con repetición espaciada.
+- **`grep`**: glosario de 68 términos del examen con buscador y filtro por dominio.
+- **`config`**: hora del recordatorio, idioma de la teoría y reinicio del progreso.
+
+La teoría (lecciones, fichas y glosario) está en inglés y en español de España, con un botón `[EN|ES]`.
+Las preguntas van siempre en inglés, como el examen.
+
+- **Repetición espaciada**: lo fallado vuelve al día siguiente; lo acertado a los 3, 7 y 16 días.
+- **Juego**: XP, combos, niveles (de `prompt_rookie` a `certified_legend`), racha diaria con meta de 5
+  preguntas, vibración y una lluvia de caracteres al subir de nivel o hacer una ronda perfecta.
 - **Avisos**: recordatorio diario a la hora elegida y un último aviso a las 22:00 si la racha está en
   peligro. Son notificaciones locales; desaparecen en cuanto se cumple la meta del día.
-- **Dominio por área**, ponderado con los pesos del examen (27/18/20/20/15).
 
-El banco ([src/questions.ts](src/questions.ts)) tiene 92 preguntas que cubren los 30 *task statements*
+El banco ([src/questions.ts](src/questions.ts)) tiene 253 preguntas (42 por escenario) que cubren los 30 *task statements*
 de la guía (v1.0, julio 2026). Las preguntas oficiales no son públicas: estas imitan su formato
 (evidencia de producción → "most effective…", 4 opciones con trampas plausibles) sin copiarlas.
+Lecciones, fichas y glosario están en [src/lessons.ts](src/lessons.ts), [src/flashcards.ts](src/flashcards.ts)
+y [src/glossary.ts](src/glossary.ts).
 
 ## Desarrollo
 
 ```bash
-npm test            # lógica del juego + calidad del banco (reparto por dominio, que la longitud no delate la buena…)
+npm test            # lógica del juego, calidad del banco y contenido completo en los dos idiomas
 npx tsc --noEmit
 npx expo lint
 npm run web         # probar en el navegador (sin avisos ni vibración)

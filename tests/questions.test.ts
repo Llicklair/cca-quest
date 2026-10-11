@@ -55,3 +55,29 @@ test('las opciones caben en una pantalla de móvil', () => {
     assert.ok(q.scenario.length <= 420, `${q.id}: escenario de ${q.scenario.length} caracteres`);
   }
 });
+
+test('cada simulacro fijo tiene 60 preguntas distintas y entre los cuatro casi no se repiten', async () => {
+  const { fixedExams, FIXED_EXAMS, EXAM } = await import('../src/game.ts');
+  const exams = fixedExams(QUESTIONS);
+  for (const exam of exams) {
+    assert.equal(exam.length, EXAM.scenarios * EXAM.perScenario);
+    assert.equal(new Set(exam.map((q) => q.id)).size, exam.length);
+  }
+  // solo lo inevitable: un escenario que sale en 3 simulacros pide 45 preguntas
+  const all = exams.flat().map((q) => q.id);
+  const minimum = Object.keys(SETTINGS).reduce((n, s) => {
+    const have = QUESTIONS.filter((q) => q.setting === s).length;
+    return n + Math.max(0, FIXED_EXAMS.flat().filter((x) => x === s).length * EXAM.perScenario - have);
+  }, 0);
+  assert.equal(all.length - new Set(all).size, minimum);
+});
+
+test('los simulacros fijos se acercan a los pesos de cada dominio', async () => {
+  const { fixedExams } = await import('../src/game.ts');
+  fixedExams(QUESTIONS).forEach((exam, n) => {
+    for (const d of DOMAINS) {
+      const share = (100 * exam.filter((q) => q.domain === d.id).length) / exam.length;
+      assert.ok(Math.abs(share - d.weight) <= 8, `exam ${n + 1}, ${d.id}: ${share.toFixed(0)}% frente a ${d.weight}%`);
+    }
+  });
+});
