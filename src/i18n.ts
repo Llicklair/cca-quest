@@ -148,7 +148,7 @@ const en = {
 
   // arranque
   boot: (q: number, l: number, c: number, t: number, lvl: number, xp: number, streak: number) => [
-    'cca-quest v1.2 · claude certified architect trainer',
+    'cca-quest v1.4 · claude certified architect trainer',
     `[ ok ] ${q} questions · 6 scenarios · 30 task statements`,
     `[ ok ] ${l} lessons · ${c} cards · ${t} terms`,
     `[ ok ] progress: lvl ${lvl} · ${xp} xp · streak ${streak}d`,
@@ -292,7 +292,7 @@ const es: Strings = {
   bestPct: (pct) => `mejor ${pct}%`,
 
   boot: (q, l, c, t, lvl, xp, streak) => [
-    'cca-quest v1.2 · entrenador del claude certified architect',
+    'cca-quest v1.4 · entrenador del claude certified architect',
     `[ ok ] ${q} preguntas · 6 escenarios · 30 task statements`,
     `[ ok ] ${l} lecciones · ${c} fichas · ${t} términos`,
     `[ ok ] progreso: nivel ${lvl} · ${xp} xp · racha ${streak}d`,

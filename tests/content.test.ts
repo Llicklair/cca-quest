@@ -48,6 +48,21 @@ test('fichas: ids únicos, de una tarea que existe y completas', () => {
   for (const ts of TS) assert.ok(FLASHCARDS.some((f) => f.ts === ts), `sin fichas para ${ts}`);
 });
 
+test('cada pregunta tiene su traducción completa y en el mismo orden', async () => {
+  const { QUESTIONS_ES } = await import('../src/questions-es.ts');
+  for (const q of QUESTIONS) {
+    const t = QUESTIONS_ES[q.id];
+    assert.ok(t, `${q.id}: sin traducir`);
+    assert.equal(t.options.length, q.options.length, q.id);
+    assert.equal(t.why.length, q.why.length, q.id);
+    for (const s of [t.scenario, t.ask, t.rule, ...t.options, ...t.why]) {
+      assert.ok(s.trim().length > 0, `${q.id}: texto vacío`);
+      assert.equal(s.split('`').length % 2, 1, `${q.id}: comillas invertidas sin cerrar`);
+    }
+  }
+  assert.equal(Object.keys(QUESTIONS_ES).length, QUESTIONS.length);
+});
+
 test('glosario: cada término una vez y de un dominio válido', () => {
   const keys = TERMS.map((t) => t.term.toLowerCase().replace(/[^a-z0-9]/g, ''));
   assert.equal(new Set(keys).size, keys.length);
