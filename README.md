@@ -7,7 +7,9 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
 
 - **`play`**: rondas de 5 preguntas de escenario al estilo de las de muestra de la guía oficial. Cada una
   se enmarca en uno de los 6 escenarios del examen y practica un *task statement* concreto (1.1 – 5.6).
-  Al responder, cada opción dice por qué es buena o mala, y queda una regla para recordar.
+  Al responder, cada opción dice por qué es buena o mala, y queda una regla para recordar. Al acabar
+  la ronda se ven las falladas (tu respuesta, la buena y el porqué), y en el inicio queda una lista de
+  todas las que fallaste la última vez para repasarlas cuando quieras.
   En el inicio, una lista `todo` dice qué toca hoy (ronda, siguiente lección, fichas pendientes) y un
   mapa de actividad de 16 semanas, estilo GitHub, enseña la constancia.
 - **Simulacros** (`$ cca-quest exam --mock`), como el examen real: 60 preguntas en 2 horas, 4 de los 6

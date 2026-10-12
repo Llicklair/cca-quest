@@ -11,6 +11,7 @@ import {
   levelOf,
   liveStreak,
   mastery,
+  misses,
   readiness,
   shuffle,
   todo,
@@ -23,6 +24,7 @@ import { FLASHCARDS } from '../flashcards.ts';
 import { LESSONS } from '../lessons.ts';
 import { QUESTIONS } from '../questions.ts';
 import { QUESTIONS_ES } from '../questions-es.ts';
+import { MissCard } from './misses.tsx';
 import { TERMS } from '../glossary.ts';
 import { STR } from '../i18n.ts';
 import { Banner, Bar, BounceIn, Btn, Cmd, Heatmap, Panel, Pop, Pulse, Rich, Tag, Txt, Typer } from '../term.tsx';
@@ -41,6 +43,7 @@ export type Round = {
   levelUp: Level | null;
   goalMet: boolean;
   label: string; // “daily” o la tarea que se practica
+  picks: number[]; // opción (índice original) elegida en cada pregunta, en orden
 };
 
 export function newRound(qs: Question[], label: string): Round {
@@ -56,6 +59,7 @@ export function newRound(qs: Question[], label: string): Round {
     levelUp: null,
     goalMet: false,
     label,
+    picks: [],
   };
 }
 
@@ -73,6 +77,7 @@ export function Status({
   onExam,
   onLesson,
   onCards,
+  onMisses,
 }: {
   p: Progress;
   update: number | null; // build nueva disponible, si la hay
@@ -81,6 +86,7 @@ export function Status({
   onExam: () => void;
   onLesson: (ts: string) => void;
   onCards: () => void;
+  onMisses: () => void;
 }) {
   const t = dayKey(new Date());
   const lvl = levelOf(p.xp);
@@ -90,7 +96,7 @@ export function Status({
   const due = dueCount(QUESTIONS, p, t);
   const unseen = QUESTIONS.filter((q) => !p.cards[q.id]).length;
   const atRisk = streak > 0 && !doneToday;
-  const tasks = todo(p, t, LESSONS, FLASHCARDS);
+  const tasks = todo(p, t, LESSONS, FLASHCARDS, misses(QUESTIONS, p).length);
   const lastExam = p.exams[0];
   const T = STR[p.lang];
 
@@ -159,8 +165,11 @@ export function Status({
                 : T.roundLeft(task.left)
               : task.kind === 'lesson'
                 ? `man ${task.ts} · ${lesson?.title[p.lang] ?? ''}`
-                : T.reviewCards(task.due);
-          const go = task.kind === 'round' ? onPlay : task.kind === 'lesson' ? () => onLesson(task.ts) : onCards;
+                : task.kind === 'cards'
+                  ? T.reviewCards(task.due)
+                  : T.missesTodo(task.count);
+          const go =
+            task.kind === 'round' ? onPlay : task.kind === 'lesson' ? () => onLesson(task.ts) : task.kind === 'cards' ? onCards : onMisses;
           return (
             <Pressable key={task.kind} onPress={go} disabled={done} style={({ pressed }) => [s.todo, pressed && { backgroundColor: c.greenBg }]}>
               <Txt bold color={done ? c.green : c.amber}>
@@ -408,11 +417,24 @@ export function Done({ round, p, onAgain, onHome }: { round: Round; p: Progress;
           </Panel>
         </BounceIn>
       )}
-      {!perfect && (
-        <Txt size={12} color={c.muted} style={{ marginTop: 8 }}>
-          {T.missedBack}
-        </Txt>
-      )}
+      {(() => {
+        const missed = round.items.flatMap((it, k) => (round.picks[k] !== undefined && round.picks[k] !== it.q.answer ? [{ q: it.q, picked: round.picks[k] }] : []));
+        return missed.length === 0 ? (
+          <Txt size={12} color={c.green} style={{ marginTop: 8 }}>
+            {T.noRoundMisses}
+          </Txt>
+        ) : (
+          <View style={{ gap: 10, marginTop: 8 }}>
+            <Cmd>{T.roundMisses(missed.length)}</Cmd>
+            {missed.map((m) => (
+              <MissCard key={m.q.id} q={m.q} picked={m.picked} lang={p.lang} T={T} />
+            ))}
+            <Txt size={12} color={c.muted}>
+              {T.missedBack}
+            </Txt>
+          </View>
+        );
+      })()}
       <View style={{ gap: 10, marginTop: 16 }}>
         <Btn kind="primary" label={T.anotherRound} onPress={onAgain} />
         <Btn label="$ cd ~" onPress={onHome} />

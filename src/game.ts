@@ -72,15 +72,16 @@ export function at(day: string, hour: number, minute: number): Date {
 export const INTERVALS = [0, 1, 3, 7, 16];
 export const MASTERED = 4;
 
-export type Card = { box: number; due: string; seen: number; right: number };
+export type Card = { box: number; due: string; seen: number; right: number; last?: number }; // last = opción elegida la última vez
 
-export function review(card: Card | undefined, correct: boolean, today: string): Card {
+export function review(card: Card | undefined, correct: boolean, today: string, picked?: number): Card {
   const box = !correct ? 1 : card ? Math.min(card.box + 1, MASTERED) : 2;
   return {
     box,
     due: addDays(today, INTERVALS[box]),
     seen: (card?.seen ?? 0) + 1,
     right: (card?.right ?? 0) + (correct ? 1 : 0),
+    ...(picked === undefined ? {} : { last: picked }),
   };
 }
 
@@ -210,7 +211,7 @@ export type Outcome = {
 };
 
 /** Apunta una respuesta: caja de la pregunta, XP con combo, meta del día y racha. */
-export function answer(p0: Progress, id: string, correct: boolean, combo: number, today: string): Outcome {
+export function answer(p0: Progress, id: string, correct: boolean, combo: number, today: string, picked?: number): Outcome {
   const p = rollDay(p0, today);
   const nextCombo = correct ? combo + 1 : 0;
   let gained = correct ? XP.right + (nextCombo >= 5 ? XP.combo5 : nextCombo >= 3 ? XP.combo3 : 0) : XP.wrong;
@@ -228,7 +229,7 @@ export function answer(p0: Progress, id: string, correct: boolean, combo: number
   const progress: Progress = {
     ...p,
     xp: p.xp + gained,
-    cards: { ...p.cards, [id]: review(p.cards[id], correct, today) },
+    cards: { ...p.cards, [id]: review(p.cards[id], correct, today, picked) },
     answered,
     correct: p.correct + (correct ? 1 : 0),
     bestCombo: Math.max(p.bestCombo, nextCombo),
@@ -376,15 +377,17 @@ export function dueCount(qs: Question[], p: Progress, day: string): number {
 export type Todo =
   | { kind: 'round'; done: boolean; left: number }
   | { kind: 'lesson'; ts: string }
-  | { kind: 'cards'; due: number };
+  | { kind: 'cards'; due: number }
+  | { kind: 'misses'; count: number };
 
 /** La lista de tareas del día: la ronda, la siguiente lección sin leer y las fichas pendientes. */
-export function todo(p: Progress, today: string, lessons: { ts: string }[], deck: { id: string }[]): Todo[] {
+export function todo(p: Progress, today: string, lessons: { ts: string }[], deck: { id: string }[], failed = 0): Todo[] {
   const list: Todo[] = [{ kind: 'round', done: goalDone(p, today), left: Math.max(0, GOAL - (p.day === today ? p.answered : 0)) }];
   const unread = lessons.find((l) => !p.lessons[l.ts]);
   if (unread) list.push({ kind: 'lesson', ts: unread.ts });
   const due = deckDue(deck, p, today);
   if (due > 0) list.push({ kind: 'cards', due });
+  if (failed > 0) list.push({ kind: 'misses', count: failed });
   return list;
 }
 
@@ -490,4 +493,13 @@ export function examResult(items: { q: Question; picked: number | null }[], day:
 export function bestScore(p: Progress, label: string): number | null {
   const mine = p.exams.filter((e) => e.label === label);
   return mine.length ? Math.max(...mine.map((e) => e.right / e.total)) : null;
+}
+
+// --- Fallos ---
+
+/** Las preguntas que se fallaron la última vez que salieron (caja 1), las más recientes primero. */
+export function misses(qs: Question[], p: Progress): Question[] {
+  return qs
+    .filter((q) => p.cards[q.id]?.box === 1)
+    .sort((a, b) => p.cards[b.id].due.localeCompare(p.cards[a.id].due) || a.id.localeCompare(b.id));
 }

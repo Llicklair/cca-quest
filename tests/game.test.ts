@@ -20,6 +20,7 @@ import {
   heatmap,
   levelOf,
   liveStreak,
+  misses,
   mastery,
   readLesson,
   readiness,
@@ -337,4 +338,18 @@ test('actualizaciones: solo avisa si la release es más nueva que la instalada',
   assert.deepEqual(compare(10, 'build-12'), { current: 10, latest: 12, available: true });
   assert.deepEqual(compare(12, 'build-12'), { current: 12, latest: 12, available: false });
   assert.equal(compare(12, 'latest'), null);
+});
+
+test('fallos: se guarda la opción elegida y se listan las falladas, recientes primero', () => {
+  const qs = [q('a1', 'agentic'), q('a2', 'agentic'), q('a3', 'agentic')];
+  let p = answer(fresh(HOY), 'a1', false, 0, HOY, 2).progress;
+  p = answer(p, 'a2', true, 0, HOY, 0).progress;
+  p = answer(p, 'a3', false, 0, '2026-10-12', 3).progress;
+  assert.equal(p.cards.a1.last, 2);
+  assert.equal(p.cards.a2.last, 0);
+  assert.deepEqual(misses(qs, p).map((x) => x.id), ['a3', 'a1']);
+  // acertarla después la saca de la lista
+  p = answer(p, 'a1', true, 0, '2026-10-13', 0).progress;
+  assert.deepEqual(misses(qs, p).map((x) => x.id), ['a3']);
+  assert.deepEqual(todo(p, '2026-10-13', [], [], misses(qs, p).length).at(-1), { kind: 'misses', count: 1 });
 });

@@ -17,6 +17,7 @@ import {
   type Question,
 } from '../game.ts';
 import { STR } from '../i18n.ts';
+import { MissCard } from './misses.tsx';
 import { QUESTIONS } from '../questions.ts';
 import { QUESTIONS_ES } from '../questions-es.ts';
 import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer } from '../term.tsx';
@@ -365,13 +366,7 @@ export function Exam({
         </Cmd>
       )}
       {wrong.map((x) => (
-        <Panel key={x.q.id} color={c.line}>
-          <Rich text={text(x.q).scenario.length > 150 ? `${text(x.q).scenario.slice(0, 150).trimEnd()}…` : text(x.q).scenario} size={12} color={c.muted} />
-          <Rich text={text(x.q).ask} bold color={c.green} style={{ marginTop: 4 }} />
-          <Rich text={`- ${x.picked === null ? T.noAnswer : text(x.q).options[x.picked]}`} size={13} color={c.red} style={{ marginTop: 6 }} />
-          <Rich text={`+ ${text(x.q).options[x.q.answer]}`} size={13} color={c.green} style={{ marginTop: 4 }} />
-          <Rich text={`└ ${text(x.q).why[x.q.answer]}`} size={12} color={c.muted} style={{ marginTop: 4 }} />
-        </Panel>
+        <MissCard key={x.q.id} q={x.q} picked={x.picked} lang={p.lang} T={T} />
       ))}
       <View style={{ gap: 10, marginTop: 6 }}>
         <Btn kind="amber" label={T.examList} onPress={() => setPhase({ kind: 'menu' })} />

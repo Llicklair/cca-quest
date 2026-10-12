@@ -108,7 +108,7 @@ export function Config({
         <Btn kind="danger" label={T.reset} onPress={onReset} style={{ marginTop: 6 }} />
       </View>
       <Txt size={11} color={c.muted} style={{ textAlign: 'center', marginTop: 10 }}>
-        cca-quest v1.4 · build {BUILD}
+        cca-quest v1.5 · build {BUILD}
       </Txt>
     </ScrollView>
   );

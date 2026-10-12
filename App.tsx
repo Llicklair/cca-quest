@@ -33,6 +33,7 @@ import { QUESTIONS } from './src/questions';
 import { Cards } from './src/screens/cards';
 import { Config } from './src/screens/config';
 import { Exam, type Slot } from './src/screens/exam';
+import { Misses } from './src/screens/misses';
 import { Glossary } from './src/screens/glossary';
 import { LessonList, LessonView } from './src/screens/learn';
 import { Done, RoundView, Status, newRound, type Round } from './src/screens/play';
@@ -41,7 +42,7 @@ import { Boot, LangToggle, Rain, Txt } from './src/term';
 import { c } from './src/theme';
 
 type Tab = 'play' | 'learn' | 'cards' | 'grep' | 'config';
-type PlayView = 'status' | 'round' | 'done' | 'exam';
+type PlayView = 'status' | 'round' | 'done' | 'exam' | 'misses';
 const TABS: Tab[] = ['play', 'learn', 'cards', 'grep', 'config'];
 
 const today = () => dayKey(new Date());
@@ -113,7 +114,7 @@ function Main() {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
       if (examRunning) return true;
       if (tab === 'learn' && lesson) setLesson(null);
-      else if (tab === 'play' && (view === 'done' || view === 'exam')) setView('status');
+      else if (tab === 'play' && (view === 'done' || view === 'exam' || view === 'misses')) setView('status');
       else if (tab !== 'play') setTab('play');
       else return false;
       return true;
@@ -154,7 +155,7 @@ function Main() {
     if (!round || round.picked !== null) return;
     const item = round.items[round.i];
     const ok = item.order[pos] === item.q.answer;
-    const o = answer(p, item.q.id, ok, round.combo, today());
+    const o = answer(p, item.q.id, ok, round.combo, today(), item.order[pos]);
     commit(o.progress);
     if (ok) feel.good();
     else feel.bad();
@@ -168,6 +169,7 @@ function Main() {
       gain: o.gained,
       levelUp: o.levelUp ?? round.levelUp,
       goalMet: round.goalMet || o.goalJustMet,
+      picks: [...round.picks, item.order[pos]],
     });
   };
 
@@ -219,7 +221,7 @@ function Main() {
   const finishExam = (slots: Slot[], secs: number, label: string) => {
     let next = p;
     // Lo no contestado cuenta como fallo en la nota, pero no da XP ni suma a la meta del día.
-    for (const { q, picked } of slots) if (picked !== null) next = answer(next, q.id, picked === q.answer, 0, today()).progress;
+    for (const { q, picked } of slots) if (picked !== null) next = answer(next, q.id, picked === q.answer, 0, today(), picked).progress;
     const result = examResult(slots, today(), secs, label);
     next = { ...next, exams: [result, ...next.exams].slice(0, 30), examDraft: null };
     commit(next);
@@ -260,7 +262,11 @@ function Main() {
               setTab('learn');
             }}
             onCards={() => setTab('cards')}
+            onMisses={() => setView('misses')}
           />
+        )}
+        {tab === 'play' && view === 'misses' && (
+          <Misses p={p} onPractice={(qs) => start(qs, 'misses')} onBack={() => setView('status')} />
         )}
         {tab === 'play' && view === 'exam' && (
           <Exam

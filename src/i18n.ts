@@ -105,6 +105,15 @@ const en = {
   notifOffTitle: 'Notifications are off',
   notifOffBody: 'Allow notifications for CCA Quest in Android settings.',
 
+  // fallos
+  roundMisses: (n: number) => `git diff --misses (${n})`,
+  noRoundMisses: '// no misses this round. clean run.',
+  missesTodo: (n: number) => `review ${plural(n, 'missed question', 'missed questions')}`,
+  missesCount: (n: number) => `${plural(n, 'question', 'questions')} you got wrong last time`,
+  noMissesLeft: 'nothing to review: every question you missed has since been answered right',
+  practiceMisses: (n: number) => `▶ PRACTICE MISSES (${n})`,
+  missesHint: 'a miss leaves this list once you get it right',
+
   // actualizaciones
   update: 'update',
   checking: 'checking github…',
@@ -148,7 +157,7 @@ const en = {
 
   // arranque
   boot: (q: number, l: number, c: number, t: number, lvl: number, xp: number, streak: number) => [
-    'cca-quest v1.4 · claude certified architect trainer',
+    'cca-quest v1.5 · claude certified architect trainer',
     `[ ok ] ${q} questions · 6 scenarios · 30 task statements`,
     `[ ok ] ${l} lessons · ${c} cards · ${t} terms`,
     `[ ok ] progress: lvl ${lvl} · ${xp} xp · streak ${streak}d`,
@@ -252,6 +261,14 @@ const es: Strings = {
   notifOffTitle: 'Las notificaciones están desactivadas',
   notifOffBody: 'Permite las notificaciones de CCA Quest en los ajustes de Android.',
 
+  roundMisses: (n) => `git diff --misses (${n})`,
+  noRoundMisses: '// ningún fallo en esta ronda. limpia.',
+  missesTodo: (n) => `repasar ${plural(n, 'pregunta fallada', 'preguntas falladas')}`,
+  missesCount: (n) => `${plural(n, 'pregunta', 'preguntas')} que fallaste la última vez`,
+  noMissesLeft: 'nada que repasar: ya acertaste todas las que habías fallado',
+  practiceMisses: (n) => `▶ PRACTICAR FALLOS (${n})`,
+  missesHint: 'una pregunta sale de esta lista cuando la aciertas',
+
   update: 'actualizar',
   checking: 'consultando github…',
   upToDate: (b) => `estás al día · build ${b}`,
@@ -292,7 +309,7 @@ const es: Strings = {
   bestPct: (pct) => `mejor ${pct}%`,
 
   boot: (q, l, c, t, lvl, xp, streak) => [
-    'cca-quest v1.4 · entrenador del claude certified architect',
+    'cca-quest v1.5 · entrenador del claude certified architect',
     `[ ok ] ${q} preguntas · 6 escenarios · 30 task statements`,
     `[ ok ] ${l} lecciones · ${c} fichas · ${t} términos`,
     `[ ok ] progreso: nivel ${lvl} · ${xp} xp · racha ${streak}d`,
