@@ -1,0 +1,128 @@
+# Compila la app de iPhone en cada push y la sube a TestFlight, sin Mac ni cuenta de Expo:
+# prebuild + xcodebuild en un runner de macOS, firmada con el certificado y el perfil de la cuenta
+# de Apple de la empresa (secretos del repo) y subida con la clave de la API de App Store Connect.
+name: iOS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ios
+  cancel-in-progress: false
+
+jobs:
+  testflight:
+    runs-on: macos-26
+    env:
+      TEAM_ID: 67266UR7NA
+      BUNDLE_ID: com.theagilemonkeys.ccaquest
+      PROFILE_NAME: CCA Quest App Store
+    steps:
+      - uses: actions/checkout@v4
+
+      # Expo SDK 57 pide Xcode 26.4 o posterior.
+      - run: sudo xcode-select -s /Applications/Xcode_26.6.app
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+
+      - name: Generar el proyecto iOS
+        run: npx expo prebuild -p ios
+
+      # El número de build de TestFlight tiene que crecer en cada subida: el de esta ejecución.
+      - name: Número de compilación
+        run: |
+          PLIST=$(find ios -maxdepth 2 -name Info.plist -not -path '*/Pods/*' | head -1)
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${{ github.run_number }}" "$PLIST"
+          echo "$PLIST: build ${{ github.run_number }}"
+
+      - name: Certificado y perfil
+        env:
+          P12: ${{ secrets.IOS_DIST_P12 }}
+          P12_PASSWORD: ${{ secrets.IOS_DIST_P12_PASSWORD }}
+          PROFILE: ${{ secrets.IOS_PROFILE }}
+        run: |
+          KC="$RUNNER_TEMP/build.keychain-db"
+          KC_PW=$(openssl rand -hex 16)
+          security create-keychain -p "$KC_PW" "$KC"
+          security set-keychain-settings -lut 21600 "$KC"
+          security unlock-keychain -p "$KC_PW" "$KC"
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/dist.p12"
+          security import "$RUNNER_TEMP/dist.p12" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KC"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KC_PW" "$KC" > /dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          echo "$PROFILE" | base64 --decode > "$RUNNER_TEMP/profile.mobileprovision"
+          UUID=$(security cms -D -i "$RUNNER_TEMP/profile.mobileprovision" | plutil -extract UUID raw -)
+          for d in "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
+            mkdir -p "$d"
+            cp "$RUNNER_TEMP/profile.mobileprovision" "$d/$UUID.mobileprovision"
+          done
+          security find-identity -v -p codesigning "$KC"
+
+      # Firma manual solo en el target de la app: si se pasa el perfil por línea de comandos,
+      # xcodebuild lo aplica también a los Pods y falla.
+      - name: Firma del target de la app
+        run: |
+          ruby -e 'require "xcodeproj"' 2>/dev/null || gem install xcodeproj --no-document
+          ruby -e '
+            require "xcodeproj"
+            proj = Xcodeproj::Project.open(Dir["ios/*.xcodeproj"].first)
+            app = proj.targets.find { |t| t.product_type == "com.apple.product-type.application" }
+            app.build_configurations.each do |c|
+              s = c.build_settings
+              s["CODE_SIGN_STYLE"] = "Manual"
+              s["DEVELOPMENT_TEAM"] = ENV["TEAM_ID"]
+              s["CODE_SIGN_IDENTITY"] = "Apple Distribution"
+              s["CODE_SIGN_IDENTITY[sdk=iphoneos*]"] = "Apple Distribution"
+              s["PROVISIONING_PROFILE_SPECIFIER"] = ENV["PROFILE_NAME"]
+            end
+            proj.save
+            puts "#{app.name}: firma manual con #{ENV["PROFILE_NAME"]}"
+          '
+
+      - name: Archivar
+        run: |
+          WS=$(ls -d ios/*.xcworkspace | head -1)
+          xcodebuild -quiet -workspace "$WS" -scheme "$(basename "$WS" .xcworkspace)" -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/app.xcarchive" archive
+
+      - name: Subir a TestFlight
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          echo "$ASC_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>Apple Distribution</string>
+            <key>provisioningProfiles</key>
+            <dict><key>$BUNDLE_ID</key><string>$PROFILE_NAME</string></dict>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/app.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates -authenticationKeyPath "$RUNNER_TEMP/AuthKey.p8" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Limpiar el llavero
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
+          rm -f "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/dist.p12"

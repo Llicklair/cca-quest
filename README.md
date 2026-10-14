@@ -68,16 +68,16 @@ las notificaciones la primera vez. Las versiones nuevas se instalan encima y con
 ## iPhone (TestFlight)
 
 En iPhone no se puede instalar desde un archivo: va por TestFlight, con la cuenta de Apple Developer
-de la empresa. Expo compila en la nube, así que no hace falta Mac. La primera vez, desde la raíz del repo:
+de la empresa (bundle ID `com.theagilemonkeys.ccaquest`). Lo compila GitHub Actions en un runner de
+macOS en cada push a `main` ([.github/workflows/ios.yml](.github/workflows/ios.yml)), sin Mac ni cuenta
+de Expo: `expo prebuild`, firma manual del target de la app y subida a TestFlight con la clave de la
+API de App Store Connect. El número de build es el de la ejecución del workflow.
 
-```bash
-npx eas-cli@latest login   # cuenta de Expo (gratis)
-npx testflight             # pide el Apple ID y el 2FA, crea los certificados, compila y sube a TestFlight
-```
-
-Las siguientes versiones son solo `npx testflight`: el número de build lo lleva EAS (`eas.json`). En
-App Store Connect, un grupo externo de TestFlight con enlace público permite repartirla con un enlace;
-Apple revisa la primera build de cada versión. Las builds de TestFlight caducan a los 90 días.
+Usa estos secretos del repo, creados con la clave de API: `ASC_KEY_P8`, `ASC_KEY_ID` y `ASC_ISSUER_ID`
+(la clave), y `IOS_DIST_P12`, `IOS_DIST_P12_PASSWORD` e `IOS_PROFILE` (el certificado "Apple
+Distribution" y el perfil "CCA Quest App Store", que caducan en octubre de 2027). Se reparte con un
+grupo externo de TestFlight con enlace público; Apple revisa la primera build de cada versión, y las
+builds caducan a los 90 días.
 
 En iPhone no aparece el aviso de versión nueva: eso es del APK de Android, y allí actualiza TestFlight.
 El icono de iOS es `assets/icon-ios.png`, el mismo sin canal alfa, porque Apple no acepta transparencia.
