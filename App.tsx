@@ -101,9 +101,10 @@ function Main() {
     });
   }, []);
 
-  // Al arrancar se mira si hay una APK más nueva en las releases del repo.
+  // Al arrancar se mira si hay una APK más nueva en las releases del repo. Solo en Android:
+  // en iPhone actualiza TestFlight y en la web siempre está la última.
   useEffect(() => {
-    checkUpdate().then(setUpdate);
+    if (Platform.OS === 'android') checkUpdate().then(setUpdate);
   }, []);
 
   // Al volver a la app puede ser otro día: se ponen a cero los contadores de hoy.

@@ -64,3 +64,20 @@ npm run apk          # descarga el APK de la última compilación a dist/
 
 Se instala abriendo el `.apk` en el móvil (permitir "instalar apps de origen desconocido") y aceptando
 las notificaciones la primera vez. Las versiones nuevas se instalan encima y conservan el progreso.
+
+## iPhone (TestFlight)
+
+En iPhone no se puede instalar desde un archivo: va por TestFlight, con la cuenta de Apple Developer
+de la empresa. Expo compila en la nube, así que no hace falta Mac. La primera vez, desde la raíz del repo:
+
+```bash
+npx eas-cli@latest login   # cuenta de Expo (gratis)
+npx testflight             # pide el Apple ID y el 2FA, crea los certificados, compila y sube a TestFlight
+```
+
+Las siguientes versiones son solo `npx testflight`: el número de build lo lleva EAS (`eas.json`). En
+App Store Connect, un grupo externo de TestFlight con enlace público permite repartirla con un enlace;
+Apple revisa la primera build de cada versión. Las builds de TestFlight caducan a los 90 días.
+
+En iPhone no aparece el aviso de versión nueva: eso es del APK de Android, y allí actualiza TestFlight.
+El icono de iOS es `assets/icon-ios.png`, el mismo sin canal alfa, porque Apple no acepta transparencia.

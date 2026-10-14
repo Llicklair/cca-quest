@@ -1,4 +1,4 @@
-import { Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { Progress } from '../game.ts';
 import { BUILD } from '../build.ts';
@@ -68,27 +68,29 @@ export function Config({
         <Btn small label="$ notify --test  (5s)" onPress={onTest} style={{ marginTop: 10 }} />
       </Panel>
 
-      <Panel title={T.update} color={update?.available ? c.amber : c.lineHi} titleColor={update?.available ? c.amber : c.muted}>
-        <Txt bold color={update?.available ? c.amber : c.text}>
-          {checking
-            ? T.checking
-            : update === undefined
-              ? `build ${BUILD}`
-              : update === null
-                ? T.offline
-                : update.available
-                  ? T.newBuild(update.current, update.latest)
-                  : T.upToDate(update.current)}
-        </Txt>
-        {update?.available ? (
-          <Btn kind="amber" label={T.download} onPress={() => Linking.openURL(APK_URL)} style={{ marginTop: 10 }} />
-        ) : (
-          <Btn small label={T.checkNow} onPress={onCheck} disabled={checking} style={{ marginTop: 10 }} />
-        )}
-        <Txt size={11} color={c.muted} style={{ marginTop: 6 }}>
-          {T.updateHint}
-        </Txt>
-      </Panel>
+      {Platform.OS === 'android' && (
+        <Panel title={T.update} color={update?.available ? c.amber : c.lineHi} titleColor={update?.available ? c.amber : c.muted}>
+          <Txt bold color={update?.available ? c.amber : c.text}>
+            {checking
+              ? T.checking
+              : update === undefined
+                ? `build ${BUILD}`
+                : update === null
+                  ? T.offline
+                  : update.available
+                    ? T.newBuild(update.current, update.latest)
+                    : T.upToDate(update.current)}
+          </Txt>
+          {update?.available ? (
+            <Btn kind="amber" label={T.download} onPress={() => Linking.openURL(APK_URL)} style={{ marginTop: 10 }} />
+          ) : (
+            <Btn small label={T.checkNow} onPress={onCheck} disabled={checking} style={{ marginTop: 10 }} />
+          )}
+          <Txt size={11} color={c.muted} style={{ marginTop: 6 }}>
+            {T.updateHint}
+          </Txt>
+        </Panel>
+      )}
 
       <Panel title={T.exam}>
         <Txt>{T.examFacts1}</Txt>
@@ -108,7 +110,7 @@ export function Config({
         <Btn kind="danger" label={T.reset} onPress={onReset} style={{ marginTop: 6 }} />
       </View>
       <Txt size={11} color={c.muted} style={{ textAlign: 'center', marginTop: 10 }}>
-        cca-quest v1.6 · build {BUILD}
+        cca-quest v1.6{Platform.OS === 'android' ? ` · build ${BUILD}` : ''}
       </Txt>
     </ScrollView>
   );
