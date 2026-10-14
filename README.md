@@ -17,6 +17,11 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
   repetirlos y ver si mejoras; cada uno respeta los pesos por dominio y entre ellos casi no se repiten
   preguntas), uno aleatorio de 60 y uno rápido de 20. Se pueden pausar y retomar con el reloj parado. Al
   final, nota por dominio, repaso de los fallos e historial de intentos.
+- **Simulacro nivel real**: 60 preguntas largas como las del examen (los 6 escenarios, 10 de cada uno).
+  Quien ya aprobó cuenta que el examen real no es más difícil en conceptos, sino más largo de leer: un
+  simulacro de 60 preguntas cortas se hace en una hora y el real deja 15 minutos de margen. Estas tienen
+  el doble de lectura, datos que no importan y dos opciones defendibles que solo desempata un detalle del
+  enunciado. No salen en las rondas diarias hasta que haces el simulacro; las que falles, sí vuelven.
 - **`learn`**: una lección por *task statement* (30), como una página de `man`: resumen, ideas clave,
   trampas típicas del examen y un ejemplo. Desde cada una se practican sus preguntas.
 - **`cards`**: 140 fichas para girar y puntuarse uno mismo, con repetición espaciada.
@@ -35,7 +40,8 @@ Las preguntas van siempre en inglés, como el examen.
 El banco ([src/questions.ts](src/questions.ts)) tiene 253 preguntas (42 por escenario) que cubren los 30 *task statements*
 de la guía (v1.0, julio 2026). Las preguntas oficiales no son públicas: estas imitan su formato
 (evidencia de producción → "most effective…", 4 opciones con trampas plausibles) sin copiarlas.
-Lecciones, fichas y glosario están en [src/lessons.ts](src/lessons.ts), [src/flashcards.ts](src/flashcards.ts)
+Las 60 de nivel real están aparte, en [src/questions-exam.ts](src/questions-exam.ts), para que los simulacros
+1–4 no cambien. Lecciones, fichas y glosario están en [src/lessons.ts](src/lessons.ts), [src/flashcards.ts](src/flashcards.ts)
 y [src/glossary.ts](src/glossary.ts).
 
 ## Desarrollo

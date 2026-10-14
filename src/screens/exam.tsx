@@ -10,6 +10,7 @@ import {
   bestScore,
   buildExam,
   fixedExams,
+  levelExam,
   shuffle,
   type ExamDraft,
   type ExamResult,
@@ -17,9 +18,9 @@ import {
   type Question,
 } from '../game.ts';
 import { STR } from '../i18n.ts';
-import { MissCard } from './misses.tsx';
+import { MissCard, inLang } from './misses.tsx';
 import { QUESTIONS } from '../questions.ts';
-import { QUESTIONS_ES } from '../questions-es.ts';
+import { EXAM_LEVEL } from '../questions-exam.ts';
 import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer } from '../term.tsx';
 import { c, domainColor } from '../theme.ts';
 
@@ -28,6 +29,9 @@ type Run = { label: string; slots: Slot[]; i: number; per: number; limit: number
 type Phase = { kind: 'menu' } | { kind: 'run' } | { kind: 'report'; result: ExamResult; slots: Slot[]; gained: number };
 
 const FIXED = fixedExams(QUESTIONS);
+const LEVEL = levelExam(EXAM_LEVEL);
+const perOf = (label: string) =>
+  label === 'quick' ? EXAM.quickPerScenario : label === 'exam-level' ? EXAM.levelPerScenario : EXAM.perScenario;
 const clock = (secs: number) => {
   const h = Math.floor(secs / 3600);
   const m = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
@@ -56,7 +60,7 @@ export function Exam({
   const runRef = useRef<Run | null>(null);
   const elapsedRef = useRef(0);
   const T = STR[p.lang];
-  const text = (q: Question) => (p.lang === 'es' && QUESTIONS_ES[q.id]) || q; // la pregunta en el idioma elegido
+  const text = (q: Question) => inLang(q, p.lang);
 
   const draftOf = (r: Run, secs: number): ExamDraft => ({
     label: r.label,
@@ -114,13 +118,12 @@ export function Exam({
   };
 
   const resume = (d: ExamDraft) => {
-    const byId = new Map(QUESTIONS.map((q) => [q.id, q]));
+    const byId = new Map([...QUESTIONS, ...EXAM_LEVEL].map((q) => [q.id, q]));
     const slots = d.ids.flatMap((id, k) => {
       const q = byId.get(id);
       return q ? [{ q, order: d.orders[k], picked: d.picked[k] }] : [];
     });
-    const per = d.label === 'quick' ? EXAM.quickPerScenario : EXAM.perScenario;
-    update({ label: d.label, slots, i: Math.min(d.i, slots.length - 1), per, limit: d.limit });
+    update({ label: d.label, slots, i: Math.min(d.i, slots.length - 1), per: perOf(d.label), limit: d.limit });
     elapsedRef.current = d.elapsed;
     setElapsed(d.elapsed);
     setPhase({ kind: 'run' });
@@ -193,6 +196,20 @@ export function Exam({
           />
         </Panel>
 
+        <Panel title={T.levelTitle(clock(LEVEL.length * EXAM.secsPerQuestion))} color={c.amber} titleColor={c.amber}>
+          <Txt size={12} color={c.muted} style={{ marginBottom: 6 }}>
+            {T.levelNote}
+          </Txt>
+          <ExamRow
+            title={T.examLabel('exam-level')}
+            sub={T.levelSub(LEVEL.length / EXAM.levelPerScenario, EXAM.levelPerScenario)}
+            best={bestScore(p, 'exam-level')}
+            bestLabel={T.bestPct}
+            disabled={Boolean(d) || LEVEL.length === 0}
+            onPress={() => begin('exam-level', LEVEL, EXAM.levelPerScenario)}
+          />
+        </Panel>
+
         <Panel title={T.quickTitle(clock(20 * EXAM.secsPerQuestion))}>
           <ExamRow
             title={T.examLabel('quick')}
@@ -221,7 +238,7 @@ export function Exam({
                   <Txt color={c.muted} style={{ width: 52 }}>
                     {e.day.slice(5)}
                   </Txt>
-                  <Txt style={{ width: 82 }}>{T.examLabel(e.label)}</Txt>
+                  <Txt style={{ width: 92 }}>{T.examLabel(e.label)}</Txt>
                   <Bar value={e.right / e.total} width={8} color={ok ? c.green : c.amber} />
                   <Txt bold color={ok ? c.green : c.amber}>
                     {String(score).padStart(3)}%

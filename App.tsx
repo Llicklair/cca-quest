@@ -18,6 +18,7 @@ import {
   readLesson,
   reviewCard,
   rollDay,
+  roundPool,
   sessionBonus,
   type Lang,
   type Progress,
@@ -30,6 +31,7 @@ import { LESSONS } from './src/lessons';
 import { ensurePermission, reschedule, testNotification } from './src/notify';
 import { checkUpdate, type UpdateInfo } from './src/update';
 import { QUESTIONS } from './src/questions';
+import { EXAM_LEVEL } from './src/questions-exam';
 import { Cards } from './src/screens/cards';
 import { Config } from './src/screens/config';
 import { Exam, type Slot } from './src/screens/exam';
@@ -46,6 +48,8 @@ type PlayView = 'status' | 'round' | 'done' | 'exam' | 'misses';
 const TABS: Tab[] = ['play', 'learn', 'cards', 'grep', 'config'];
 
 const today = () => dayKey(new Date());
+// Los avisos cuentan lo que toca repasar, también las preguntas nivel examen ya vistas.
+const remind = (p: Progress) => reschedule(roundPool(QUESTIONS, EXAM_LEVEL, p), p);
 
 function confirmAction(title: string, message: string, action: string, cancel: string, onConfirm: () => void) {
   if (Platform.OS === 'web') {
@@ -93,7 +97,7 @@ function Main() {
   useEffect(() => {
     load(today()).then((loaded) => {
       setP(loaded);
-      if (loaded.reminder.on) ensurePermission().then(() => reschedule(QUESTIONS, loaded));
+      if (loaded.reminder.on) ensurePermission().then(() => remind(loaded));
     });
   }, []);
 
@@ -141,7 +145,7 @@ function Main() {
     feel.big();
   };
 
-  const start = (qs: Question[] = QUESTIONS, label = 'daily') => {
+  const start = (qs: Question[] = roundPool(QUESTIONS, EXAM_LEVEL, p), label = 'daily') => {
     const picked = buildSession(qs, rollDay(p, today()), today(), Math.min(5, qs.length));
     feel.tap();
     setRound(newRound(picked, label));
@@ -182,7 +186,7 @@ function Main() {
     }
     const { progress, levelUp } = addXp(p, sessionBonus(round.right, round.items.length));
     commit(progress);
-    reschedule(QUESTIONS, progress);
+    remind(progress);
     const done = { ...round, xp: round.xp + progress.xp - p.xp, levelUp: levelUp ?? round.levelUp };
     setRound(done);
     setView('done');
@@ -193,7 +197,7 @@ function Main() {
 
   const quit = () =>
     confirmAction(T.leaveTitle, T.leaveBody, T.leave, T.cancel, () => {
-      reschedule(QUESTIONS, p);
+      remind(p);
       setView('status');
     });
 
@@ -214,7 +218,7 @@ function Main() {
   const setLang = (lang: Lang) => {
     const next = { ...p, lang };
     commit(next);
-    reschedule(QUESTIONS, next); // los avisos ya programados pasan al idioma nuevo
+    remind(next); // los avisos ya programados pasan al idioma nuevo
   };
 
   // El simulacro cuenta como práctica: cada respuesta pasa por el mismo sistema de cajas y XP.
@@ -225,7 +229,7 @@ function Main() {
     const result = examResult(slots, today(), secs, label);
     next = { ...next, exams: [result, ...next.exams].slice(0, 30), examDraft: null };
     commit(next);
-    reschedule(QUESTIONS, next);
+    remind(next);
     if (levelOf(next.xp).n > levelOf(p.xp).n || result.right / result.total >= EXAM.target) celebrate();
     return { result, gained: next.xp - p.xp };
   };
@@ -233,8 +237,8 @@ function Main() {
   const updateReminder = (change: Partial<Progress['reminder']>) => {
     const next = { ...p, reminder: { ...p.reminder, ...change } };
     commit(next);
-    if (next.reminder.on) ensurePermission().then(() => reschedule(QUESTIONS, next));
-    else reschedule(QUESTIONS, next);
+    if (next.reminder.on) ensurePermission().then(() => remind(next));
+    else remind(next);
   };
 
   const inRound = tab === 'play' && view === 'round';
@@ -330,7 +334,7 @@ function Main() {
                 await wipe();
                 const blank = await load(today());
                 commit(blank);
-                reschedule(QUESTIONS, blank);
+                remind(blank);
                 setRound(null);
                 setView('status');
                 setTab('play');

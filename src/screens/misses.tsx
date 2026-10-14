@@ -1,14 +1,17 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 
-import { misses, type Lang, type Progress, type Question } from '../game.ts';
+import { misses, roundPool, type Lang, type Progress, type Question } from '../game.ts';
 import { STR, type Strings } from '../i18n.ts';
 import { QUESTIONS } from '../questions.ts';
 import { QUESTIONS_ES } from '../questions-es.ts';
+import { EXAM_LEVEL } from '../questions-exam.ts';
+import { EXAM_LEVEL_ES } from '../questions-exam-es.ts';
 import { Btn, Cmd, Panel, Rich, Txt, Typer } from '../term.tsx';
 import { c, domainColor } from '../theme.ts';
 
 /** La pregunta en el idioma elegido (las opciones y explicaciones van en el mismo orden). */
-export const inLang = (q: Question, lang: Lang) => (lang === 'es' && QUESTIONS_ES[q.id]) || q;
+const ES = { ...QUESTIONS_ES, ...EXAM_LEVEL_ES };
+export const inLang = (q: Question, lang: Lang) => (lang === 'es' && ES[q.id]) || q;
 
 /** Una pregunta fallada: escenario, pregunta, lo que contestaste (rojo), la buena (verde) y por qué. */
 export function MissCard({ q, picked, lang, T }: { q: Question; picked: number | null | undefined; lang: Lang; T: Strings }) {
@@ -34,7 +37,7 @@ export function MissCard({ q, picked, lang, T }: { q: Question; picked: number |
 /** Todas las preguntas falladas la última vez que salieron, para repasarlas cuando quieras. */
 export function Misses({ p, onPractice, onBack }: { p: Progress; onPractice: (qs: Question[]) => void; onBack: () => void }) {
   const T = STR[p.lang];
-  const list = misses(QUESTIONS, p);
+  const list = misses(roundPool(QUESTIONS, EXAM_LEVEL, p), p);
   return (
     <ScrollView contentContainerStyle={s.page}>
       <Typer text="$ git log --failed" bold color={c.green} />

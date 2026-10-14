@@ -135,6 +135,10 @@ const en = {
   fullNote: '// like the real one: 4 of 6 scenarios, 15 questions each, no feedback until you submit. you can pause.',
   examLabel: (label: string) => label,
   randomSub: '4 random scenarios · new every time',
+  levelTitle: (clock: string) => `exam-level · 60 q · ${clock}`,
+  levelNote:
+    "// long questions like the real exam: twice the reading, two defensible options and a detail that decides. people who passed say the real one is longer to read, not harder. its questions don't show up in daily rounds until you've done this mock.",
+  levelSub: (scenarios: number, per: number) => `all ${scenarios} scenarios · ${per} questions each`,
   quickTitle: (clock: string) => `quick · 20 q · ${clock}`,
   quickSub: '4 random scenarios · 5 questions each',
   finishFirst: '// finish or discard the exam in progress to start another',
@@ -157,7 +161,7 @@ const en = {
 
   // arranque
   boot: (q: number, l: number, c: number, t: number, lvl: number, xp: number, streak: number) => [
-    'cca-quest v1.5 · claude certified architect trainer',
+    'cca-quest v1.6 · claude certified architect trainer',
     `[ ok ] ${q} questions · 6 scenarios · 30 task statements`,
     `[ ok ] ${l} lessons · ${c} cards · ${t} terms`,
     `[ ok ] progress: lvl ${lvl} · ${xp} xp · streak ${streak}d`,
@@ -286,8 +290,13 @@ const es: Strings = {
   discard: 'DESCARTAR',
   fullMock: (clock) => `simulacro completo · 60 preguntas · ${clock}`,
   fullNote: '// como el real: 4 de 6 escenarios, 15 preguntas de cada uno y sin corrección hasta entregar. puedes pausarlo.',
-  examLabel: (label) => label.replace('exam', 'examen').replace('random', 'aleatorio').replace('quick', 'rápido'),
+  examLabel: (label) =>
+    label === 'exam-level' ? 'nivel real' : label.replace('exam', 'examen').replace('random', 'aleatorio').replace('quick', 'rápido'),
   randomSub: '4 escenarios al azar · distinto cada vez',
+  levelTitle: (clock) => `nivel real · 60 preguntas · ${clock}`,
+  levelNote:
+    '// preguntas largas como las del examen: el doble de lectura, dos opciones defendibles y un detalle que decide. quien ya aprobó cuenta que el real no es más difícil, sino más largo de leer. sus preguntas no salen en las rondas hasta que hagas este simulacro.',
+  levelSub: (scenarios, per) => `los ${scenarios} escenarios · ${per} preguntas de cada uno`,
   quickTitle: (clock) => `rápido · 20 preguntas · ${clock}`,
   quickSub: '4 escenarios al azar · 5 preguntas de cada uno',
   finishFirst: '// termina o descarta el que tienes a medias para empezar otro',
@@ -309,7 +318,7 @@ const es: Strings = {
   bestPct: (pct) => `mejor ${pct}%`,
 
   boot: (q, l, c, t, lvl, xp, streak) => [
-    'cca-quest v1.5 · entrenador del claude certified architect',
+    'cca-quest v1.6 · entrenador del claude certified architect',
     `[ ok ] ${q} preguntas · 6 escenarios · 30 task statements`,
     `[ ok ] ${l} lecciones · ${c} fichas · ${t} términos`,
     `[ ok ] progreso: nivel ${lvl} · ${xp} xp · racha ${streak}d`,

@@ -407,7 +407,8 @@ export function heatmap(p: Progress, today: string, weeks = 12): (number | null)
 // --- Simulacros de examen ---
 
 // Como el real: 60 preguntas en 120 minutos, 4 escenarios de 6 con 15 preguntas cada uno.
-export const EXAM = { scenarios: 4, perScenario: 15, quickPerScenario: 5, secsPerQuestion: 120, target: 0.72 };
+// El de nivel examen tiene los 6 escenarios con 10 preguntas cada uno.
+export const EXAM = { scenarios: 4, perScenario: 15, quickPerScenario: 5, levelPerScenario: 10, secsPerQuestion: 120, target: 0.72 };
 
 // Los cuatro simulacros fijos, para poder repetirlos y comparar. Cada escenario sale en 2 o 3.
 export const FIXED_EXAMS: Setting[][] = [
@@ -463,6 +464,19 @@ export function buildExam(qs: Question[], rand: () => number = Math.random, scen
     .filter((s) => qs.filter((q) => q.setting === s).length >= perScenario)
     .slice(0, scenarios);
   return settings.flatMap((s) => shuffle(qs.filter((q) => q.setting === s), rand).slice(0, perScenario));
+}
+
+/** El simulacro nivel examen: todas sus preguntas, agrupadas por escenario y siempre en el mismo orden. */
+export function levelExam(qs: Question[]): Question[] {
+  return (Object.keys(SETTINGS) as Setting[]).flatMap((s, k) => shuffle(qs.filter((q) => q.setting === s), seeded(500 + k)));
+}
+
+/**
+ * Las preguntas que entran en las rondas y el repaso: el banco y, de las de nivel examen,
+ * solo las que ya salieron en su simulacro. Así no se gastan antes de hacerlo, y las falladas vuelven.
+ */
+export function roundPool(base: Question[], level: Question[], p: Progress): Question[] {
+  return [...base, ...level.filter((q) => p.cards[q.id])];
 }
 
 /** Simulacro a medias: lo justo para retomarlo donde se dejó. */

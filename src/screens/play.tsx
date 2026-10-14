@@ -13,6 +13,7 @@ import {
   mastery,
   misses,
   readiness,
+  roundPool,
   shuffle,
   todo,
   type Lang,
@@ -23,8 +24,8 @@ import {
 import { FLASHCARDS } from '../flashcards.ts';
 import { LESSONS } from '../lessons.ts';
 import { QUESTIONS } from '../questions.ts';
-import { QUESTIONS_ES } from '../questions-es.ts';
-import { MissCard } from './misses.tsx';
+import { EXAM_LEVEL } from '../questions-exam.ts';
+import { MissCard, inLang } from './misses.tsx';
 import { TERMS } from '../glossary.ts';
 import { STR } from '../i18n.ts';
 import { Banner, Bar, BounceIn, Btn, Cmd, Heatmap, Panel, Pop, Pulse, Rich, Tag, Txt, Typer } from '../term.tsx';
@@ -93,10 +94,11 @@ export function Status({
   const streak = liveStreak(p, t);
   const doneToday = goalDone(p, t);
   const todayCount = Math.min(GOAL, p.day === t ? p.answered : 0);
-  const due = dueCount(QUESTIONS, p, t);
+  const pool = roundPool(QUESTIONS, EXAM_LEVEL, p);
+  const due = dueCount(pool, p, t);
   const unseen = QUESTIONS.filter((q) => !p.cards[q.id]).length;
   const atRisk = streak > 0 && !doneToday;
-  const tasks = todo(p, t, LESSONS, FLASHCARDS, misses(QUESTIONS, p).length);
+  const tasks = todo(p, t, LESSONS, FLASHCARDS, misses(pool, p).length);
   const lastExam = p.exams[0];
   const T = STR[p.lang];
 
@@ -270,7 +272,7 @@ export function RoundView({
   const last = round.i + 1 === round.items.length;
   const hasLesson = q.ts && LESSONS.some((l) => l.ts === q.ts);
   const T = STR[lang];
-  const tx = (lang === 'es' && QUESTIONS_ES[q.id]) || q; // la pregunta en el idioma elegido
+  const tx = inLang(q, lang);
 
   return (
     <View style={s.fill}>
