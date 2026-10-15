@@ -1,11 +1,15 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { DOMAINS, mastery, type Lesson, type Progress } from '../game.ts';
+import { EXTRAS } from '../extras.ts';
+import { DOMAINS, mastery, type Lesson, type Progress, type Term } from '../game.ts';
+import { TERMS } from '../glossary.ts';
 import { STR } from '../i18n.ts';
 import { LESSONS } from '../lessons.ts';
 import { QUESTIONS } from '../questions.ts';
-import { Bar, Btn, Cmd, Rich, Txt, Typer } from '../term.tsx';
+import { Bar, Btn, Cmd, Panel, Rich, TermContext, Txt, Typer } from '../term.tsx';
 import { c, domainColor } from '../theme.ts';
+import { SeeIt, TryIt } from './extras.tsx';
 
 // --- Índice de lecciones ---
 
@@ -64,6 +68,10 @@ export function LessonList({
 
 // --- Una lección, como una página de man ---
 
+// Los términos del glosario se pueden tocar dentro de la lección para ver qué significan.
+const GLOSSARY = new Map(TERMS.map((t) => [t.term.toLowerCase(), t]));
+const termOf = (code: string) => GLOSSARY.get(code.replace(/^"|"$/g, '').toLowerCase());
+
 export function LessonView({
   lesson,
   p,
@@ -81,69 +89,109 @@ export function LessonView({
   const domain = DOMAINS.find((d) => lesson.ts.startsWith(`${d.n}.`))!;
   const nQs = QUESTIONS.filter((q) => q.ts === lesson.ts).length;
   const read = p.lessons[lesson.ts];
+  const extra = EXTRAS.find((e) => e.ts === lesson.ts);
   const T = STR[L];
+  const [term, setTerm] = useState<Term | null>(null);
+  const terms = { isTerm: (code: string) => Boolean(termOf(code)), open: (code: string) => setTerm(termOf(code) ?? null) };
 
   return (
-    <ScrollView contentContainerStyle={s.page}>
-      <View style={s.head}>
-        <Pressable onPress={onBack} hitSlop={12}>
-          <Txt bold color={c.muted}>
-            [‹ ls]
-          </Txt>
+    <View style={{ flex: 1 }}>
+      <TermContext.Provider value={terms}>
+        <ScrollView contentContainerStyle={s.page}>
+          <View style={s.head}>
+            <Pressable onPress={onBack} hitSlop={12}>
+              <Txt bold color={c.muted}>
+                [‹ ls]
+              </Txt>
+            </Pressable>
+          </View>
+          <Cmd>man {lesson.ts}</Cmd>
+
+          <Section name="NAME">
+            <Rich text={`${lesson.ts} — ${lesson.title[L]}`} bold color={domainColor[domain.id]} />
+            <Txt size={12} color={c.muted}>
+              d{domain.n} {domain.name.toLowerCase()}
+            </Txt>
+          </Section>
+
+          {extra && (
+            <Section name={T.sections.plain}>
+              <View style={s.plain}>
+                <Rich text={extra.plain[L]} size={15} />
+              </View>
+              <Txt size={11} color={c.muted}>
+                {T.termHint}
+              </Txt>
+            </Section>
+          )}
+
+          <Section name={T.sections.tldr}>
+            <Rich text={lesson.tldr[L]} size={15} />
+          </Section>
+
+          {extra && (
+            <Section name={T.sections.see}>
+              <SeeIt key={lesson.ts} v={extra.see} lang={L} T={T} />
+            </Section>
+          )}
+
+          <Section name={T.sections.ideas}>
+            {lesson.ideas.map((idea, i) => (
+              <View key={i} style={s.item}>
+                <Txt bold color={c.green}>
+                  ›
+                </Txt>
+                <Rich text={idea[L]} style={{ flex: 1 }} />
+              </View>
+            ))}
+          </Section>
+
+          <Section name={T.sections.traps}>
+            {lesson.traps.map((trap, i) => (
+              <View key={i} style={s.item}>
+                <Txt bold color={c.red}>
+                  ✗
+                </Txt>
+                <Rich text={trap[L]} style={{ flex: 1 }} />
+              </View>
+            ))}
+          </Section>
+
+          <Section name={T.sections.example}>
+            <View style={s.example}>
+              <Rich text={lesson.example[L]} color={c.text} />
+            </View>
+          </Section>
+
+          {extra && (
+            <Section name={T.sections.drill}>
+              <TryIt key={lesson.ts} d={extra.drill} lang={L} T={T} />
+            </Section>
+          )}
+
+          <View style={{ gap: 10, marginTop: 10 }}>
+            {read ? (
+              <Txt size={12} color={c.green}>
+                {T.readOn(read)}
+              </Txt>
+            ) : (
+              <Btn kind="amber" label={T.markRead} onPress={onRead} />
+            )}
+            {nQs > 0 && <Btn kind="primary" label={T.practice(lesson.ts, Math.min(nQs, 5))} onPress={onPractice} />}
+          </View>
+        </ScrollView>
+      </TermContext.Provider>
+      {term && (
+        <Pressable style={s.sheetBack} onPress={() => setTerm(null)}>
+          <Panel title={term.term} color={domainColor[term.domain]} titleColor={domainColor[term.domain]}>
+            <Rich text={term.def[L]} />
+            <Txt size={12} bold color={c.muted} style={{ marginTop: 10, textAlign: 'right' }}>
+              {T.close}
+            </Txt>
+          </Panel>
         </Pressable>
-      </View>
-      <Cmd>man {lesson.ts}</Cmd>
-
-      <Section name="NAME">
-        <Rich text={`${lesson.ts} — ${lesson.title[L]}`} bold color={domainColor[domain.id]} />
-        <Txt size={12} color={c.muted}>
-          d{domain.n} {domain.name.toLowerCase()}
-        </Txt>
-      </Section>
-
-      <Section name={T.sections.tldr}>
-        <Rich text={lesson.tldr[L]} size={15} />
-      </Section>
-
-      <Section name={T.sections.ideas}>
-        {lesson.ideas.map((idea, i) => (
-          <View key={i} style={s.item}>
-            <Txt bold color={c.green}>
-              ›
-            </Txt>
-            <Rich text={idea[L]} style={{ flex: 1 }} />
-          </View>
-        ))}
-      </Section>
-
-      <Section name={T.sections.traps}>
-        {lesson.traps.map((trap, i) => (
-          <View key={i} style={s.item}>
-            <Txt bold color={c.red}>
-              ✗
-            </Txt>
-            <Rich text={trap[L]} style={{ flex: 1 }} />
-          </View>
-        ))}
-      </Section>
-
-      <Section name={T.sections.example}>
-        <View style={s.example}>
-          <Rich text={lesson.example[L]} color={c.text} />
-        </View>
-      </Section>
-
-      <View style={{ gap: 10, marginTop: 10 }}>
-        {read ? (
-          <Txt size={12} color={c.green}>
-            {T.readOn(read)}
-          </Txt>
-        ) : (
-          <Btn kind="amber" label={T.markRead} onPress={onRead} />
-        )}
-        {nQs > 0 && <Btn kind="primary" label={T.practice(lesson.ts, Math.min(nQs, 5))} onPress={onPractice} />}
-      </View>
-    </ScrollView>
+      )}
+    </View>
   );
 }
 
@@ -164,4 +212,6 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: c.line },
   item: { flexDirection: 'row', gap: 10 },
   example: { borderLeftWidth: 2, borderLeftColor: c.lineHi, paddingLeft: 10 },
+  plain: { borderLeftWidth: 2, borderLeftColor: c.amber, paddingLeft: 10 },
+  sheetBack: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end', padding: 16 },
 });

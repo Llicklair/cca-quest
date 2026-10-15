@@ -1,6 +1,6 @@
 // Piezas de la interfaz de terminal: texto monoespaciado, paneles, barras ASCII,
 // botones, cursor, tecleo y la lluvia de caracteres para celebrar.
-import { useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import {
   Animated,
   Easing,
@@ -37,20 +37,31 @@ export function Txt({ children, color = c.text, size = 14, bold, style, onPress 
   );
 }
 
+/**
+ * Términos que se pueden tocar dentro de `Rich`: quien lo provee decide qué `código` es un
+ * término (normalmente, los del glosario) y qué pasa al tocarlo. Sin proveedor, no se toca nada.
+ */
+export const TermContext = createContext<{ isTerm: (code: string) => boolean; open: (code: string) => void } | null>(null);
+
 /** Texto con `código` entre comillas invertidas resaltado. */
 export function Rich({ text, color = c.text, size = 14, bold, style }: { text: string } & Omit<TxtProps, 'children'>) {
+  const terms = useContext(TermContext);
   const parts = text.split('`');
   return (
     <Txt color={color} size={size} bold={bold} style={style}>
-      {parts.map((part, i) =>
-        i % 2 === 1 ? (
-          <Text key={i} style={{ color: c.cyan, fontFamily: font.bold }}>
+      {parts.map((part, i) => {
+        if (i % 2 === 0) return part;
+        const tappable = terms?.isTerm(part);
+        return (
+          <Text
+            key={i}
+            onPress={tappable ? () => terms!.open(part) : undefined}
+            style={[{ color: c.cyan, fontFamily: font.bold }, tappable && s.term]}
+          >
             {part}
           </Text>
-        ) : (
-          part
-        ),
-      )}
+        );
+      })}
     </Txt>
   );
 }
@@ -322,6 +333,7 @@ export function Tag({ label, color = c.muted }: { label: string; color?: string 
 }
 
 const s = StyleSheet.create({
+  term: { textDecorationLine: 'underline', textDecorationStyle: 'dotted', textDecorationColor: c.cyan },
   panel: { borderWidth: 1, borderRadius: 4, padding: 14, paddingTop: 16, backgroundColor: c.panel, marginTop: 8 },
   panelTitle: { position: 'absolute', top: -10, left: 10, backgroundColor: c.bg },
   btn: { borderWidth: 1, borderRadius: 3, paddingVertical: 13, paddingHorizontal: 14, alignItems: 'center' },

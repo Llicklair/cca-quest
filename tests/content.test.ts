@@ -71,3 +71,41 @@ test('glosario: cada término una vez y de un dominio válido', () => {
     ok(t.def, t.term);
   }
 });
+
+test('cada lección tiene sus extras, completos y bien formados', async () => {
+  const { EXTRAS } = await import('../src/extras.ts');
+  assert.deepEqual(
+    EXTRAS.map((e) => e.ts),
+    TS,
+  );
+  for (const e of EXTRAS) {
+    const v = e.see;
+    ok(e.plain, `extra ${e.ts}`);
+    ok(v.title, `extra ${e.ts}`);
+    if (v.kind === 'flow') {
+      assert.ok(v.steps.length >= 3, `${e.ts}: diagrama de menos de 3 pasos`);
+      for (const step of v.steps) {
+        ok(step.label, `extra ${e.ts}`);
+        ok(step.note, `extra ${e.ts}`);
+        if (step.loop !== undefined) assert.ok(step.loop >= 0 && step.loop < v.steps.length, `${e.ts}: vuelta a un paso que no existe`);
+      }
+    } else {
+      for (const side of v.sides) {
+        ok(side.label, `extra ${e.ts}`);
+        ok(side.body, `extra ${e.ts}`);
+      }
+      ok(v.why, `extra ${e.ts}`);
+    }
+    const d = e.drill;
+    ok(d.title, `ejercicio ${e.ts}`);
+    assert.ok(d.buckets.length >= 2 && d.buckets.length <= 3, `${e.ts}: entre 2 y 3 casillas`);
+    for (const b of d.buckets) ok(b, `ejercicio ${e.ts}`);
+    assert.ok(d.items.length >= 3, `${e.ts}: pocos casos`);
+    for (const item of d.items) {
+      ok(item.text, `ejercicio ${e.ts}`);
+      ok(item.why, `ejercicio ${e.ts}`);
+      assert.ok(item.bucket >= 0 && item.bucket < d.buckets.length, `${e.ts}: casilla que no existe`);
+    }
+    for (const k of d.buckets.keys()) assert.ok(d.items.some((item) => item.bucket === k), `${e.ts}: una casilla sin casos`);
+  }
+});

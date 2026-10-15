@@ -98,6 +98,14 @@ export type QuestionText = { scenario: string; ask: string; options: string[]; w
 export type Bi = { en: string; es: string };
 
 export type Lesson = { ts: string; title: Bi; tldr: Bi; ideas: Bi[]; traps: Bi[]; example: Bi };
+
+// Lo que acompaña al texto de una lección: un diagrama para ver el mecanismo y un
+// ejercicio de clasificar casos para practicar la decisión, como en el examen.
+export type FlowStep = { label: Bi; note: Bi; loop?: number }; // loop: índice del paso al que se vuelve
+export type Side = { label: Bi; body: Bi; tone: 'bad' | 'good' | 'neutral' };
+export type Visual = { kind: 'flow'; title: Bi; steps: FlowStep[] } | { kind: 'compare'; title: Bi; sides: [Side, Side]; why: Bi };
+export type Drill = { title: Bi; buckets: Bi[]; items: { text: Bi; bucket: number; why: Bi }[] };
+export type LessonExtra = { ts: string; plain: Bi; see: Visual; drill: Drill }; // plain: la idea con una analogía cotidiana
 export type Flashcard = { id: string; ts: string; front: Bi; back: Bi };
 export type Term = { term: string; domain: Domain; def: Bi };
 

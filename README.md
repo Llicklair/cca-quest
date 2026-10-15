@@ -23,7 +23,11 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
   el doble de lectura, datos que no importan y dos opciones defendibles que solo desempata un detalle del
   enunciado. No salen en las rondas diarias hasta que haces el simulacro; las que falles, sí vuelven.
 - **`learn`**: una lección por *task statement* (30), como una página de `man`: resumen, ideas clave,
-  trampas típicas del examen y un ejemplo. Desde cada una se practican sus preguntas.
+  trampas típicas del examen y un ejemplo. Desde cada una se practican sus preguntas. Para que se entienda
+  a cualquier nivel, cada lección trae además una analogía cotidiana ("dicho sencillo"), un diagrama que
+  se recorre paso a paso o una comparación de dos enfoques con pestañas ("míralo"), y un ejercicio de
+  clasificar casos, de fácil a difícil, con corrección al momento ("pruébalo"). Los términos del glosario
+  se pueden tocar dentro de la lección para ver su definición.
 - **`cards`**: 140 fichas para girar y puntuarse uno mismo, con repetición espaciada.
 - **`grep`**: glosario de 68 términos del examen con buscador y filtro por dominio.
 - **`config`**: hora del recordatorio, idioma de la teoría y reinicio del progreso.
@@ -42,7 +46,7 @@ de la guía (v1.0, julio 2026). Las preguntas oficiales no son públicas: estas 
 (evidencia de producción → "most effective…", 4 opciones con trampas plausibles) sin copiarlas.
 Las 60 de nivel real están aparte, en [src/questions-exam.ts](src/questions-exam.ts), para que los simulacros
 1–4 no cambien. Lecciones, fichas y glosario están en [src/lessons.ts](src/lessons.ts), [src/flashcards.ts](src/flashcards.ts)
-y [src/glossary.ts](src/glossary.ts).
+y [src/glossary.ts](src/glossary.ts), y los extras de cada lección en [src/extras.ts](src/extras.ts).
 
 ## Desarrollo
 
