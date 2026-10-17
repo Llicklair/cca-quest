@@ -276,10 +276,24 @@ export function shuffle<T>(items: T[], rand: () => number = Math.random): T[] {
 }
 
 /**
- * Las preguntas de una ronda: primero las que tocan repaso (las más atrasadas y
- * flojas antes), siempre con al menos una nueva si quedan, elegida del dominio que
- * va más retrasado respecto a su peso en el examen. Si no hay bastantes, se
- * adelantan repasos de las cajas más bajas.
+ * Las preguntas que toca repasar, las más atrasadas y flojas antes. Mientras queden
+ * preguntas sin ver solo vuelven las falladas: las acertadas esperan a que se haya
+ * visto todo el banco, porque repetir lo que ya se sabe mientras quedan nuevas se
+ * siente como preguntas repetidas.
+ */
+function dueReviews(qs: Question[], p: Progress, day: string): Question[] {
+  const card = (q: Question) => p.cards[q.id];
+  const unseenLeft = qs.some((q) => !card(q));
+  return qs
+    .filter((q) => card(q) && card(q).due <= day && (!unseenLeft || card(q).box === 1))
+    .sort((a, b) => card(a).due.localeCompare(card(b).due) || card(a).box - card(b).box);
+}
+
+/**
+ * Las preguntas de una ronda: primero los repasos que tocan (ver dueReviews),
+ * siempre con al menos una nueva si quedan, elegida del dominio que va más
+ * retrasado respecto a su peso en el examen. Si no hay bastantes, se adelantan
+ * repasos de las cajas más bajas.
  */
 export function buildSession(
   qs: Question[],
@@ -289,9 +303,7 @@ export function buildSession(
   rand: () => number = Math.random,
 ): Question[] {
   const card = (q: Question) => p.cards[q.id];
-  const due = qs
-    .filter((q) => card(q) && card(q).due <= today)
-    .sort((a, b) => card(a).due.localeCompare(card(b).due) || card(a).box - card(b).box);
+  const due = dueReviews(qs, p, today);
   const unseen = qs.filter((q) => !card(q));
 
   const picked: Question[] = [];
@@ -376,8 +388,9 @@ export function readiness(qs: Question[], p: Progress): number {
   return DOMAINS.reduce((s, d) => s + (d.weight / 100) * mastery(qs, p, d.id), 0);
 }
 
+/** Los repasos que traerá la ronda: los mismos que elige buildSession. */
 export function dueCount(qs: Question[], p: Progress, day: string): number {
-  return qs.filter((q) => p.cards[q.id] && p.cards[q.id].due <= day).length;
+  return dueReviews(qs, p, day).length;
 }
 
 // --- Qué hacer ahora ---
@@ -466,12 +479,33 @@ export function fixedExams(qs: Question[], per = EXAM.perScenario): Question[][]
   });
 }
 
-/** Simulacro al azar: escenarios al azar y sus preguntas, agrupadas por escenario. */
-export function buildExam(qs: Question[], rand: () => number = Math.random, scenarios = EXAM.scenarios, perScenario = EXAM.perScenario): Question[] {
+/**
+ * Simulacro al azar: escenarios al azar y sus preguntas, agrupadas por escenario. Con
+ * progreso, primero salen las nunca acertadas (sin ver o falladas la última vez) y
+ * luego las acertadas de caja más baja, para que un simulacro tras otro repita lo mínimo.
+ */
+export function buildExam(
+  qs: Question[],
+  rand: () => number = Math.random,
+  scenarios = EXAM.scenarios,
+  perScenario = EXAM.perScenario,
+  p?: Progress,
+): Question[] {
+  const rank = (q: Question) => {
+    const box = p?.cards[q.id]?.box ?? 0;
+    return box <= 1 ? 0 : box;
+  };
   const settings = shuffle(Object.keys(SETTINGS) as Setting[], rand)
     .filter((s) => qs.filter((q) => q.setting === s).length >= perScenario)
     .slice(0, scenarios);
-  return settings.flatMap((s) => shuffle(qs.filter((q) => q.setting === s), rand).slice(0, perScenario));
+  return settings.flatMap((s) =>
+    shuffle(
+      shuffle(qs.filter((q) => q.setting === s), rand)
+        .sort((a, b) => rank(a) - rank(b))
+        .slice(0, perScenario),
+      rand,
+    ),
+  );
 }
 
 /** El simulacro nivel examen: todas sus preguntas, agrupadas por escenario y siempre en el mismo orden. */

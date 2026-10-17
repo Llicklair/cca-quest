@@ -118,7 +118,22 @@ test('niveles', () => {
   assert.equal(sessionBonus(3, 5), XP.session);
 });
 
-test('la ronda empieza por lo que toca repasar y mete al menos una nueva', () => {
+test('la ronda empieza por las falladas que tocan y mete al menos una nueva', () => {
+  const qs = [q('a1', 'agentic'), q('a2', 'agentic'), q('a3', 'agentic'), q('p1', 'prompting'), q('x1', 'context'), q('x2', 'context')];
+  const p = fresh(HOY);
+  p.cards = {
+    a1: { box: 1, due: '2026-10-10', seen: 1, right: 0 },
+    a3: { box: 1, due: '2026-10-08', seen: 2, right: 1 },
+    p1: { box: 1, due: '2026-10-09', seen: 1, right: 0 },
+    x1: { box: 1, due: HOY, seen: 1, right: 0 },
+    x2: { box: 1, due: HOY, seen: 1, right: 0 },
+  };
+  const ids = buildSession(qs, p, HOY, 5, seeded(1)).map((x) => x.id).sort();
+  // 5 falladas pendientes: entran las 4 más atrasadas y queda hueco para la nueva
+  assert.deepEqual(ids, ['a1', 'a2', 'a3', 'p1', 'x1'].sort());
+});
+
+test('las acertadas no vuelven mientras queden preguntas sin ver', () => {
   const qs = [q('a1', 'agentic'), q('a2', 'agentic'), q('c1', 'claude-code'), q('p1', 'prompting'), q('t1', 'tools'), q('x1', 'context'), q('x2', 'context')];
   const p = fresh(HOY);
   p.cards = {
@@ -128,12 +143,17 @@ test('la ronda empieza por lo que toca repasar y mete al menos una nueva', () =>
     t1: { box: 3, due: HOY, seen: 2, right: 2 },
     x1: { box: 1, due: HOY, seen: 1, right: 0 },
   };
+  // c1 y t1 tocan, pero se acertaron y quedan dos nuevas: salen las falladas y las nuevas
+  assert.equal(dueCount(qs, p, HOY), 3);
   const ids = buildSession(qs, p, HOY, 5, seeded(1)).map((x) => x.id).sort();
-  // 5 pendientes: entran las 4 más atrasadas/flojas y queda hueco para una nueva
-  assert.equal(ids.length, 5);
-  assert.ok(ids.includes('p1') && ids.includes('a1') && ids.includes('x1') && ids.includes('c1'));
-  assert.ok(!ids.includes('t1'));
-  assert.ok(ids.includes('a2') || ids.includes('x2'));
+  assert.deepEqual(ids, ['a1', 'a2', 'p1', 'x1', 'x2']);
+
+  // Visto todo el banco, las acertadas vuelven cuando les toca
+  p.cards.a2 = { box: 2, due: '2026-10-14', seen: 1, right: 1 };
+  p.cards.x2 = { box: 2, due: '2026-10-14', seen: 1, right: 1 };
+  assert.equal(dueCount(qs, p, HOY), 5);
+  const later = buildSession(qs, p, HOY, 5, seeded(1)).map((x) => x.id).sort();
+  assert.deepEqual(later, ['a1', 'c1', 'p1', 't1', 'x1']);
 });
 
 test('las nuevas salen del dominio más retrasado respecto a su peso', () => {
@@ -169,7 +189,8 @@ test('dominio, preparación y pendientes', () => {
   assert.equal(mastery(qs, p), 0.5);
   assert.equal(readiness(qs, p).toFixed(2), '0.27');
   assert.equal(dueCount(qs, p, HOY), 0);
-  assert.equal(dueCount(qs, p, '2026-10-20'), 1);
+  assert.equal(dueCount(qs, p, '2026-10-20'), 0); // acertada y c1 sin ver: espera
+  assert.equal(dueCount([qs[0]], p, '2026-10-20'), 1);
 });
 
 test('recordatorios: hoy no avisa si ya se cumplió la meta', () => {
@@ -276,6 +297,22 @@ test('el simulacro saca 4 escenarios con 5 preguntas cada uno, agrupadas', () =>
   assert.equal(groups.length, 4);
   assert.equal(new Set(groups).size, 4);
   assert.equal(new Set(exam.map((x) => x.id)).size, 20);
+});
+
+test('el simulacro al azar deja para el final las ya acertadas', () => {
+  const settings = ['support', 'codegen', 'research', 'devprod', 'ci', 'extraction'] as const;
+  const qs = settings.flatMap((s) =>
+    Array.from({ length: 6 }, (_, i) => ({ ...q(`${s}-${i}`, 'agentic'), setting: s })),
+  );
+  const p = fresh(HOY);
+  // En cada escenario, 3 acertadas, 1 fallada y 2 sin ver
+  for (const s of settings) {
+    for (const i of [0, 1, 2]) p.cards[`${s}-${i}`] = { box: 2 + (i % 2), due: HOY, seen: 1, right: 1 };
+    p.cards[`${s}-3`] = { box: 1, due: HOY, seen: 1, right: 0 };
+  }
+  const exam = buildExam(qs, seeded(9), EXAM.scenarios, 3, p);
+  assert.equal(exam.length, 12);
+  assert.ok(exam.every((x) => !p.cards[x.id] || p.cards[x.id].box === 1));
 });
 
 test('nota del simulacro por dominio, lo no contestado cuenta como fallo', () => {

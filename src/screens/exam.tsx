@@ -192,7 +192,7 @@ export function Exam({
             best={bestScore(p, 'random')}
             bestLabel={T.bestPct}
             disabled={Boolean(d)}
-            onPress={() => begin('random', buildExam(QUESTIONS, Math.random, EXAM.scenarios, EXAM.perScenario), EXAM.perScenario)}
+            onPress={() => begin('random', buildExam(QUESTIONS, Math.random, EXAM.scenarios, EXAM.perScenario, p), EXAM.perScenario)}
           />
         </Panel>
 
@@ -217,7 +217,7 @@ export function Exam({
             best={bestScore(p, 'quick')}
             bestLabel={T.bestPct}
             disabled={Boolean(d)}
-            onPress={() => begin('quick', buildExam(QUESTIONS, Math.random, EXAM.scenarios, EXAM.quickPerScenario), EXAM.quickPerScenario)}
+            onPress={() => begin('quick', buildExam(QUESTIONS, Math.random, EXAM.scenarios, EXAM.quickPerScenario, p), EXAM.quickPerScenario)}
           />
         </Panel>
         {d && (

@@ -15,7 +15,8 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
 - **Simulacros** (`$ cca-quest exam --mock`), como el examen real: 60 preguntas en 2 horas, 4 de los 6
   escenarios con 15 preguntas cada uno y sin correcciones hasta entregar. Hay 4 fijos (Exam 1–4, para
   repetirlos y ver si mejoras; cada uno respeta los pesos por dominio y entre ellos casi no se repiten
-  preguntas), uno aleatorio de 60 y uno rápido de 20. Se pueden pausar y retomar con el reloj parado. Al
+  preguntas), uno aleatorio de 60 y uno rápido de 20 (estos dos sacan primero las que aún no has
+  acertado). Se pueden pausar y retomar con el reloj parado. Al
   final, nota por dominio, repaso de los fallos e historial de intentos.
 - **Simulacro nivel real**: 60 preguntas largas como las del examen (los 6 escenarios, 10 de cada uno).
   Quien ya aprobó cuenta que el examen real no es más difícil en conceptos, sino más largo de leer: un
@@ -35,7 +36,8 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
 La teoría (lecciones, fichas y glosario) está en inglés y en español de España, con un botón `[EN|ES]`.
 Las preguntas van siempre en inglés, como el examen.
 
-- **Repetición espaciada**: lo fallado vuelve al día siguiente; lo acertado a los 3, 7 y 16 días.
+- **Repetición espaciada**: lo fallado vuelve al día siguiente; lo acertado a los 3, 7 y 16 días, pero
+  solo cuando ya has visto todo el banco: mientras queden preguntas nuevas, las rondas no repiten aciertos.
 - **Juego**: XP, combos, niveles (de `prompt_rookie` a `certified_legend`), racha diaria con meta de 5
   preguntas, vibración y una lluvia de caracteres al subir de nivel o hacer una ronda perfecta.
 - **Avisos**: recordatorio diario a la hora elegida y un último aviso a las 22:00 si la racha está en
