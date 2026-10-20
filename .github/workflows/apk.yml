@@ -7,6 +7,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      sync_url:
+        description: 'Servidor de sincronización para una APK de prueba, p. ej. http://192.168.0.16:8787. Con él no se publica release.'
+        required: false
+        default: ''
 
 permissions:
   contents: write # para crear la release
@@ -43,11 +48,20 @@ jobs:
           npx expo prebuild -p android --no-install
           sed -i 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g/' android/gradle.properties
 
+      # Android bloquea http en las release: solo se permite para probar con el servidor de sincronización local.
+      - name: Permitir http (solo pruebas)
+        if: startsWith(inputs.sync_url, 'http://')
+        run: |
+          sed -i 's/<application /<application android:usesCleartextTraffic="true" /' android/app/src/main/AndroidManifest.xml
+          grep -q 'usesCleartextTraffic="true"' android/app/src/main/AndroidManifest.xml
+
       # Solo ARM (todos los móviles Android reales). Release firmado con la debug.keystore
       # de la plantilla, que es siempre la misma, así que cada versión se instala encima
       # de la anterior sin perder el progreso.
       - name: Compilar
         working-directory: android
+        env:
+          EXPO_PUBLIC_SYNC_URL: ${{ inputs.sync_url }} # vacío en los push: sin servidor no aparece la sincronización
         run: ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a --no-daemon
 
       - run: cp android/app/build/outputs/apk/release/app-release.apk CCAQuest.apk
@@ -57,7 +71,10 @@ jobs:
           name: CCAQuest
           path: CCAQuest.apk
 
+      # Una APK de prueba (otra rama o con servidor de pruebas) se queda en los artefactos: si fuera
+      # release, todas las apps instaladas avisarían de que hay versión nueva.
       - name: Publicar la release
+        if: github.ref == 'refs/heads/main' && !inputs.sync_url
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
