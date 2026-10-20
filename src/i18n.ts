@@ -137,7 +137,7 @@ const en = {
   // sincronizar con el PC
   syncTitle: 'sync',
   linkHintPc: '// open CCA Quest on your phone: config → sync → scan the QR. your progress shows up here.',
-  linkHintPhone: '// on the computer, open CCA Quest in the browser: config → sync. scan the QR it shows.',
+  linkHintPhone: '// on the computer, open llicklair.github.io/cca-quest → config → sync and scan the QR it shows.',
   linkShow: '▶ LINK A PHONE (QR)',
   linkScan: '▶ SCAN THE COMPUTER QR',
   linkWaiting: 'waiting for the phone to scan it…',
@@ -191,7 +191,7 @@ const en = {
 
   // arranque
   boot: (q: number, l: number, c: number, t: number, lvl: number, xp: number, streak: number) => [
-    'cca-quest v1.6 · claude certified architect trainer',
+    'cca-quest v1.8 · claude certified architect trainer',
     `[ ok ] ${q} questions · 6 scenarios · 30 task statements`,
     `[ ok ] ${l} lessons · ${c} cards · ${t} terms`,
     `[ ok ] progress: lvl ${lvl} · ${xp} xp · streak ${streak}d`,
@@ -324,7 +324,7 @@ const es: Strings = {
 
   syncTitle: 'sincronizar',
   linkHintPc: '// abre CCA Quest en el móvil: config → sincronizar → escanea el QR. tu progreso aparecerá aquí.',
-  linkHintPhone: '// en el ordenador, abre CCA Quest en el navegador: config → sincronizar. escanea el QR que sale.',
+  linkHintPhone: '// en el ordenador, abre llicklair.github.io/cca-quest → ajustes → sincronizar y escanea el QR que sale.',
   linkShow: '▶ VINCULAR UN MÓVIL (QR)',
   linkScan: '▶ ESCANEAR EL QR DEL PC',
   linkWaiting: 'esperando a que el móvil lo escanee…',
@@ -377,7 +377,7 @@ const es: Strings = {
   bestPct: (pct) => `mejor ${pct}%`,
 
   boot: (q, l, c, t, lvl, xp, streak) => [
-    'cca-quest v1.6 · entrenador del claude certified architect',
+    'cca-quest v1.8 · entrenador del claude certified architect',
     `[ ok ] ${q} preguntas · 6 escenarios · 30 task statements`,
     `[ ok ] ${l} lecciones · ${c} fichas · ${t} términos`,
     `[ ok ] progreso: nivel ${lvl} · ${xp} xp · racha ${streak}d`,

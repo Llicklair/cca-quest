@@ -1,0 +1,50 @@
+# Publica la versión web en GitHub Pages en cada push a main: es la que se abre en el PC para
+# seguir estudiando con el progreso del móvil (ajustes → sincronizar).
+# https://llicklair.github.io/cca-quest/
+name: Web
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # npm ci falla con el lock hecho en Windows (le faltan las opcionales @emnapi/* de Linux)
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+
+      # app.json pone baseUrl /cca-quest para que los recursos se pidan bajo esa ruta de Pages.
+      # .nojekyll: que Pages sirva tal cual las carpetas que empiezan por _ (_expo).
+      - name: Exportar la web
+        run: |
+          npx expo export -p web --output-dir dist
+          touch dist/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

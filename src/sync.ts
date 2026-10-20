@@ -3,9 +3,10 @@
 // su propio canal con una clave aleatoria de 128 bits que solo conocen sus dispositivos:
 // no hay cuentas y el servidor no permite listar canales.
 //
-// Servidor: un proyecto de Supabase (EXPO_PUBLIC_SYNC_URL y su clave pública EXPO_PUBLIC_SYNC_KEY)
-// con las funciones de supabase/sync.sql. Sin URL la sincronización no aparece.
-// `npm run sync-server` imita esas funciones en local.
+// Servidor: un proyecto gratuito de Supabase con las funciones de supabase/sync.sql. La URL y
+// la clave publicable van aquí porque están hechas para ir dentro de apps públicas: los datos los
+// protege la tabla con RLS. EXPO_PUBLIC_SYNC_URL y EXPO_PUBLIC_SYNC_KEY las cambian para probar,
+// por ejemplo con `npm run sync-server`, que imita esas funciones en local.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -14,10 +15,13 @@ import { AppState } from 'react-native';
 import { fresh, rollDay, type Progress } from './game.ts';
 import { merge, sameShared, shared, type Shared } from './merge.ts';
 
+const SUPABASE_URL = 'https://cthoeurgsdovuwogbnjd.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_v-_0vnGNd3Gnki5_bEOmJQ_bkW9yXCD';
+
+// `||` y no `??`: el workflow de la APK pasa la variable vacía cuando no se le da otra.
 // Vale con o sin /rest/v1 al final: es como sale copiada a veces del panel de Supabase.
-const BASE = (process.env.EXPO_PUBLIC_SYNC_URL ?? '').replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
-const KEY = process.env.EXPO_PUBLIC_SYNC_KEY ?? ''; // clave publicable: hecha para ir dentro de la app
-export const SYNC_ENABLED = BASE !== '';
+const BASE = (process.env.EXPO_PUBLIC_SYNC_URL || SUPABASE_URL).replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
+const KEY = process.env.EXPO_PUBLIC_SYNC_KEY || SUPABASE_KEY;
 
 const LINK_KEY = 'cca-quest:link';
 const POLL_MS = 15_000;

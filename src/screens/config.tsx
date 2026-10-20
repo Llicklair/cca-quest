@@ -4,7 +4,7 @@ import type { Progress } from '../game.ts';
 import { BUILD } from '../build.ts';
 import { STR } from '../i18n.ts';
 import { APK_URL, type UpdateInfo } from '../update.ts';
-import { SYNC_ENABLED, type useSync } from '../sync.ts';
+import type { useSync } from '../sync.ts';
 import { SyncPanel } from './link.tsx';
 import { Btn, Cmd, Panel, Txt, Typer } from '../term.tsx';
 import { c } from '../theme.ts';
@@ -42,7 +42,7 @@ export function Config({
     <ScrollView contentContainerStyle={s.page}>
       <Typer text="$ cca-quest config" bold color={c.green} />
 
-      {SYNC_ENABLED && <SyncPanel lang={p.lang} sync={sync} />}
+      <SyncPanel lang={p.lang} sync={sync} />
 
       <Panel title={T.reminders}>
         <View style={s.row}>
@@ -116,7 +116,7 @@ export function Config({
         <Btn kind="danger" label={T.reset} onPress={onReset} style={{ marginTop: 6 }} />
       </View>
       <Txt size={11} color={c.muted} style={{ textAlign: 'center', marginTop: 10 }}>
-        cca-quest v1.6{Platform.OS === 'android' ? ` · build ${BUILD}` : ''}
+        cca-quest v1.8{Platform.OS === 'android' ? ` · build ${BUILD}` : ''}
       </Txt>
     </ScrollView>
   );

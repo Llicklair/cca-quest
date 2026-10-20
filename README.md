@@ -61,27 +61,38 @@ npm run web         # probar en el navegador (sin avisos ni vibración)
 
 ## Sincronizar móvil y PC
 
-Como WhatsApp Web: en el PC, ajustes → sincronizar → vincular un móvil enseña un QR; el móvil lo
-escanea (o se teclea el código) y desde entonces los dos comparten el progreso. Sincroniza al abrir
-la app, al volver a ella, cada 15 s y a los 3 s de cada cambio. Se junta pregunta a pregunta, así que
-no se pierde nada aunque se estudie en los dos sin conexión; los avisos son de cada dispositivo.
+Como WhatsApp Web: en el PC se abre la versión web, **https://llicklair.github.io/cca-quest/**, y en
+ajustes → sincronizar → vincular un móvil enseña un QR; el móvil lo escanea (o se teclea el código) y
+desde entonces los dos comparten el progreso. Sincroniza al abrir la app, al volver a ella, cada 15 s
+y a los 3 s de cada cambio. Se junta pregunta a pregunta, así que no se pierde nada aunque se estudie
+en los dos sin conexión (la XP se queda con la mayor de las dos); los avisos son de cada dispositivo.
+Borrar el progreso también desvincula ese dispositivo, para que no vuelva al sincronizar.
 
 Cada persona tiene su propio canal con una clave aleatoria de 128 bits que solo conocen sus
 dispositivos: sin cuentas, y no se pueden listar canales. La lógica está en [src/sync.ts](src/sync.ts)
-y [src/merge.ts](src/merge.ts); sin `EXPO_PUBLIC_SYNC_URL` el panel no aparece.
+y [src/merge.ts](src/merge.ts).
 
 El servidor es un proyecto gratuito de Supabase con [supabase/sync.sql](supabase/sync.sql) pegado en
 el SQL Editor: una tabla con RLS y sin políticas, a la que solo se llega con tres funciones RPC que
-piden la clave exacta. La app lleva la URL y la clave publicable (pensada para ir en apps públicas):
+piden la clave exacta. La URL y la clave publicable están en [src/sync.ts](src/sync.ts): están
+hechas para ir dentro de apps públicas. Un proyecto gratuito se pausa tras 7 días sin uso; se
+reactiva desde el panel de Supabase sin perder datos.
+
+Para probar con otro servidor, `.env.local` (no se sube) cambia los dos valores. `npm run sync-server`
+imita las funciones de Supabase en local, en el puerto 8787:
 
 ```bash
-# .env.local (no se sube)
-EXPO_PUBLIC_SYNC_URL=https://<proyecto>.supabase.co
-EXPO_PUBLIC_SYNC_KEY=sb_publishable_...
+EXPO_PUBLIC_SYNC_URL=http://localhost:8787
 ```
 
-Para probar sin Supabase, `npm run sync-server` imita esas funciones en el puerto 8787
-(`EXPO_PUBLIC_SYNC_URL=http://localhost:8787`, sin clave).
+Una APK de prueba con otro servidor se lanza a mano con los parámetros `sync_url` y `sync_key` del
+workflow de la APK; así no se publica release.
+
+## Web
+
+La compila y publica GitHub Actions en GitHub Pages en cada push a `main`
+([.github/workflows/web.yml](.github/workflows/web.yml)). `experiments.baseUrl` en `app.json` hace
+que los recursos se pidan bajo `/cca-quest/`.
 
 ## Generar el APK
 

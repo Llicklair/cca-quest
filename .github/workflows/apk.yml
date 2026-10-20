@@ -65,7 +65,7 @@ jobs:
       - name: Compilar
         working-directory: android
         env:
-          EXPO_PUBLIC_SYNC_URL: ${{ inputs.sync_url }} # vacío en los push: sin servidor no aparece la sincronización
+          EXPO_PUBLIC_SYNC_URL: ${{ inputs.sync_url }} # vacío en los push: se usa el Supabase de src/sync.ts
           EXPO_PUBLIC_SYNC_KEY: ${{ inputs.sync_key }}
         run: ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a --no-daemon
 
