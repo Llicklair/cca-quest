@@ -37,7 +37,14 @@
           "defaultChannel": "reminders"
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "CCA Quest uses the camera to scan the QR code that links your computer.",
+          "recordAudioAndroid": false
+        }
+      ]
     ]
   }
 }

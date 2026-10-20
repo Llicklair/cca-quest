@@ -4,6 +4,8 @@ import type { Progress } from '../game.ts';
 import { BUILD } from '../build.ts';
 import { STR } from '../i18n.ts';
 import { APK_URL, type UpdateInfo } from '../update.ts';
+import { SYNC_ENABLED, type useSync } from '../sync.ts';
+import { SyncPanel } from './link.tsx';
 import { Btn, Cmd, Panel, Txt, Typer } from '../term.tsx';
 import { c } from '../theme.ts';
 
@@ -11,6 +13,7 @@ export const GUIDE_URL = 'https://anthropic-partners.skilljar.com/claude-certifi
 
 export function Config({
   p,
+  sync,
   onReminder,
   update,
   checking,
@@ -19,6 +22,7 @@ export function Config({
   onReset,
 }: {
   p: Progress;
+  sync: ReturnType<typeof useSync>;
   onReminder: (change: Partial<Progress['reminder']>) => void;
   update: UpdateInfo | null | undefined; // undefined = sin comprobar, null = sin conexión
   checking: boolean;
@@ -37,6 +41,8 @@ export function Config({
   return (
     <ScrollView contentContainerStyle={s.page}>
       <Typer text="$ cca-quest config" bold color={c.green} />
+
+      {SYNC_ENABLED && <SyncPanel lang={p.lang} sync={sync} />}
 
       <Panel title={T.reminders}>
         <View style={s.row}>

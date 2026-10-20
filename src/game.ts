@@ -125,6 +125,7 @@ export type Progress = {
   history: Record<string, number>; // día → preguntas y fichas contestadas (para el mapa de actividad)
   exams: ExamResult[]; // simulacros, el más reciente primero
   examDraft: ExamDraft | null; // simulacro a medias, para seguir otro rato
+  stamp: number; // hora (ms) del último cambio, para saber qué copia es la más reciente al sincronizar
 };
 
 export type ExamResult = {
@@ -153,6 +154,7 @@ export function fresh(today: string): Progress {
     history: {},
     exams: [],
     examDraft: null,
+    stamp: 0,
   };
 }
 

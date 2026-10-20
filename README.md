@@ -59,6 +59,25 @@ npx expo lint
 npm run web         # probar en el navegador (sin avisos ni vibración)
 ```
 
+## Sincronizar móvil y PC
+
+Como WhatsApp Web: en el PC, ajustes → sincronizar → vincular un móvil enseña un QR; el móvil lo
+escanea (o se teclea el código) y desde entonces los dos comparten el progreso. Sincroniza al abrir
+la app, al volver a ella, cada 15 s y a los 3 s de cada cambio. Se junta pregunta a pregunta, así que
+no se pierde nada aunque se estudie en los dos sin conexión; los avisos son de cada dispositivo.
+
+Cada persona tiene su propio canal con una clave aleatoria de 128 bits que solo conocen sus
+dispositivos: sin cuentas, y el servidor no deja listar canales. La lógica está en
+[src/sync.ts](src/sync.ts) y [src/merge.ts](src/merge.ts); sin `EXPO_PUBLIC_SYNC_URL` el panel no aparece.
+
+Para probarlo en local, con el móvil en la misma red que el PC:
+
+```bash
+npm run sync-server  # servidor de prueba en el puerto 8787; enseña la URL con la IP del PC
+echo EXPO_PUBLIC_SYNC_URL=http://<IP-del-PC>:8787 > .env.local
+npm run web          # en el PC: http://localhost:8081 · en el móvil: http://<IP-del-PC>:8081
+```
+
 ## Generar el APK
 
 Lo compila GitHub Actions en cada push a `main` ([.github/workflows/apk.yml](.github/workflows/apk.yml)),

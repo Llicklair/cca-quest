@@ -1,7 +1,7 @@
 import { JetBrainsMono_400Regular, JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
 import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState, BackHandler, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -40,6 +40,7 @@ import { Glossary } from './src/screens/glossary';
 import { LessonList, LessonView } from './src/screens/learn';
 import { Done, RoundView, Status, newRound, type Round } from './src/screens/play';
 import { load, save, wipe } from './src/storage';
+import { useSync } from './src/sync';
 import { Boot, LangToggle, Rain, Txt } from './src/term';
 import { c } from './src/theme';
 
@@ -86,6 +87,14 @@ function Main() {
   const [update, setUpdate] = useState<UpdateInfo | null | undefined>(undefined);
   const [checking, setChecking] = useState(false);
   const endBoot = useCallback(() => setBooted(true), []);
+  // El progreso más reciente, también para la sincronización, que trabaja fuera del render.
+  const latest = useRef<Progress | null>(null);
+  const applyRemote = useCallback((next: Progress) => {
+    latest.current = next;
+    setP(next);
+    save(next);
+  }, []);
+  const sync = useSync(() => latest.current, applyRemote, today);
   const bootLines = useMemo(() => {
     if (!p) return [];
     const lvl = levelOf(p.xp);
@@ -96,6 +105,7 @@ function Main() {
 
   useEffect(() => {
     load(today()).then((loaded) => {
+      latest.current = loaded;
       setP(loaded);
       if (loaded.reminder.on) ensurePermission().then(() => remind(loaded));
     });
@@ -110,7 +120,7 @@ function Main() {
   // Al volver a la app puede ser otro día: se ponen a cero los contadores de hoy.
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') setP((cur) => (cur ? rollDay(cur, today()) : cur));
+      if (state === 'active') setP((cur) => (cur ? (latest.current = rollDay(cur, today())) : cur));
     });
     return () => sub.remove();
   }, []);
@@ -127,10 +137,18 @@ function Main() {
     return () => sub.remove();
   }, [tab, view, lesson, examRunning]);
 
-  const commit = useCallback((next: Progress) => {
-    setP(next);
-    save(next);
-  }, []);
+  // Cada cambio lleva la hora para saber, al sincronizar, qué copia es la más reciente.
+  const { schedule } = sync;
+  const commit = useCallback(
+    (next: Progress) => {
+      const stamped = { ...next, stamp: Date.now() };
+      latest.current = stamped;
+      setP(stamped);
+      save(stamped);
+      schedule();
+    },
+    [schedule],
+  );
 
   if (!p || !fontsReady) return <View style={s.fill} />;
   if (!booted) {
@@ -278,7 +296,16 @@ function Main() {
             p={p}
             onFinish={finishExam}
             // Forma funcional: el cronómetro llama a esto desde un intervalo y no debe pisar progreso más reciente.
-            onSaveDraft={(examDraft) => setP((cur) => (cur ? (save({ ...cur, examDraft }), { ...cur, examDraft }) : cur))}
+            onSaveDraft={(examDraft) =>
+              setP((cur) => {
+                if (!cur) return cur;
+                const next = { ...cur, examDraft, stamp: Date.now() };
+                latest.current = next;
+                save(next);
+                schedule();
+                return next;
+              })
+            }
             onExit={() => setView('status')}
             onRunning={setExamRunning}
           />
@@ -317,6 +344,7 @@ function Main() {
         {tab === 'config' && (
           <Config
             p={p}
+            sync={sync}
             onReminder={updateReminder}
             update={update}
             checking={checking}
@@ -331,7 +359,9 @@ function Main() {
               if (!(await testNotification(p.lang))) Alert.alert(T.notifOffTitle, T.notifOffBody);
             }}
             onReset={() =>
-              confirmAction(T.resetTitle, T.resetBody, T.resetAction, T.cancel, async () => {
+              confirmAction(T.resetTitle, sync.channel ? `${T.resetBody} ${T.resetLinked}` : T.resetBody, T.resetAction, T.cancel, async () => {
+                // Se desvincula antes de borrar: si no, la siguiente sincronización traería el progreso de vuelta.
+                await sync.unlink();
                 await wipe();
                 const blank = await load(today());
                 commit(blank);
