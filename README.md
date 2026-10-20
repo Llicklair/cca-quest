@@ -67,16 +67,21 @@ la app, al volver a ella, cada 15 s y a los 3 s de cada cambio. Se junta pregunt
 no se pierde nada aunque se estudie en los dos sin conexión; los avisos son de cada dispositivo.
 
 Cada persona tiene su propio canal con una clave aleatoria de 128 bits que solo conocen sus
-dispositivos: sin cuentas, y el servidor no deja listar canales. La lógica está en
-[src/sync.ts](src/sync.ts) y [src/merge.ts](src/merge.ts); sin `EXPO_PUBLIC_SYNC_URL` el panel no aparece.
+dispositivos: sin cuentas, y no se pueden listar canales. La lógica está en [src/sync.ts](src/sync.ts)
+y [src/merge.ts](src/merge.ts); sin `EXPO_PUBLIC_SYNC_URL` el panel no aparece.
 
-Para probarlo en local, con el móvil en la misma red que el PC:
+El servidor es un proyecto gratuito de Supabase con [supabase/sync.sql](supabase/sync.sql) pegado en
+el SQL Editor: una tabla con RLS y sin políticas, a la que solo se llega con tres funciones RPC que
+piden la clave exacta. La app lleva la URL y la clave publicable (pensada para ir en apps públicas):
 
 ```bash
-npm run sync-server  # servidor de prueba en el puerto 8787; enseña la URL con la IP del PC
-echo EXPO_PUBLIC_SYNC_URL=http://<IP-del-PC>:8787 > .env.local
-npm run web          # en el PC: http://localhost:8081 · en el móvil: http://<IP-del-PC>:8081
+# .env.local (no se sube)
+EXPO_PUBLIC_SYNC_URL=https://<proyecto>.supabase.co
+EXPO_PUBLIC_SYNC_KEY=sb_publishable_...
 ```
+
+Para probar sin Supabase, `npm run sync-server` imita esas funciones en el puerto 8787
+(`EXPO_PUBLIC_SYNC_URL=http://localhost:8787`, sin clave).
 
 ## Generar el APK
 

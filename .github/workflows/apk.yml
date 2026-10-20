@@ -9,7 +9,11 @@ on:
   workflow_dispatch:
     inputs:
       sync_url:
-        description: 'Servidor de sincronización para una APK de prueba, p. ej. http://192.168.0.16:8787. Con él no se publica release.'
+        description: 'Servidor de sincronización para una APK de prueba (la URL del proyecto de Supabase). Con él no se publica release.'
+        required: false
+        default: ''
+      sync_key:
+        description: 'Clave publicable de ese proyecto de Supabase (sb_publishable_…).'
         required: false
         default: ''
 
@@ -62,6 +66,7 @@ jobs:
         working-directory: android
         env:
           EXPO_PUBLIC_SYNC_URL: ${{ inputs.sync_url }} # vacío en los push: sin servidor no aparece la sincronización
+          EXPO_PUBLIC_SYNC_KEY: ${{ inputs.sync_key }}
         run: ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a --no-daemon
 
       - run: cp android/app/build/outputs/apk/release/app-release.apk CCAQuest.apk

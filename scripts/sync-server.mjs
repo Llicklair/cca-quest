@@ -1,4 +1,5 @@
-// Servidor de sincronización para probar en local: un almacén clave → JSON.
+// Servidor de sincronización para probar en local. Imita las funciones RPC de Supabase de
+// supabase/sync.sql (kv_get, kv_put, kv_del), así la app usa el mismo código con los dos.
 //   npm run sync-server            (puerto 8787; otro con PORT=9000)
 // Escucha en toda la red local para que el móvil llegue por Wi-Fi, y guarda los datos en
 // .sync-data.json para no perderlos al reiniciarlo.
@@ -29,51 +30,54 @@ const expired = (key) => key.startsWith('p-') && store[key] && Date.now() - stor
 function send(res, status, body) {
   res.writeHead(status, {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, apikey',
     ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
   });
   res.end(body === undefined ? undefined : JSON.stringify(body));
 }
 
+function handle(fn, { key, value }) {
+  if (typeof key !== 'string' || !KEY.test(key)) return [400, { message: 'invalid key' }];
+  const short = key.slice(0, 8);
+  if (fn === 'kv_get') {
+    if (expired(key)) delete store[key];
+    console.log(`get ${short}… ${store[key] ? 'ok' : 'vacío'}`);
+    return [200, store[key] ? store[key].value : null];
+  }
+  if (fn === 'kv_put') {
+    store[key] = { at: Date.now(), value };
+    persist();
+    console.log(`put ${short}… ${JSON.stringify(value).length} B`);
+    return [204];
+  }
+  delete store[key];
+  persist();
+  console.log(`del ${short}…`);
+  return [204];
+}
+
 createServer((req, res) => {
   if (req.method === 'OPTIONS') return send(res, 204);
-  const key = decodeURIComponent((req.url ?? '').replace(/^\/kv\//, ''));
-  if (!req.url?.startsWith('/kv/') || !KEY.test(key)) return send(res, 404, { error: 'not found' });
-  const short = key.slice(0, 8);
-
-  if (req.method === 'GET') {
-    if (expired(key)) delete store[key];
-    console.log(`GET    ${short}… ${store[key] ? 'ok' : 'vacío'}`);
-    return store[key] ? send(res, 200, store[key].value) : send(res, 404, { error: 'not found' });
-  }
-  if (req.method === 'DELETE') {
-    delete store[key];
-    persist();
-    console.log(`DELETE ${short}…`);
-    return send(res, 204);
-  }
-  if (req.method === 'PUT') {
-    let size = 0;
-    const chunks = [];
-    req.on('data', (chunk) => {
-      size += chunk.length;
-      if (size > MAX_BODY) req.destroy();
-      else chunks.push(chunk);
-    });
-    req.on('end', () => {
-      try {
-        store[key] = { at: Date.now(), value: JSON.parse(Buffer.concat(chunks).toString('utf8')) };
-      } catch {
-        return send(res, 400, { error: 'invalid json' });
-      }
-      persist();
-      console.log(`PUT    ${short}… ${size} B`);
-      send(res, 204);
-    });
-    return;
-  }
-  send(res, 405, { error: 'method not allowed' });
+  const fn = (req.url ?? '').match(/^\/rest\/v1\/rpc\/(kv_get|kv_put|kv_del)$/)?.[1];
+  if (req.method !== 'POST' || !fn) return send(res, 404, { message: 'not found' });
+  let size = 0;
+  const chunks = [];
+  req.on('data', (chunk) => {
+    size += chunk.length;
+    if (size > MAX_BODY) req.destroy();
+    else chunks.push(chunk);
+  });
+  req.on('end', () => {
+    let args;
+    try {
+      args = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+    } catch {
+      return send(res, 400, { message: 'invalid json' });
+    }
+    const [status, body] = handle(fn, args ?? {});
+    send(res, status, body);
+  });
 }).listen(PORT, '0.0.0.0', () => {
   const ips = Object.values(networkInterfaces())
     .flat()

@@ -3,8 +3,9 @@
 // su propio canal con una clave aleatoria de 128 bits que solo conocen sus dispositivos:
 // no hay cuentas y el servidor no permite listar canales.
 //
-// Servidor: lo que diga EXPO_PUBLIC_SYNC_URL. Sin esa variable la sincronización no aparece.
-// Para probar en local: `npm run sync-server` y la URL del PC en `.env.local`.
+// Servidor: un proyecto de Supabase (EXPO_PUBLIC_SYNC_URL y su clave pública EXPO_PUBLIC_SYNC_KEY)
+// con las funciones de supabase/sync.sql. Sin URL la sincronización no aparece.
+// `npm run sync-server` imita esas funciones en local.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -13,7 +14,9 @@ import { AppState } from 'react-native';
 import { fresh, rollDay, type Progress } from './game.ts';
 import { merge, sameShared, shared, type Shared } from './merge.ts';
 
-const BASE = (process.env.EXPO_PUBLIC_SYNC_URL ?? '').replace(/\/+$/, '');
+// Vale con o sin /rest/v1 al final: es como sale copiada a veces del panel de Supabase.
+const BASE = (process.env.EXPO_PUBLIC_SYNC_URL ?? '').replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
+const KEY = process.env.EXPO_PUBLIC_SYNC_KEY ?? ''; // clave publicable: hecha para ir dentro de la app
 export const SYNC_ENABLED = BASE !== '';
 
 const LINK_KEY = 'cca-quest:link';
@@ -42,31 +45,36 @@ export function parseCode(input: string): string | null {
   return raw.length === 10 && [...raw].every((ch) => ALPHABET.includes(ch)) ? raw : null;
 }
 
-// --- Servidor: un almacén clave → JSON ---
+// --- Servidor: un almacén clave → JSON detrás de tres funciones RPC ---
 
-async function call(method: 'GET' | 'PUT' | 'DELETE', key: string, body?: unknown): Promise<unknown> {
+async function rpc(fn: 'kv_get' | 'kv_put' | 'kv_del', args: Record<string, unknown>): Promise<unknown> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 8_000);
   try {
-    const res = await fetch(`${BASE}/kv/${key}`, {
-      method,
+    const res = await fetch(`${BASE}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
       signal: ctrl.signal,
-      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      headers: { 'Content-Type': 'application/json', ...(KEY ? { apikey: KEY } : {}) },
+      body: JSON.stringify(args),
     });
-    if (method === 'GET' && res.status === 404) return null;
-    if (!res.ok) throw new Error(`sync ${method} ${res.status}`);
-    return method === 'GET' ? await res.json() : null;
+    if (!res.ok) throw new Error(`sync ${fn} ${res.status}`);
+    if (fn !== 'kv_get') return null;
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
   } finally {
     clearTimeout(timer);
   }
 }
 
+const get = (key: string) => rpc('kv_get', { key });
+const put = (key: string, value: unknown) => rpc('kv_put', { key, value });
+const del = (key: string) => rpc('kv_del', { key });
+
 /** El PC pregunta si el móvil ya dejó su canal en el código. */
 export async function pairedChannel(code: string): Promise<string | null> {
-  const got = (await call('GET', `p-${code}`)) as { channel?: string } | null;
+  const got = (await get(`p-${code}`)) as { channel?: string } | null;
   if (!got?.channel) return null;
-  call('DELETE', `p-${code}`).catch(() => {});
+  del(`p-${code}`).catch(() => {});
   return got.channel;
 }
 
@@ -106,7 +114,7 @@ export function useSync(current: () => Progress | null, apply: (p: Progress) => 
    * Solo trabaja con el canal vinculado, salvo `joining`, que estrena uno que aún no se ha guardado.
    */
   const exchange = useCallback(async (ch: string, joining = false) => {
-    const got = (await call('GET', `c-${ch}`)) as Partial<Shared> | null;
+    const got = (await get(`c-${ch}`)) as Partial<Shared> | null;
     const local = fns.current.current();
     // Si mientras tanto se desvinculó (por ejemplo, al borrar el progreso), no se toca nada.
     if (!local || (!joining && linked.current !== ch)) return;
@@ -114,7 +122,7 @@ export function useSync(current: () => Progress | null, apply: (p: Progress) => 
     const remote = got ? { ...shared(fresh(local.day)), ...got } : null;
     const merged = remote ? merge(local, remote) : local;
     if (!sameShared(shared(merged), shared(local))) fns.current.apply(rollDay(merged, fns.current.today()));
-    if (!remote || !sameShared(shared(merged), remote)) await call('PUT', `c-${ch}`, shared(merged));
+    if (!remote || !sameShared(shared(merged), remote)) await put(`c-${ch}`, shared(merged));
   }, []);
 
   const runOn = useCallback(
@@ -184,7 +192,7 @@ export function useSync(current: () => Progress | null, apply: (p: Progress) => 
     async (code: string) => {
       const ch = channel ?? newChannel();
       await exchange(ch, true);
-      await call('PUT', `p-${code}`, { channel: ch });
+      await put(`p-${code}`, { channel: ch });
       await save(ch);
       setStatus({ state: 'ok', at: new Date() });
     },
