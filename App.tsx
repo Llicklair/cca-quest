@@ -13,6 +13,7 @@ import {
   EXAM,
   dayKey,
   examResult,
+  isRight,
   levelOf,
   liveStreak,
   readLesson,
@@ -31,8 +32,7 @@ import { STR } from './src/i18n';
 import { LESSONS } from './src/lessons';
 import { ensurePermission, reschedule, testNotification } from './src/notify';
 import { checkUpdate, type UpdateInfo } from './src/update';
-import { QUESTIONS } from './src/questions';
-import { EXAM_LEVEL } from './src/questions-exam';
+import { BANK, LEVEL_BANK } from './src/bank';
 import { Cards } from './src/screens/cards';
 import { Config } from './src/screens/config';
 import { Exam, type Slot } from './src/screens/exam';
@@ -59,7 +59,7 @@ const quizLink = Platform.OS === 'web' && typeof window !== 'undefined' ? parseR
 
 const today = () => dayKey(new Date());
 // Los avisos cuentan lo que toca repasar, también las preguntas nivel examen ya vistas.
-const remind = (p: Progress) => reschedule(roundPool(QUESTIONS, EXAM_LEVEL, p), p);
+const remind = (p: Progress) => reschedule(roundPool(BANK, LEVEL_BANK, p), p);
 
 export default function App() {
   return (
@@ -97,7 +97,7 @@ function Main() {
   const bootLines = useMemo(() => {
     if (!p) return [];
     const lvl = levelOf(p.xp);
-    return STR[p.lang].boot(QUESTIONS.length, LESSONS.length, FLASHCARDS.length, TERMS.length, lvl.n, p.xp, liveStreak(p, today()));
+    return STR[p.lang].boot(BANK.length, LESSONS.length, FLASHCARDS.length, TERMS.length, lvl.n, p.xp, liveStreak(p, today()));
     // solo al arrancar: no hace falta rehacerlo cuando cambia el progreso
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p === null]);
@@ -171,7 +171,7 @@ function Main() {
     feel.big();
   };
 
-  const start = (qs: Question[] = roundPool(QUESTIONS, EXAM_LEVEL, p), label = 'daily') => {
+  const start = (qs: Question[] = roundPool(BANK, LEVEL_BANK, p), label = 'daily') => {
     const picked = buildSession(qs, rollDay(p, today()), today(), Math.min(5, qs.length));
     feel.tap();
     setRound(newRound(picked, label));
@@ -179,19 +179,20 @@ function Main() {
     setView('round');
   };
 
-  const practice = (ts: string) => start(QUESTIONS.filter((q) => q.ts === ts), `task ${ts}`);
+  const practice = (ts: string) => start(BANK.filter((q) => q.ts === ts), `task ${ts}`);
 
-  const pick = (pos: number) => {
+  // `chosen`: el índice original elegido, o la máscara de lo marcado en las de respuesta múltiple.
+  const pick = (chosen: number) => {
     if (!round || round.picked !== null) return;
     const item = round.items[round.i];
-    const ok = item.order[pos] === item.q.answer;
-    const o = answer(p, item.q.id, ok, round.combo, today(), item.order[pos]);
+    const ok = isRight(item.q, chosen);
+    const o = answer(p, item.q.id, ok, round.combo, today(), chosen);
     commit(o.progress);
     if (ok) feel.good();
     else feel.bad();
     setRound({
       ...round,
-      picked: pos,
+      picked: chosen,
       combo: o.combo,
       best: Math.max(round.best, o.combo),
       right: round.right + (ok ? 1 : 0),
@@ -199,7 +200,7 @@ function Main() {
       gain: o.gained,
       levelUp: o.levelUp ?? round.levelUp,
       goalMet: round.goalMet || o.goalJustMet,
-      picks: [...round.picks, item.order[pos]],
+      picks: [...round.picks, chosen],
     });
   };
 
@@ -254,7 +255,7 @@ function Main() {
   const finishExam = (slots: Slot[], secs: number, label: string) => {
     let next = p;
     // Lo no contestado cuenta como fallo en la nota, pero no da XP ni suma a la meta del día.
-    for (const { q, picked } of slots) if (picked !== null) next = answer(next, q.id, picked === q.answer, 0, today(), picked).progress;
+    for (const { q, picked } of slots) if (picked !== null) next = answer(next, q.id, isRight(q, picked), 0, today(), picked).progress;
     const result = examResult(slots, today(), secs, label);
     next = { ...next, exams: [result, ...next.exams].slice(0, 30), examDraft: null };
     commit(next);
@@ -340,9 +341,10 @@ function Main() {
         )}
         {tab === 'play' && view === 'round' && round && (
           <RoundView
+            key={round.i}
             round={round}
             lang={p.lang}
-            onPick={pick}
+            onAnswer={pick}
             onNext={next}
             onQuit={quit}
             onLesson={(ts) => {

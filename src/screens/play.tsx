@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import {
@@ -9,11 +10,16 @@ import {
   goalDone,
   handle,
   heatmap,
+  isMulti,
+  isRight,
   levelOf,
   liveStreak,
+  maskOf,
   mastery,
   misses,
+  pickedOf,
   readiness,
+  rightOf,
   roundPool,
   shuffle,
   todo,
@@ -25,8 +31,8 @@ import {
 } from '../game.ts';
 import { FLASHCARDS } from '../flashcards.ts';
 import { LESSONS } from '../lessons.ts';
+import { BANK, LEVEL_BANK } from '../bank.ts';
 import { QUESTIONS } from '../questions.ts';
-import { EXAM_LEVEL } from '../questions-exam.ts';
 import { AskClaude, MissCard, inLang } from './misses.tsx';
 import { RankPanels } from './rank.tsx';
 import { TERMS } from '../glossary.ts';
@@ -38,7 +44,7 @@ export type Item = { q: Question; order: number[] }; // order[pos] = índice ori
 export type Round = {
   items: Item[];
   i: number;
-  picked: number | null; // posición pulsada
+  picked: number | null; // lo elegido: índice original, o máscara en las de respuesta múltiple
   combo: number;
   best: number;
   right: number;
@@ -47,7 +53,7 @@ export type Round = {
   levelUp: Level | null;
   goalMet: boolean;
   label: string; // “daily” o la tarea que se practica
-  picks: number[]; // opción (índice original) elegida en cada pregunta, en orden
+  picks: number[]; // lo elegido en cada pregunta, en orden (índice original, o máscara en las de respuesta múltiple)
 };
 
 export function newRound(qs: Question[], label: string): Round {
@@ -100,9 +106,9 @@ export function Status({
   const streak = liveStreak(p, t);
   const doneToday = goalDone(p, t);
   const todayCount = Math.min(GOAL, p.day === t ? p.answered : 0);
-  const pool = roundPool(QUESTIONS, EXAM_LEVEL, p);
+  const pool = roundPool(BANK, LEVEL_BANK, p);
   const due = dueCount(pool, p, t);
-  const unseen = QUESTIONS.filter((q) => !p.cards[q.id]).length;
+  const unseen = BANK.filter((q) => !p.cards[q.id]).length;
   const atRisk = streak > 0 && !doneToday;
   const tasks = todo(p, t, LESSONS, FLASHCARDS, misses(pool, p).length);
   const lastExam = p.exams[0];
@@ -157,7 +163,7 @@ export function Status({
         <Txt color={c.muted}>
           {'> '}
           <Txt color={due > 0 ? c.amber : c.muted}>{T.dueWord(due)}</Txt>
-          {T.restLine(unseen, QUESTIONS.length)}
+          {T.restLine(unseen, BANK.length)}
         </Txt>
         <Btn kind="primary" label={doneToday ? T.bonusRound : T.startRound} onPress={onPlay} />
       </View>
@@ -252,7 +258,7 @@ export function Status({
       <RankPanels p={p} onProfile={onProfile} />
 
       <Txt size={11} color={c.muted} style={{ textAlign: 'center', marginTop: 4 }}>
-        {T.footer(QUESTIONS.length, LESSONS.length, FLASHCARDS.length, TERMS.length)}
+        {T.footer(BANK.length, LESSONS.length, FLASHCARDS.length, TERMS.length)}
       </Txt>
     </ScrollView>
   );
@@ -274,22 +280,30 @@ function Row({ k, children }: { k: string; children: React.ReactNode }) {
 export function RoundView({
   round,
   lang,
-  onPick,
+  onAnswer,
   onNext,
   onQuit,
   onLesson,
 }: {
   round: Round;
   lang: Lang;
-  onPick: (pos: number) => void;
+  onAnswer: (picked: number) => void; // índice original, o máscara en las de respuesta múltiple
   onNext: () => void;
   onQuit: () => void;
   onLesson: (ts: string) => void;
 }) {
   const { q, order } = round.items[round.i];
   const answered = round.picked !== null;
-  const correctPos = order.indexOf(q.answer);
-  const ok = round.picked === correctPos;
+  const multi = isMulti(q);
+  const rights = rightOf(q);
+  // En las de respuesta múltiple se marcan las opciones y luego se comprueba (App le pone key por pregunta).
+  const [marked, setMarked] = useState<number[]>([]);
+  const chosen = answered ? pickedOf(q, round.picked!) : marked;
+  const ok = answered && isRight(q, round.picked);
+  const tap = (orig: number) => {
+    if (!multi) onAnswer(orig);
+    else setMarked((cur) => (cur.includes(orig) ? cur.filter((x) => x !== orig) : [...cur, orig]));
+  };
   const dom = DOMAINS.find((d) => d.id === q.domain)!;
   const last = round.i + 1 === round.items.length;
   const hasLesson = q.ts && LESSONS.some((l) => l.ts === q.ts);
@@ -334,21 +348,23 @@ export function RoundView({
         <Txt bold size={15} color={c.green}>
           ? {tx.ask}
         </Txt>
+        {multi && <Tag label={T.selectN(rights.length)} color={c.cyan} />}
 
         <View style={{ gap: 8 }}>
           {order.map((orig, pos) => {
-            const right = pos === correctPos;
-            const mine = pos === round.picked;
-            const mark = !answered ? 'ABCD'[pos] : right ? '✓' : mine ? '✗' : 'ABCD'[pos];
-            const tone = !answered ? c.lineHi : right ? c.green : mine ? c.red : c.line;
+            const right = rights.includes(orig);
+            const mine = chosen.includes(orig);
+            const mark = !answered ? (mine ? '■' : 'ABCDE'[pos]) : right ? '✓' : mine ? '✗' : 'ABCDE'[pos];
+            const tone = !answered ? (mine ? c.cyan : c.lineHi) : right ? c.green : mine ? c.red : c.line;
             return (
               <Pressable
                 key={pos}
                 disabled={answered}
-                onPress={() => onPick(pos)}
+                onPress={() => tap(orig)}
                 style={({ pressed }) => [
                   s.opt,
                   { borderColor: tone },
+                  !answered && mine && { backgroundColor: c.greenBg },
                   answered && right && { backgroundColor: c.greenBg },
                   answered && mine && !right && { backgroundColor: c.redBg },
                   answered && !right && !mine && { opacity: 0.6 },
@@ -356,7 +372,7 @@ export function RoundView({
                 ]}
               >
                 <View style={s.optRow}>
-                  <Txt bold color={answered && right ? c.green : answered && mine ? c.red : c.muted}>
+                  <Txt bold color={answered && right ? c.green : answered && mine ? c.red : mine ? c.cyan : c.muted}>
                     [{mark}]
                   </Txt>
                   <Rich text={tx.options[orig]} style={{ flex: 1 }} />
@@ -368,6 +384,9 @@ export function RoundView({
             );
           })}
         </View>
+        {multi && !answered && (
+          <Btn kind="primary" label={T.checkPicks(marked.length, rights.length)} disabled={marked.length !== rights.length} onPress={() => onAnswer(maskOf(marked))} />
+        )}
 
         {answered && (
           <Panel title={T.remember} color={c.amber} titleColor={c.amber}>
@@ -375,7 +394,7 @@ export function RoundView({
           </Panel>
         )}
         {/* Antes de contestar, para entender la pregunta (sin la respuesta); después, para entender la corrección. */}
-        <AskClaude q={q} lang={lang} order={order} picked={answered ? order[round.picked!] : undefined} reveal={answered} />
+        <AskClaude q={q} lang={lang} order={order} picked={answered ? round.picked : undefined} reveal={answered} />
         {answered && hasLesson && <Btn small label={T.readLesson(q.ts!)} onPress={() => onLesson(q.ts!)} />}
       </ScrollView>
 
@@ -444,7 +463,7 @@ export function Done({ round, p, onAgain, onHome }: { round: Round; p: Progress;
         </BounceIn>
       )}
       {(() => {
-        const missed = round.items.flatMap((it, k) => (round.picks[k] !== undefined && round.picks[k] !== it.q.answer ? [{ q: it.q, picked: round.picks[k] }] : []));
+        const missed = round.items.flatMap((it, k) => (round.picks[k] !== undefined && !isRight(it.q, round.picks[k]) ? [{ q: it.q, picked: round.picks[k] }] : []));
         return missed.length === 0 ? (
           <Txt size={12} color={c.green} style={{ marginTop: 8 }}>
             {T.noRoundMisses}

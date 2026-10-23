@@ -390,3 +390,24 @@ test('fallos: se guarda la opción elegida y se listan las falladas, recientes p
   assert.deepEqual(misses(qs, p).map((x) => x.id), ['a3']);
   assert.deepEqual(todo(p, '2026-10-13', [], [], misses(qs, p).length).at(-1), { kind: 'misses', count: 1 });
 });
+
+test('respuesta múltiple: lo elegido es una máscara y solo vale acertar las dos', async () => {
+  const { isMulti, isRight, maskOf, pickedOf, rightOf, examResult } = await import('../src/game.ts');
+  const base = { id: 'm', domain: 'tools' as const, scenario: 's', ask: 'Which TWO?', options: ['a', 'b', 'c', 'd', 'e'], why: ['', '', '', '', ''], rule: 'r' };
+  const multi = { ...base, answer: 1, answers: [1, 3] };
+  const single = { ...base, answer: 2 };
+  assert.equal(isMulti(multi), true);
+  assert.equal(isMulti(single), false);
+  assert.deepEqual(rightOf(single), [2]);
+  assert.equal(maskOf([1, 3]), 0b1010);
+  assert.deepEqual(pickedOf(multi, 0b1010), [1, 3]);
+  assert.deepEqual(pickedOf(single, 2), [2]);
+  assert.equal(isRight(multi, maskOf([3, 1])), true);
+  assert.equal(isRight(multi, maskOf([1])), false, 'una sola de las dos no vale');
+  assert.equal(isRight(multi, maskOf([1, 3, 4])), false, 'marcar de más tampoco');
+  assert.equal(isRight(multi, 1), false, 'el índice de la primera buena no es la respuesta');
+  assert.equal(isRight(single, 2), true);
+  assert.equal(isRight(single, null), false);
+  const r = examResult([{ q: multi, picked: maskOf([1, 3]) }, { q: single, picked: 0 }], '2026-10-23', 60);
+  assert.equal(r.right, 1);
+});

@@ -165,7 +165,7 @@ const en = {
   fullNote: '// like the real one: 4 of 6 scenarios, 15 questions each, no feedback until you submit. you can pause.',
   examLabel: (label: string) => label,
   randomSub: '4 random scenarios · new every time',
-  levelTitle: (clock: string) => `exam-level · 60 q · ${clock}`,
+  levelTitle: (n: number, clock: string) => `exam-level · ${n} q · ${clock}`,
   levelNote:
     "// long questions like the real exam: twice the reading, two defensible options and a detail that decides. people who passed say the real one is longer to read, not harder. its questions don't show up in daily rounds until you've done this mock.",
   levelSub: (scenarios: number, per: number) => `all ${scenarios} scenarios · ${per} questions each`,
@@ -186,6 +186,9 @@ const en = {
   onTrack: '// on track. keep the streak going.',
   below: (pct: number) => `// below the ~${pct}% target. review the misses below.`,
   noAnswer: '(no answer)',
+  // respuesta múltiple
+  selectN: (n: number) => `select ${n}`,
+  checkPicks: (marked: number, n: number) => `▶ CHECK · ${marked}/${n}`,
   examList: '▶ EXAM LIST',
   bestPct: (pct: number) => `best ${pct}%`,
 
@@ -424,7 +427,7 @@ const es: Strings = {
   examLabel: (label) =>
     label === 'exam-level' ? 'nivel real' : label.replace('exam', 'examen').replace('random', 'aleatorio').replace('quick', 'rápido'),
   randomSub: '4 escenarios al azar · distinto cada vez',
-  levelTitle: (clock) => `nivel real · 60 preguntas · ${clock}`,
+  levelTitle: (n, clock) => `nivel real · ${n} preguntas · ${clock}`,
   levelNote:
     '// preguntas largas como las del examen: el doble de lectura, dos opciones defendibles y un detalle que decide. quien ya aprobó cuenta que el real no es más difícil, sino más largo de leer. sus preguntas no salen en las rondas hasta que hagas este simulacro.',
   levelSub: (scenarios, per) => `los ${scenarios} escenarios · ${per} preguntas de cada uno`,
@@ -445,6 +448,8 @@ const es: Strings = {
   onTrack: '// vas bien. mantén la racha.',
   below: (pct) => `// por debajo del ~${pct}%. repasa los fallos de abajo.`,
   noAnswer: '(sin contestar)',
+  selectN: (n) => `elige ${n}`,
+  checkPicks: (marked, n) => `▶ COMPROBAR · ${marked}/${n}`,
   examList: '▶ LISTA DE SIMULACROS',
   bestPct: (pct) => `mejor ${pct}%`,
 

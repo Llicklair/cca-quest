@@ -15,8 +15,8 @@ const TEXT = {
     concept: 'Explain this concept in simple words, with a concrete example and how it usually shows up in exam questions.',
     scenario: 'Scenario',
     question: 'Question',
-    right: 'Right answer',
-    mine: 'My answer',
+    right: 'Right answer(s)',
+    mine: 'My answer(s)',
     none: 'none (I ran out of time)',
     why: 'Explanation in my study app',
   },
@@ -29,7 +29,7 @@ const TEXT = {
     concept: 'Explícame este concepto con palabras sencillas, con un ejemplo concreto y cómo suele salir en las preguntas del examen.',
     scenario: 'Escenario',
     question: 'Pregunta',
-    right: 'Respuesta buena',
+    right: 'Respuesta(s) buena(s)',
     mine: 'Mi respuesta',
     none: 'ninguna (se me acabó el tiempo)',
     why: 'Explicación de mi app de estudio',
@@ -39,31 +39,36 @@ const TEXT = {
 const clean = (lines: string[]) => lines.join('\n').replace(/`/g, '');
 
 /**
- * Una pregunta. `order[pos]` es el índice original de la opción que se enseñó en la posición `pos`,
- * para que las letras coincidan con las de la pantalla. Sin `reveal`, no lleva la respuesta buena.
- * `picked` es el índice original elegido: null si no se contestó y undefined si no viene al caso.
+ * Una pregunta. `rights` son los índices originales de las opciones buenas (dos en las de respuesta
+ * múltiple). `order[pos]` es el índice original de la opción que se enseñó en la posición `pos`,
+ * para que las letras coincidan con las de la pantalla. Sin `reveal`, no lleva las respuestas buenas.
+ * `picked`: los índices originales elegidos, null si no se contestó y undefined si no viene al caso.
  */
 export function claudePrompt(
   tx: QuestionText,
-  answer: number,
+  rights: number[],
   lang: Lang,
-  { order = tx.options.map((_, k) => k), picked, reveal = true }: { order?: number[]; picked?: number | null; reveal?: boolean } = {},
+  { order = tx.options.map((_, k) => k), picked, reveal = true }: { order?: number[]; picked?: number[] | null; reveal?: boolean } = {},
 ): string {
   const t = TEXT[lang];
-  const letter = (orig: number) => 'ABCD'[order.indexOf(orig)];
+  const letters = (origs: number[]) =>
+    origs
+      .map((o) => 'ABCDE'[order.indexOf(o)])
+      .sort()
+      .join(', ');
   return clean([
     `${t.exam} ${reveal ? t.after : t.before}`,
     '',
     `${t.scenario}: ${tx.scenario}`,
     '',
     `${t.question}: ${tx.ask}`,
-    ...order.map((orig, pos) => `${'ABCD'[pos]}) ${tx.options[orig]}`),
+    ...order.map((orig, pos) => `${'ABCDE'[pos]}) ${tx.options[orig]}`),
     ...(reveal
       ? [
           '',
-          `${t.right}: ${letter(answer)}`,
-          ...(picked === undefined ? [] : [`${t.mine}: ${picked === null ? t.none : letter(picked)}`]),
-          `${t.why}: ${tx.why[answer]}`,
+          `${t.right}: ${letters(rights)}`,
+          ...(picked === undefined ? [] : [`${t.mine}: ${picked === null || picked.length === 0 ? t.none : letters(picked)}`]),
+          ...rights.map((r) => `${t.why}: ${tx.why[r]}`),
         ]
       : []),
   ]);

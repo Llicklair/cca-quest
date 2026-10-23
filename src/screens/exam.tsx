@@ -10,7 +10,10 @@ import {
   bestScore,
   buildExam,
   fixedExams,
+  isMulti,
+  isRight,
   levelExam,
+  rightOf,
   shuffle,
   type ExamDraft,
   type ExamResult,
@@ -19,19 +22,20 @@ import {
 } from '../game.ts';
 import { STR } from '../i18n.ts';
 import { AskClaude, MissCard, inLang } from './misses.tsx';
+import { BANK, LEVEL_BANK } from '../bank.ts';
 import { QUESTIONS } from '../questions.ts';
-import { EXAM_LEVEL } from '../questions-exam.ts';
 import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer } from '../term.tsx';
 import { c, domainColor } from '../theme.ts';
 
-export type Slot = { q: Question; order: number[]; picked: number | null }; // picked = índice original
+export type Slot = { q: Question; order: number[]; picked: number | null }; // picked = índice original, o máscara en las de respuesta múltiple
 type Run = { label: string; slots: Slot[]; i: number; per: number; limit: number };
 type Phase = { kind: 'menu' } | { kind: 'run' } | { kind: 'report'; result: ExamResult; slots: Slot[]; gained: number };
 
+// Los fijos salen solo de las de una respuesta, para que no cambien al crecer el banco (ver bank.ts).
 const FIXED = fixedExams(QUESTIONS);
-const LEVEL = levelExam(EXAM_LEVEL);
-const perOf = (label: string) =>
-  label === 'quick' ? EXAM.quickPerScenario : label === 'exam-level' ? EXAM.levelPerScenario : EXAM.perScenario;
+const LEVEL = levelExam(LEVEL_BANK);
+const LEVEL_PER = LEVEL.length / Object.keys(SETTINGS).length;
+const perOf = (label: string) => (label === 'quick' ? EXAM.quickPerScenario : label === 'exam-level' ? LEVEL_PER : EXAM.perScenario);
 const clock = (secs: number) => {
   const h = Math.floor(secs / 3600);
   const m = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
@@ -118,7 +122,7 @@ export function Exam({
   };
 
   const resume = (d: ExamDraft) => {
-    const byId = new Map([...QUESTIONS, ...EXAM_LEVEL].map((q) => [q.id, q]));
+    const byId = new Map([...BANK, ...LEVEL_BANK].map((q) => [q.id, q]));
     const slots = d.ids.flatMap((id, k) => {
       const q = byId.get(id);
       return q ? [{ q, order: d.orders[k], picked: d.picked[k] }] : [];
@@ -138,9 +142,19 @@ export function Exam({
     onRunning(false);
   };
 
+  // En las de respuesta múltiple cada toque marca o desmarca una opción (hasta las que pide la pregunta).
   const choose = (orig: number) => {
     if (!run) return;
-    const next = { ...run, slots: run.slots.map((s, k) => (k === run.i ? { ...s, picked: orig } : s)) };
+    const slot = run.slots[run.i];
+    let picked: number | null = orig;
+    if (isMulti(slot.q)) {
+      const mask = slot.picked ?? 0;
+      const bit = 1 << orig;
+      const count = (m: number) => m.toString(2).replace(/0/g, '').length;
+      if (!(mask & bit) && count(mask) >= rightOf(slot.q).length) return;
+      picked = mask ^ bit || null;
+    }
+    const next = { ...run, slots: run.slots.map((s, k) => (k === run.i ? { ...s, picked } : s)) };
     update(next);
     onSaveDraft(draftOf(next, elapsedRef.current));
     feel.tap();
@@ -192,21 +206,21 @@ export function Exam({
             best={bestScore(p, 'random')}
             bestLabel={T.bestPct}
             disabled={Boolean(d)}
-            onPress={() => begin('random', buildExam(QUESTIONS, Math.random, EXAM.scenarios, EXAM.perScenario, p), EXAM.perScenario)}
+            onPress={() => begin('random', buildExam(BANK, Math.random, EXAM.scenarios, EXAM.perScenario, p), EXAM.perScenario)}
           />
         </Panel>
 
-        <Panel title={T.levelTitle(clock(LEVEL.length * EXAM.secsPerQuestion))} color={c.amber} titleColor={c.amber}>
+        <Panel title={T.levelTitle(LEVEL.length, clock(LEVEL.length * EXAM.secsPerQuestion))} color={c.amber} titleColor={c.amber}>
           <Txt size={12} color={c.muted} style={{ marginBottom: 6 }}>
             {T.levelNote}
           </Txt>
           <ExamRow
             title={T.examLabel('exam-level')}
-            sub={T.levelSub(LEVEL.length / EXAM.levelPerScenario, EXAM.levelPerScenario)}
+            sub={T.levelSub(Object.keys(SETTINGS).length, LEVEL_PER)}
             best={bestScore(p, 'exam-level')}
             bestLabel={T.bestPct}
             disabled={Boolean(d) || LEVEL.length === 0}
-            onPress={() => begin('exam-level', LEVEL, EXAM.levelPerScenario)}
+            onPress={() => begin('exam-level', LEVEL, LEVEL_PER)}
           />
         </Panel>
 
@@ -217,7 +231,7 @@ export function Exam({
             best={bestScore(p, 'quick')}
             bestLabel={T.bestPct}
             disabled={Boolean(d)}
-            onPress={() => begin('quick', buildExam(QUESTIONS, Math.random, EXAM.scenarios, EXAM.quickPerScenario, p), EXAM.quickPerScenario)}
+            onPress={() => begin('quick', buildExam(BANK, Math.random, EXAM.scenarios, EXAM.quickPerScenario, p), EXAM.quickPerScenario)}
           />
         </Panel>
         {d && (
@@ -296,8 +310,9 @@ export function Exam({
           <Txt bold size={15} color={c.green}>
             ? {text(slot.q).ask}
           </Txt>
+          {isMulti(slot.q) && <Tag label={T.selectN(rightOf(slot.q).length)} color={c.cyan} />}
           {slot.order.map((orig, pos) => {
-            const on = slot.picked === orig;
+            const on = isMulti(slot.q) ? ((slot.picked ?? 0) & (1 << orig)) !== 0 : slot.picked === orig;
             return (
               <Pressable
                 key={pos}
@@ -306,7 +321,7 @@ export function Exam({
               >
                 <View style={s.optRow}>
                   <Txt bold color={on ? c.amber : c.muted}>
-                    [{on ? '●' : 'ABCD'[pos]}]
+                    [{on ? (isMulti(slot.q) ? '■' : '●') : 'ABCDE'[pos]}]
                   </Txt>
                   <Rich text={text(slot.q).options[orig]} style={{ flex: 1 }} />
                 </View>
@@ -347,7 +362,7 @@ export function Exam({
   const { result, gained } = phase;
   const score = pct(result.right, result.total);
   const passed = score >= EXAM.target * 100;
-  const wrong = phase.slots.filter((x) => x.picked !== x.q.answer);
+  const wrong = phase.slots.filter((x) => !isRight(x.q, x.picked));
   return (
     <ScrollView contentContainerStyle={s.page}>
       <Typer text={`$ cca-quest exam --report "${result.label}"`} bold color={c.green} />

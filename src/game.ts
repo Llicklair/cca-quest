@@ -33,10 +33,31 @@ export type Question = {
   scenario: string;
   ask: string;
   options: string[];
-  answer: number; // índice en options
+  answer: number; // índice en options (en las de respuesta múltiple, la primera buena)
+  answers?: number[]; // solo en las de respuesta múltiple ("select 2"): todas las buenas, en orden
   why: string[]; // una explicación por opción, en el mismo orden
   rule: string; // la idea que hay que llevarse
 };
+
+// --- Respuesta múltiple ---
+// El examen real tiene preguntas de "elige 2" (guía v1.0). Lo elegido en una de ellas se guarda
+// como máscara de bits (opciones 0 y 2 → 0b101), así que en el progreso, los simulacros a medias y
+// la sincronización sigue siendo un número, como el índice elegido en las de una respuesta.
+
+export const isMulti = (q: Question) => (q.answers?.length ?? 0) > 1;
+
+/** Las opciones buenas, como índices originales. */
+export const rightOf = (q: Question) => q.answers ?? [q.answer];
+
+export const maskOf = (picked: number[]) => picked.reduce((m, i) => m | (1 << i), 0);
+
+/** Lo elegido como lista de índices originales: el índice tal cual, o lo que marca la máscara. */
+export const pickedOf = (q: Question, picked: number): number[] =>
+  isMulti(q) ? q.options.map((_, i) => i).filter((i) => picked & (1 << i)) : [picked];
+
+/** Acierto: en las de respuesta múltiple, exactamente las buenas (sin puntos parciales, como en el examen). */
+export const isRight = (q: Question, picked: number | null | undefined) =>
+  picked !== null && picked !== undefined && (isMulti(q) ? picked === maskOf(q.answers!) : picked === q.answer);
 
 // --- Días locales como 'YYYY-MM-DD' ---
 
@@ -536,18 +557,18 @@ export type ExamDraft = {
   label: string;
   ids: string[];
   orders: number[][]; // orden en que se muestran las opciones de cada pregunta
-  picked: (number | null)[]; // índice original elegido
+  picked: (number | null)[]; // índice original elegido, o máscara en las de respuesta múltiple
   i: number;
   elapsed: number; // segundos consumidos
   limit: number; // segundos totales
 };
 
-/** Nota de un simulacro. `picked` es el índice original elegido o null si se quedó sin contestar. */
+/** Nota de un simulacro. `picked` es el índice original elegido (la máscara, en las de respuesta múltiple) o null si se quedó sin contestar. */
 export function examResult(items: { q: Question; picked: number | null }[], day: string, secs: number, label = 'quick'): ExamResult {
   const byDomain: ExamResult['byDomain'] = {};
   let right = 0;
   for (const { q, picked } of items) {
-    const ok = picked === q.answer;
+    const ok = isRight(q, picked);
     if (ok) right++;
     const [r, t] = byDomain[q.domain] ?? [0, 0];
     byDomain[q.domain] = [r + (ok ? 1 : 0), t + 1];

@@ -19,7 +19,8 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
   preguntas), uno aleatorio de 60 y uno rápido de 20 (estos dos sacan primero las que aún no has
   acertado). Se pueden pausar y retomar con el reloj parado. Al
   final, nota por dominio, repaso de los fallos e historial de intentos.
-- **Simulacro nivel real**: 60 preguntas largas como las del examen (los 6 escenarios, 10 de cada uno).
+- **Simulacro nivel real**: 66 preguntas largas como las del examen (los 6 escenarios, 11 de cada uno,
+  una de ellas de "elige 2").
   Quien ya aprobó cuenta que el examen real no es más difícil en conceptos, sino más largo de leer: un
   simulacro de 60 preguntas cortas se hace en una hora y el real deja 15 minutos de margen. Estas tienen
   el doble de lectura, datos que no importan y dos opciones defendibles que solo desempata un detalle del
@@ -56,7 +57,17 @@ El banco ([src/questions.ts](src/questions.ts)) tiene 253 preguntas (42 por esce
 de la guía (v1.0, julio 2026). Las preguntas oficiales no son públicas: estas imitan su formato
 (evidencia de producción → "most effective…", 4 opciones con trampas plausibles) sin copiarlas.
 Las 60 de nivel real están aparte, en [src/questions-exam.ts](src/questions-exam.ts), para que los simulacros
-1–4 no cambien. Lecciones, fichas y glosario están en [src/lessons.ts](src/lessons.ts), [src/flashcards.ts](src/flashcards.ts)
+1–4 no cambien.
+
+La guía v1.0 dice que el examen tiene preguntas de una respuesta y de **respuesta múltiple** ("each item
+states how many responses to select"). Por eso hay 18 de "elige 2", con 5 opciones y 2 buenas: 12 cortas
+(2 por escenario, [src/questions-multi.ts](src/questions-multi.ts)) que entran en las rondas, el repaso y los
+simulacros aleatorio y rápido, y 6 largas (una por escenario, [src/questions-exam-multi.ts](src/questions-exam-multi.ts))
+dentro del simulacro nivel real, que pasa a 66 preguntas. Solo cuenta acertar las dos, sin puntos parciales.
+Los simulacros fijos 1–4 siguen siendo solo de una respuesta para que las notas se puedan comparar
+([src/bank.ts](src/bank.ts) junta todo).
+
+Lecciones, fichas y glosario están en [src/lessons.ts](src/lessons.ts), [src/flashcards.ts](src/flashcards.ts)
 y [src/glossary.ts](src/glossary.ts), y los extras de cada lección en [src/extras.ts](src/extras.ts).
 
 ## Desarrollo

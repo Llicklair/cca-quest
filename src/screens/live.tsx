@@ -712,7 +712,7 @@ function Options({
           >
             <View style={s.optRow}>
               <Txt bold size={14 * k} color={good ? c.green : bad ? c.red : chosen ? c.cyan : c.muted}>
-                [{good ? '✓' : bad ? '✗' : 'ABCD'[pos]}]
+                [{good ? '✓' : bad ? '✗' : 'ABCDE'[pos]}]
               </Txt>
               <Rich text={tx.options[orig]} size={14 * k} style={{ flex: 1 }} />
             </View>
