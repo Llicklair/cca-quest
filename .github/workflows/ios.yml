@@ -1,6 +1,7 @@
 # Compila la app de iPhone en cada push y la sube a TestFlight, sin Mac ni cuenta de Expo:
 # prebuild + xcodebuild en un runner de macOS, firmada con el certificado y el perfil de la cuenta
 # de Apple de la empresa (secretos del repo) y subida con la clave de la API de App Store Connect.
+# Después la reparte al grupo externo "Public" y la manda a la revisión beta si hace falta.
 name: iOS
 
 on:
@@ -126,3 +127,26 @@ jobs:
         run: |
           security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
           rm -f "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/dist.p12"
+
+  # Con subir la build no basta: los probadores del enlace público solo ven las builds del grupo
+  # "Public" que Apple ha aprobado. Esperar a que App Store Connect procese la build lleva unos
+  # minutos, así que se hace en ubuntu y no en el runner de macOS, que sale mucho más caro.
+  reparto:
+    needs: testflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Grupo Public y revisión beta
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        # El "qué probar" de TestFlight es el asunto del commit.
+        run: WHATS_NEW="$(git log -1 --format=%s)" node scripts/testflight.mjs
