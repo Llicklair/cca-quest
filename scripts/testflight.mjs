@@ -3,6 +3,8 @@
 // público) y la manda a la revisión beta de Apple si hace falta. Sin esto, los probadores
 // externos se quedan en la última build aprobada.
 //   ASC_KEY_P8=… ASC_KEY_ID=… ASC_ISSUER_ID=… BUILD_NUMBER=16 WHATS_NEW='…' node scripts/testflight.mjs
+// Con BUILD_NUMBER=ultima toma la última build subida y no espera ni toca el "qué probar": es la
+// comprobación periódica que envía a revisión la build que no se pudo enviar al subirla.
 // Se puede repetir sin miedo: si la build ya está en el grupo, en revisión o aprobada, no hace nada.
 import { sign } from 'node:crypto';
 
@@ -17,6 +19,8 @@ if (!ASC_KEY_P8 || !ASC_KEY_ID || !ASC_ISSUER_ID || !BUILD_NUMBER) {
   console.error('Faltan ASC_KEY_P8, ASC_KEY_ID, ASC_ISSUER_ID o BUILD_NUMBER');
   process.exit(1);
 }
+const LATEST = BUILD_NUMBER === 'ultima';
+let number = BUILD_NUMBER;
 
 const start = Date.now();
 const deadline = start + WAIT;
@@ -69,18 +73,21 @@ async function processedBuild() {
   for (;;) {
     const { json } = await asc('GET', '/v1/builds' + query({
       'filter[app]': APP_ID,
-      'filter[version]': BUILD_NUMBER,
       'filter[preReleaseVersion.platform]': 'IOS',
+      ...(LATEST ? { sort: '-uploadedDate' } : { 'filter[version]': number }),
       include: 'preReleaseVersion',
       limit: '1',
     }));
     const build = json.data[0];
+    if (LATEST && build) number = build.attributes.version;
     const state = build?.attributes.processingState ?? 'todavía no aparece';
-    if (state !== last) console.log(`Build ${BUILD_NUMBER}: ${state} (${minutes()} min)`);
+    if (state !== last) console.log(`Build ${number}: ${state} (${minutes()} min)`);
     last = state;
     if (state === 'VALID') return { id: build.id, version: json.included?.[0]?.attributes.version };
-    if (state === 'FAILED' || state === 'INVALID') throw new Error(`Apple marcó la build ${BUILD_NUMBER} como ${state}`);
-    if (Date.now() > deadline) throw new Error(`La build ${BUILD_NUMBER} sigue en "${state}" tras ${minutes()} min`);
+    // La comprobación periódica no espera: de una build que aún se procesa ya se encarga su push.
+    if (LATEST) return null;
+    if (state === 'FAILED' || state === 'INVALID') throw new Error(`Apple marcó la build ${number} como ${state}`);
+    if (Date.now() > deadline) throw new Error(`La build ${number} sigue en "${state}" tras ${minutes()} min`);
     await sleep(POLL);
   }
 }
@@ -139,25 +146,31 @@ const DONE = {
 
 async function main() {
   const build = await processedBuild();
-  console.log(`Build ${BUILD_NUMBER} (${build.version}) procesada en ${minutes()} min`);
+  if (!build) return;
+  console.log(`Build ${number} (${build.version}) procesada en ${minutes()} min`);
   // Sin el "qué probar" la build se reparte igual: que no pare el resto.
-  await setWhatsNew(build.id).catch((e) => console.log(`::warning::No se pudo poner el "qué probar": ${e.message}`));
+  if (!LATEST) {
+    await setWhatsNew(build.id).catch((e) => console.log(`::warning::No se pudo poner el "qué probar": ${e.message}`));
+  }
   await addToGroup(build.id);
 
   const state = await externalState(build.id);
-  if (DONE[state]) return console.log(`La build ${BUILD_NUMBER} ${DONE[state]}`);
+  if (DONE[state]) return console.log(`La build ${number} ${DONE[state]}`);
   if (state !== 'READY_FOR_BETA_SUBMISSION') {
-    return console.log(`::warning::La build ${BUILD_NUMBER} está en ${state}: no se envía a la revisión beta`);
+    return console.log(`::warning::La build ${number} está en ${state}: no se envía a la revisión beta`);
   }
   const r = await asc('POST', '/v1/betaAppReviewSubmissions', {
     data: { type: 'betaAppReviewSubmissions', relationships: { build: { data: { type: 'builds', id: build.id } } } },
-  }, [409]);
-  if (r.status !== 409) return console.log('Enviada a la revisión beta de Apple');
-  // Apple no la acepta, p. ej. si ya hay otra build de la app esperando revisión.
+  }, [409, 422]);
+  if (r.status < 300) return console.log('Enviada a la revisión beta de Apple');
   const now = await externalState(build.id);
-  console.log(DONE[now]
-    ? `La build ${BUILD_NUMBER} ${DONE[now]}`
-    : `::warning::Apple no aceptó la revisión beta de la build ${BUILD_NUMBER} (${now}): ${errors(r.json)}`);
+  if (DONE[now]) return console.log(`La build ${number} ${DONE[now]}`);
+  // Apple solo revisa una build de cada versión a la vez; esta la envía la comprobación periódica
+  // cuando acabe la otra.
+  if (/another build/i.test(errors(r.json))) {
+    return console.log(`::notice::Otra build de la ${build.version} está en revisión beta; la ${number} se enviará cuando Apple acabe con ella`);
+  }
+  throw new Error(`Apple no aceptó la revisión beta de la build ${number} (${r.status}, ${now}): ${errors(r.json)}`);
 }
 
 main().catch((e) => {

@@ -7,10 +7,14 @@ name: iOS
 on:
   push:
     branches: [main]
+  # Apple solo revisa una build de cada versión a la vez: si al subir una había otra en revisión,
+  # esta comprobación la envía cuando la otra termine, para que los probadores tengan la última.
+  schedule:
+    - cron: '23 */2 * * *'
   workflow_dispatch:
     inputs:
       build:
-        description: 'Número de una build ya subida a TestFlight para repartirla sin compilar otra. Vacío: compila y sube una nueva.'
+        description: 'Número de una build ya subida a TestFlight (o "ultima") para repartirla sin compilar otra. Vacío: compila y sube una nueva.'
         required: false
         default: ''
       que_probar:
@@ -18,13 +22,14 @@ on:
         required: false
         default: ''
 
+# La comprobación periódica va en su propio grupo para no desplazar un push que espera en cola.
 concurrency:
-  group: ios
+  group: ${{ github.event_name == 'schedule' && 'ios-revision' || 'ios' }}
   cancel-in-progress: false
 
 jobs:
   testflight:
-    if: ${{ !inputs.build }}
+    if: ${{ github.event_name != 'schedule' && !inputs.build }}
     runs-on: macos-26
     env:
       TEAM_ID: 67266UR7NA
@@ -143,8 +148,9 @@ jobs:
   # minutos, así que se hace en ubuntu y no en el runner de macOS, que sale mucho más caro.
   reparto:
     needs: testflight
-    # Con una build en el lanzamiento manual, testflight se salta y se reparte solo esa.
-    if: ${{ !cancelled() && (needs.testflight.result == 'success' || inputs.build) }}
+    # En la comprobación periódica y con una build en el lanzamiento manual, testflight se salta
+    # y solo se reparte.
+    if: ${{ !cancelled() && needs.testflight.result != 'failure' }}
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -159,7 +165,7 @@ jobs:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          BUILD_NUMBER: ${{ inputs.build || github.run_number }}
+          BUILD_NUMBER: ${{ github.event_name == 'schedule' && 'ultima' || inputs.build || github.run_number }}
           QUE_PROBAR: ${{ inputs.que_probar }}
         # El "qué probar" de TestFlight es el asunto del commit, salvo que se dé otro a mano.
         run: WHATS_NEW="${QUE_PROBAR:-$(git log -1 --format=%s)}" node scripts/testflight.mjs
