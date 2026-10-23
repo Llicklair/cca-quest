@@ -19,9 +19,11 @@ import {
   rankingList,
   readRanking,
   reveal,
+  standings,
   start,
   stateOf,
   timeLeft,
+  xpFor,
 } from '../src/live.ts';
 import { EXAM_LEVEL } from '../src/questions-exam.ts';
 
@@ -145,6 +147,26 @@ test('la XP de una partida: aciertos, fallos y podio', () => {
   assert.equal(liveXp(ana, 1, 3), 2 * LIVE_XP.right + LIVE_XP.podium[0]);
   assert.equal(liveXp(bea, 2, 3), LIVE_XP.wrong, 'sin puntos no hay podio');
   assert.equal(liveXp(ana, 1, 1), 2 * LIVE_XP.right, 'jugando solo no hay podio');
+});
+
+test('la XP al acabar solo cuenta a quienes contestaron algo', () => {
+  const board = stateOf(finished(), 0).board;
+  assert.equal(xpFor(board, 'a'), 2 * LIVE_XP.right + LIVE_XP.podium[0]);
+  assert.equal(xpFor(board, 'b'), LIVE_XP.wrong);
+  assert.equal(xpFor(board, 'c'), null, 'Cris no contestó nada');
+  assert.equal(xpFor(board, 'x'), null, 'no estaba en la partida');
+});
+
+test('el presentador que juega cuenta como uno más', () => {
+  let g = start(join(join(game(1), 'p', 'Pres'), 'a', 'Ana'), 0);
+  const online = ['a', 'p']; // los móviles conectados y el propio presentador
+  g = pick(g, 'a', 'Ana', g.qids[0], wrongPos(g.right[0]), 0);
+  assert.equal(everyoneIn(g, online), false, 'falta el presentador');
+  g = pick(g, 'p', 'Pres', g.qids[0], g.right[0], 500);
+  assert.equal(everyoneIn(g, online), true);
+  const end = advance(reveal(g), 1_000);
+  assert.deepEqual(standings(end).map((s) => s.id), ['p', 'a']);
+  assert.equal(xpFor(standings(end), 'p'), LIVE_XP.right + LIVE_XP.podium[0]);
 });
 
 test('la clasificación suma cada partida una sola vez y solo a quien contestó', () => {

@@ -193,6 +193,13 @@ export function liveXp(s: Standing, rank: number, players: number): number {
   return s.right * LIVE_XP.right + (s.answered - s.right) * LIVE_XP.wrong + podium;
 }
 
+/** La XP de un jugador al acabar, contando solo a quienes contestaron algo; null si él no contestó nada. */
+export function xpFor(board: Standing[], id: string): number | null {
+  const played = board.filter((x) => x.answered > 0);
+  const mine = played.find((x) => x.id === id);
+  return mine ? liveXp(mine, rankOf(played, id), played.length) : null;
+}
+
 export type RankEntry = { name: string; points: number; games: number; wins: number; podiums: number; right: number; answered: number; last: string };
 export type Ranking = { players: Record<string, RankEntry>; games: string[] }; // games = gid de las últimas partidas ya sumadas
 

@@ -16,7 +16,6 @@ import {
   cleanName,
   everyoneIn,
   join,
-  liveXp,
   newGame,
   newRoom,
   parseRoom,
@@ -25,8 +24,10 @@ import {
   readRanking,
   reveal,
   showRoom,
+  standings,
   start,
   stateOf,
+  xpFor,
   type Game,
   type LiveState,
   type Standing,
@@ -48,7 +49,7 @@ const TICK_MS = 250;
 const HEARTBEAT_MS = 3_000; // el presentador repite el estado: así nadie se queda atrás si se pierde un mensaje
 
 type Me = { id: string; name: string };
-type Setup = { source: 'level' | 'bank'; count: number; secs: number };
+type Setup = { source: 'level' | 'bank'; count: number; secs: number; play: boolean }; // play = el presentador también contesta
 
 /** Dónde se entra desde el móvil: la web de esta misma página o, desde la app, la de GitHub Pages. */
 const joinBase = () => (Platform.OS === 'web' && typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname}` : WEB);
@@ -72,10 +73,12 @@ export function Live({
   onProfile: (p: Profile) => void;
 }) {
   const T = STR[lang];
-  const [mode, setMode] = useState<{ kind: 'menu' } | { kind: 'host'; setup: Setup } | { kind: 'play'; code: string; me: Me }>({ kind: 'menu' });
+  const [mode, setMode] = useState<{ kind: 'menu' } | { kind: 'host'; setup: Setup; me: Me | null } | { kind: 'play'; code: string; me: Me }>({
+    kind: 'menu',
+  });
   const [typed, setTyped] = useState(code ? showRoom(code) : '');
   const [name, setName] = useState(profile?.name ?? '');
-  const [setup, setSetup] = useState<Setup>({ source: 'level', count: LIVE.count, secs: LIVE.limit });
+  const [setup, setSetup] = useState<Setup>({ source: 'level', count: LIVE.count, secs: LIVE.limit, play: false });
 
   const running = mode.kind !== 'menu';
   useEffect(() => onRunning(running), [running, onRunning]);
@@ -83,17 +86,21 @@ export function Live({
 
   const room = parseRoom(typed);
   const clean = cleanName(name);
-  const enter = () => {
-    if (!room || !clean) return;
-    // Eres el mismo jugador en todas las partidas y dispositivos vinculados: el perfil va en el progreso.
-    // Si recargas la página, vuelves a la partida con tus puntos.
+  // Eres el mismo jugador en todas las partidas y dispositivos vinculados, también si presentas y
+  // juegas: el perfil va en el progreso.
+  const meNow = (): Me => {
     const me = { id: profile?.id ?? newPlayerId(), name: clean };
     if (profile?.id !== me.id || profile.name !== clean) onProfile({ id: me.id, name: clean, public: profile?.public ?? false });
+    return me;
+  };
+  const enter = () => {
+    if (!room || !clean) return;
+    // Si recargas la página, vuelves a la partida con tus puntos.
     feel.tap();
-    setMode({ kind: 'play', code: room, me });
+    setMode({ kind: 'play', code: room, me: meNow() });
   };
 
-  if (mode.kind === 'host') return <Host setup={mode.setup} lang={lang} onExit={() => setMode({ kind: 'menu' })} />;
+  if (mode.kind === 'host') return <Host setup={mode.setup} me={mode.me} lang={lang} onXp={onXp} onExit={() => setMode({ kind: 'menu' })} />;
   if (mode.kind === 'play') return <Play code={mode.code} me={mode.me} lang={lang} onXp={onXp} onExit={() => setMode({ kind: 'menu' })} />;
 
   return (
@@ -154,12 +161,33 @@ export function Live({
           value={setup.secs}
           onChange={(secs) => setSetup({ ...setup, secs })}
         />
+        <Choice
+          label={T.liveHostPlay}
+          options={[
+            { value: false, label: T.liveNo },
+            { value: true, label: T.liveYes },
+          ]}
+          value={setup.play}
+          onChange={(play) => setSetup({ ...setup, play })}
+        />
+        {setup.play && (
+          <TextInput
+            value={name}
+            onChangeText={setName}
+            placeholder={T.liveNamePh}
+            placeholderTextColor={c.muted}
+            autoCorrect={false}
+            maxLength={LIVE.maxName + 4}
+            style={[s.input, { marginTop: 10 }]}
+          />
+        )}
         <Btn
           label={T.liveHost}
           onPress={() => {
             feel.tap();
-            setMode({ kind: 'host', setup });
+            setMode({ kind: 'host', setup, me: setup.play ? meNow() : null });
           }}
+          disabled={setup.play && !clean}
           style={{ marginTop: 12 }}
         />
       </Panel>
@@ -170,7 +198,7 @@ export function Live({
 }
 
 /** Fila de opciones entre corchetes, como el selector de idioma. */
-function Choice<V extends string | number>({
+function Choice<V extends string | number | boolean>({
   label,
   options,
   value,
@@ -218,22 +246,28 @@ async function recordGame(g: Game) {
   }
 }
 
-function Host({ setup, lang, onExit }: { setup: Setup; lang: Lang; onExit: () => void }) {
+function Host({ setup, me, lang, onXp, onExit }: { setup: Setup; me: Me | null; lang: Lang; onXp: (n: number) => void; onExit: () => void }) {
   const T = STR[lang];
   const { width } = useWindowDimensions();
   const k = width >= 900 ? 1.3 : 1; // en la pantalla compartida, letra más grande
   const pool = setup.source === 'level' ? EXAM_LEVEL : QUESTIONS;
   const [code] = useState(() => newRoom());
-  const [game, setGame] = useState(() => newGame(pool, setup.count, setup.secs));
+  // Si el presentador juega, entra desde el principio como uno más (y sigue en "otra partida").
+  const [game, setGame] = useState(() => {
+    const g = newGame(pool, setup.count, setup.secs);
+    return me ? join(g, me.id, me.name) : g;
+  });
   const [peers, setPeers] = useState<Peer[]>([]);
   const [status, setStatus] = useState<RoomStatus>('connecting');
   const room = useRef<Room | null>(null);
+  const players = peers.filter((x) => !x.host);
+  const onlineIds = new Set([...players.map((x) => x.id), ...(me ? [me.id] : [])]);
   // El canal y los temporizadores viven fuera del render: leen lo último de estas refs.
   const latest = useRef(game);
   const online = useRef<string[]>([]);
   useEffect(() => {
     latest.current = game;
-    online.current = peers.filter((x) => !x.host).map((x) => x.id);
+    online.current = [...onlineIds];
   });
 
   useEffect(() => {
@@ -277,22 +311,32 @@ function Host({ setup, lang, onExit }: { setup: Setup; lang: Lang; onExit: () =>
     return () => clearInterval(id);
   }, []);
 
-  // Al acabar, la partida se suma a la clasificación de todos (una vez: addGame mira el gid).
+  // Al acabar, la partida se suma a la clasificación de todos (una vez: addGame mira el gid) y, si
+  // el presentador jugó, le da su XP como a cualquier jugador.
+  const earned = me && game.phase === 'end' ? xpFor(standings(game), me.id) : null;
   const recorded = useRef<string | null>(null);
   useEffect(() => {
     if (game.phase !== 'end' || recorded.current === game.gid) return;
     recorded.current = game.gid;
     recordGame(game);
-  }, [game]);
+    if (earned !== null) onXp(earned);
+  }, [game, earned, onXp]);
 
   const quit = () =>
     game.phase === 'lobby' || game.phase === 'end' ? onExit() : confirmAction(T.liveEndTitle, T.liveEndBody, T.liveEndAction, T.cancel, onExit);
 
-  const players = peers.filter((x) => !x.host);
-  const onlineIds = new Set(players.map((x) => x.id));
+  // El presentador que juega contesta en su pantalla; la elección se ve en la llamada.
+  const myPick = me ? game.picks[me.id]?.pos : undefined;
+  const answer = (pos: number) => {
+    if (!me) return;
+    feel.tap();
+    setGame((g) => pick(g, me.id, me.name, g.qids[g.i], pos, Date.now()));
+  };
+
   const url = joinBase();
   const q = game.phase === 'question' || game.phase === 'reveal' ? BY_ID.get(game.qids[game.i]) : undefined;
   const state = stateOf(game, now);
+  const hint = me ? T.liveHostPlays : T.liveHostHint;
 
   return (
     <View style={s.fill}>
@@ -319,7 +363,7 @@ function Host({ setup, lang, onExit }: { setup: Setup; lang: Lang; onExit: () =>
         {game.phase === 'question' && (
           <>
             <Txt size={13 * k} color={c.muted}>
-              {T.liveAnswered(state.answered.length, players.length)}
+              {T.liveAnswered(state.answered.length, onlineIds.size)}
             </Txt>
             <Clock deadline={game.startedAt + game.limit} k={k} />
           </>
@@ -343,7 +387,7 @@ function Host({ setup, lang, onExit }: { setup: Setup; lang: Lang; onExit: () =>
                 <Qr value={`${url}?quiz=${code}`} size={Math.round(220 * k)} />
               </View>
             </Panel>
-            <Panel title={T.livePlayers(players.length)}>
+            <Panel title={T.livePlayers(onlineIds.size)}>
               {Object.keys(game.players).length === 0 ? (
                 <Txt color={c.muted}>{T.liveWaitingPlayers}</Txt>
               ) : (
@@ -360,11 +404,11 @@ function Host({ setup, lang, onExit }: { setup: Setup; lang: Lang; onExit: () =>
               {T.liveSetup(setup.source === 'level' ? T.liveLevel : T.liveBank, game.qids.length, setup.secs)}
             </Txt>
             <Txt size={12} color={c.amber}>
-              {T.liveHostHint}
+              {hint}
             </Txt>
             <Btn
               kind="primary"
-              label={T.liveStart(players.length)}
+              label={T.liveStart(onlineIds.size)}
               onPress={() => {
                 feel.tap();
                 setGame((g) => start(g, Date.now()));
@@ -380,14 +424,19 @@ function Host({ setup, lang, onExit }: { setup: Setup; lang: Lang; onExit: () =>
               tx={inLang(q, lang)}
               order={state.order}
               right={state.right}
+              mine={myPick}
               tally={state.phase === 'reveal' ? state.tally : undefined}
+              onPick={me && game.phase === 'question' ? answer : undefined}
               k={k}
             />
-            {game.phase === 'question' && (
-              <Txt size={12 * k} color={c.amber}>
-                {T.liveHostHint}
-              </Txt>
-            )}
+            {game.phase === 'question' &&
+              (myPick !== undefined ? (
+                <Txt size={12 * k} color={c.cyan}>{`> ${T.liveLocked}`}</Txt>
+              ) : (
+                <Txt size={12 * k} color={c.amber}>
+                  {hint}
+                </Txt>
+              ))}
             {game.phase === 'reveal' && (
               <>
                 <Panel title={T.remember} color={c.amber} titleColor={c.amber}>
@@ -402,7 +451,12 @@ function Host({ setup, lang, onExit }: { setup: Setup; lang: Lang; onExit: () =>
         {game.phase === 'end' && (
           <>
             <Over T={T} k={k} />
-            <Board board={state.board} T={T} k={k} />
+            {earned !== null && (
+              <Txt bold size={16 * k} color={c.amber}>
+                {T.liveXp(earned)}
+              </Txt>
+            )}
+            <Board board={state.board} T={T} me={me?.id} k={k} />
             <Btn
               kind="primary"
               label={T.liveAgain}
@@ -476,10 +530,8 @@ function Play({ code, me, lang, onXp, onExit }: { code: string; me: Me; lang: La
     if (credited.current.includes(s.gid)) return;
     credited.current = [...credited.current, s.gid].slice(-20);
     AsyncStorage.setItem(XP_KEY, JSON.stringify(credited.current)).catch(() => {});
-    const played = s.board.filter((x) => x.answered > 0);
-    const mineNow = played.find((x) => x.id === me.id);
-    if (!mineNow) return;
-    const xp = liveXp(mineNow, rankOf(played, me.id), played.length);
+    const xp = xpFor(s.board, me.id);
+    if (xp === null) return;
     giveXp.current(xp);
     setEarned(xp);
   };
