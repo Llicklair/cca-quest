@@ -17,7 +17,7 @@ const PAIR_POLL_MS = 2_000;
 const PAIR_TTL_MS = 10 * 60_000;
 
 /** QR en negro sobre blanco con su margen: los lectores no leen bien los QR invertidos. */
-function Qr({ value, size = 220 }: { value: string; size?: number }) {
+export function Qr({ value, size = 220 }: { value: string; size?: number }) {
   const rows = useMemo(() => {
     const qr = createQr(0, 'M');
     qr.addData(value);

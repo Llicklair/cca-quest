@@ -2,8 +2,10 @@
 // botones, cursor, tecleo y la lluvia de caracteres para celebrar.
 import { createContext, useContext, useEffect, useState } from 'react';
 import {
+  Alert,
   Animated,
   Easing,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -321,6 +323,18 @@ export function LangToggle({ lang, onChange }: { lang: Lang; onChange: (l: Lang)
       ))}
     </View>
   );
+}
+
+/** Confirmación antes de algo que no se deshace. En la web, el confirm del navegador. */
+export function confirmAction(title: string, message: string, action: string, cancel: string, onConfirm: () => void) {
+  if (Platform.OS === 'web') {
+    if (window.confirm(`${title}\n\n${message}`)) onConfirm();
+    return;
+  }
+  Alert.alert(title, message, [
+    { text: cancel, style: 'cancel' },
+    { text: action, style: 'destructive', onPress: onConfirm },
+  ]);
 }
 
 /** Etiqueta pequeña entre corchetes: [d1 agents]. */

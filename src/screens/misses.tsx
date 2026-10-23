@@ -1,5 +1,7 @@
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Platform, ScrollView, Share, StyleSheet, View } from 'react-native';
 
+import { claudePrompt, claudeUrl, conceptPrompt } from '../ask.ts';
 import { misses, roundPool, type Lang, type Progress, type Question } from '../game.ts';
 import { STR, type Strings } from '../i18n.ts';
 import { QUESTIONS } from '../questions.ts';
@@ -12,6 +14,69 @@ import { c, domainColor } from '../theme.ts';
 /** La pregunta en el idioma elegido (las opciones y explicaciones van en el mismo orden). */
 const ES = { ...QUESTIONS_ES, ...EXAM_LEVEL_ES };
 export const inLang = (q: Question, lang: Lang) => (lang === 'es' && ES[q.id]) || q;
+
+/**
+ * El botón "pregúntale a Claude", el mismo en toda la app. En la web abre claude.ai con el prompt
+ * escrito y además lo copia; en el móvil abre el menú de compartir (la app de Claude, Codex, copiar…).
+ * `inline`: como enlace de texto, para listas largas como el glosario.
+ */
+export function AskButton({ prompt, lang, inline }: { prompt: () => string; lang: Lang; inline?: boolean }) {
+  const [copied, setCopied] = useState(false);
+  const T = STR[lang];
+  const go = () => {
+    const text = prompt();
+    if (Platform.OS !== 'web') {
+      Share.share({ message: text }).catch(() => {});
+      return;
+    }
+    navigator.clipboard
+      ?.writeText(text)
+      .then(() => setCopied(true))
+      .catch(() => {});
+    window.open(claudeUrl(text), '_blank', 'noopener');
+  };
+  return (
+    <View style={{ gap: 4 }}>
+      {inline ? (
+        <Txt size={12} bold color={c.cyan} onPress={go}>
+          {T.askClaude}
+        </Txt>
+      ) : (
+        <Btn label={T.askClaude} onPress={go} style={{ borderColor: c.cyan }} />
+      )}
+      {copied && (
+        <Txt size={11} color={c.muted}>
+          {T.askCopied}
+        </Txt>
+      )}
+    </View>
+  );
+}
+
+/**
+ * Una pregunta, en cualquier sitio de la app. Sin `reveal` (antes de contestar) Claude explica el
+ * escenario y los conceptos sin decir cuál es la buena. `order` y `picked` como en claudePrompt.
+ */
+export function AskClaude({
+  q,
+  lang,
+  order,
+  picked,
+  reveal = true,
+}: {
+  q: Question;
+  lang: Lang;
+  order?: number[];
+  picked?: number | null;
+  reveal?: boolean;
+}) {
+  return <AskButton lang={lang} prompt={() => claudePrompt(inLang(q, lang), q.answer, lang, { order, picked, reveal })} />;
+}
+
+/** Un concepto (lección, ficha o término): su nombre y lo que dice la app de él. */
+export function AskConcept({ title, lines, lang, inline }: { title: string; lines: string[]; lang: Lang; inline?: boolean }) {
+  return <AskButton lang={lang} inline={inline} prompt={() => conceptPrompt(lang, title, lines)} />;
+}
 
 /** Una pregunta fallada: escenario, pregunta, lo que contestaste (rojo), la buena (verde) y por qué. */
 export function MissCard({ q, picked, lang, T }: { q: Question; picked: number | null | undefined; lang: Lang; T: Strings }) {
@@ -30,6 +95,9 @@ export function MissCard({ q, picked, lang, T }: { q: Question; picked: number |
       <Rich text={`+ ${tx.options[q.answer]}`} size={13} color={c.green} style={{ marginTop: 4 }} />
       <Rich text={`└ ${tx.why[q.answer]}`} size={12} color={c.muted} style={{ marginTop: 4 }} />
       <Rich text={`// ${tx.rule}`} size={12} color={c.amber} style={{ marginTop: 4 }} />
+      <View style={{ marginTop: 8 }}>
+        <AskClaude q={q} lang={lang} picked={picked} />
+      </View>
     </Panel>
   );
 }

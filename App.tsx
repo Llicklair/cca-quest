@@ -21,6 +21,7 @@ import {
   roundPool,
   sessionBonus,
   type Lang,
+  type Profile,
   type Progress,
   type Question,
 } from './src/game';
@@ -38,30 +39,27 @@ import { Exam, type Slot } from './src/screens/exam';
 import { Misses } from './src/screens/misses';
 import { Glossary } from './src/screens/glossary';
 import { LessonList, LessonView } from './src/screens/learn';
+import { Live } from './src/screens/live';
+import { publishMe } from './src/screens/rank';
 import { Done, RoundView, Status, newRound, type Round } from './src/screens/play';
+import { parseRoom } from './src/live';
 import { load, save, wipe } from './src/storage';
 import { useSync } from './src/sync';
-import { Boot, LangToggle, Rain, Txt } from './src/term';
+import { Boot, LangToggle, Rain, Txt, confirmAction } from './src/term';
 import { c } from './src/theme';
 
 type Tab = 'play' | 'learn' | 'cards' | 'grep' | 'config';
-type PlayView = 'status' | 'round' | 'done' | 'exam' | 'misses';
+type PlayView = 'status' | 'round' | 'done' | 'exam' | 'misses' | 'live';
 const TABS: Tab[] = ['play', 'learn', 'cards', 'grep', 'config'];
+
+const PUBLISH_MS = 5_000;
+
+// El QR de una partida en grupo abre la web con ?quiz=CÓDIGO: se va directo a entrar, sin arranque.
+const quizLink = Platform.OS === 'web' && typeof window !== 'undefined' ? parseRoom(window.location.search) : null;
 
 const today = () => dayKey(new Date());
 // Los avisos cuentan lo que toca repasar, también las preguntas nivel examen ya vistas.
 const remind = (p: Progress) => reschedule(roundPool(QUESTIONS, EXAM_LEVEL, p), p);
-
-function confirmAction(title: string, message: string, action: string, cancel: string, onConfirm: () => void) {
-  if (Platform.OS === 'web') {
-    if (window.confirm(`${title}\n\n${message}`)) onConfirm();
-    return;
-  }
-  Alert.alert(title, message, [
-    { text: cancel, style: 'cancel' },
-    { text: action, style: 'destructive', onPress: onConfirm },
-  ]);
-}
 
 export default function App() {
   return (
@@ -77,12 +75,13 @@ function Main() {
   const [fontsReady] = useFonts({ Mono: JetBrainsMono_400Regular, MonoBold: JetBrainsMono_700Bold });
   const [p, setP] = useState<Progress | null>(null);
   const [tab, setTab] = useState<Tab>('play');
-  const [view, setView] = useState<PlayView>('status');
+  const [view, setView] = useState<PlayView>(quizLink ? 'live' : 'status');
   const [round, setRound] = useState<Round | null>(null);
   const [lesson, setLesson] = useState<string | null>(null);
   const [deckRunning, setDeckRunning] = useState(false);
   const [examRunning, setExamRunning] = useState(false);
-  const [booted, setBooted] = useState(false);
+  const [liveRunning, setLiveRunning] = useState(false);
+  const [booted, setBooted] = useState(quizLink !== null);
   const [boom, setBoom] = useState(0);
   const [update, setUpdate] = useState<UpdateInfo | null | undefined>(undefined);
   const [checking, setChecking] = useState(false);
@@ -127,15 +126,15 @@ function Main() {
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (examRunning) return true;
+      if (examRunning || liveRunning) return true;
       if (tab === 'learn' && lesson) setLesson(null);
-      else if (tab === 'play' && (view === 'done' || view === 'exam' || view === 'misses')) setView('status');
+      else if (tab === 'play' && (view === 'done' || view === 'exam' || view === 'misses' || view === 'live')) setView('status');
       else if (tab !== 'play') setTab('play');
       else return false;
       return true;
     });
     return () => sub.remove();
-  }, [tab, view, lesson, examRunning]);
+  }, [tab, view, lesson, examRunning, liveRunning]);
 
   // Cada cambio lleva la hora para saber, al sincronizar, qué copia es la más reciente.
   const { schedule } = sync;
@@ -149,6 +148,14 @@ function Main() {
     },
     [schedule],
   );
+
+  // Quien sale en la clasificación la mantiene al día: unos segundos después de cada cambio
+  // (también de los que llegan del otro dispositivo) se publica su fila, si ha cambiado.
+  useEffect(() => {
+    if (!p?.profile?.public) return;
+    const id = setTimeout(() => publishMe(p).catch(() => {}), PUBLISH_MS);
+    return () => clearTimeout(id);
+  }, [p]);
 
   if (!p || !fontsReady) return <View style={s.fill} />;
   if (!booted) {
@@ -240,6 +247,9 @@ function Main() {
     remind(next); // los avisos ya programados pasan al idioma nuevo
   };
 
+  // El perfil (nombre, id y si sales en la clasificación) va en el progreso: así viaja con la sincronización.
+  const setProfile = (profile: Profile) => commit({ ...p, profile });
+
   // El simulacro cuenta como práctica: cada respuesta pasa por el mismo sistema de cajas y XP.
   const finishExam = (slots: Slot[], secs: number, label: string) => {
     let next = p;
@@ -286,6 +296,24 @@ function Main() {
             }}
             onCards={() => setTab('cards')}
             onMisses={() => setView('misses')}
+            onLive={() => setView('live')}
+            onProfile={setProfile}
+          />
+        )}
+        {tab === 'play' && view === 'live' && (
+          <Live
+            lang={p.lang}
+            code={quizLink}
+            profile={p.profile}
+            onProfile={setProfile}
+            onExit={() => setView('status')}
+            onRunning={setLiveRunning}
+            // La partida en grupo da XP como una ronda; no toca las preguntas ni la racha.
+            onXp={(n) => {
+              const r = addXp(p, n);
+              commit(r.progress);
+              if (r.levelUp) celebrate();
+            }}
           />
         )}
         {tab === 'play' && view === 'misses' && (
@@ -375,7 +403,7 @@ function Main() {
         )}
       </View>
 
-      {!inRound && !deckRunning && !examRunning && (
+      {!inRound && !deckRunning && !examRunning && !liveRunning && (
         <View style={s.tabs}>
           {TABS.map((t) => {
             const on = tab === t;

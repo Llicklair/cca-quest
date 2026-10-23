@@ -7,6 +7,7 @@ import { FLASHCARDS } from '../flashcards.ts';
 import { STR } from '../i18n.ts';
 import { Bar, Btn, Cmd, Panel, Pop, Rich, Tag, Txt, Typer } from '../term.tsx';
 import { c, domainColor } from '../theme.ts';
+import { AskConcept } from './misses.tsx';
 
 type Run = { cards: Flashcard[]; i: number; flipped: boolean; knew: number; again: number; xp: number; gain: number };
 
@@ -65,6 +66,7 @@ export function Cards({
                 <View style={{ marginTop: 14, gap: 10 }}>
                   <Txt color={c.lineHi}>{'─'.repeat(28)}</Txt>
                   <Rich text={card.back[L]} size={15} />
+                  <AskConcept inline lang={L} title={card.front[L]} lines={[card.back[L]]} />
                 </View>
               ) : (
                 <Txt color={c.muted} size={12} style={{ marginTop: 18 }}>

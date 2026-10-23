@@ -20,8 +20,9 @@ const SUPABASE_KEY = 'sb_publishable_v-_0vnGNd3Gnki5_bEOmJQ_bkW9yXCD';
 
 // `||` y no `??`: el workflow de la APK pasa la variable vacía cuando no se le da otra.
 // Vale con o sin /rest/v1 al final: es como sale copiada a veces del panel de Supabase.
-const BASE = (process.env.EXPO_PUBLIC_SYNC_URL || SUPABASE_URL).replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
-const KEY = process.env.EXPO_PUBLIC_SYNC_KEY || SUPABASE_KEY;
+// También los usa la partida en grupo (src/room.ts) para su canal en tiempo real.
+export const BASE = (process.env.EXPO_PUBLIC_SYNC_URL || SUPABASE_URL).replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
+export const KEY = process.env.EXPO_PUBLIC_SYNC_KEY || SUPABASE_KEY;
 
 const LINK_KEY = 'cca-quest:link';
 const POLL_MS = 15_000;
@@ -39,6 +40,9 @@ export function newPairCode(): string {
 }
 
 const newChannel = () => Array.from(Crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+
+/** Id público de jugador para el quiz en grupo y la clasificación. No tiene nada que ver con el canal. */
+export const newPlayerId = () => Array.from(Crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join('');
 
 /** 'abcde-fghjk' para enseñarlo en pantalla. */
 export const showCode = (code: string) => `${code.slice(0, 5)}-${code.slice(5)}`;
@@ -73,6 +77,9 @@ async function rpc(fn: 'kv_get' | 'kv_put' | 'kv_del', args: Record<string, unkn
 const get = (key: string) => rpc('kv_get', { key });
 const put = (key: string, value: unknown) => rpc('kv_put', { key, value });
 const del = (key: string) => rpc('kv_del', { key });
+
+// La clasificación de las partidas en grupo (src/screens/live.tsx) usa el mismo almacén.
+export { get as kvGet, put as kvPut };
 
 /** El PC pregunta si el móvil ya dejó su canal en el código. */
 export async function pairedChannel(code: string): Promise<string | null> {

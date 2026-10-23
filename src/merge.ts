@@ -71,6 +71,9 @@ export function merge(local: Progress, remote: Shared): Progress {
     exams,
     examDraft: newer.examDraft,
     stamp: Math.max(local.stamp, remote.stamp),
+    // El de la copia más nueva; un perfil ya creado no se pierde aunque la otra copia no lo tenga
+    // (o venga de una versión de la app anterior al perfil).
+    profile: (remoteNewer ? (remote.profile ?? local.profile) : (local.profile ?? remote.profile)) ?? null,
   };
 }
 

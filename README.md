@@ -9,7 +9,8 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
   se enmarca en uno de los 6 escenarios del examen y practica un *task statement* concreto (1.1 – 5.6).
   Al responder, cada opción dice por qué es buena o mala, y queda una regla para recordar. Al acabar
   la ronda se ven las falladas (tu respuesta, la buena y el porqué), y en el inicio queda una lista de
-  todas las que fallaste la última vez para repasarlas cuando quieras.
+  todas las que fallaste la última vez para repasarlas cuando quieras. Al final del inicio está la
+  [clasificación](#clasificación): el nivel y el progreso de todos los que se unen.
   En el inicio, una lista `todo` dice qué toca hoy (ronda, siguiente lección, fichas pendientes) y un
   mapa de actividad de 16 semanas, estilo GitHub, enseña la constancia.
 - **Simulacros** (`$ cca-quest exam --mock`), como el examen real: 60 preguntas en 2 horas, 4 de los 6
@@ -23,6 +24,14 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
   simulacro de 60 preguntas cortas se hace en una hora y el real deja 15 minutos de margen. Estas tienen
   el doble de lectura, datos que no importan y dos opciones defendibles que solo desempata un detalle del
   enunciado. No salen en las rondas diarias hasta que haces el simulacro; las que falles, sí vuelven.
+- **Quiz en grupo** (`$ cca-quest live`), estilo Kahoot!: una pantalla presenta las preguntas y cada uno
+  contesta desde su móvil. Ver [Quiz en grupo](#quiz-en-grupo).
+- **✦ ask claude**: el mismo botón en toda la app lleva a Claude lo que estás estudiando para que te
+  lo explique con palabras sencillas. En una pregunta sin contestar (rondas y simulacros) explica el
+  escenario y los conceptos sin decir cuál es la buena; ya contestada (rondas, fallos, repaso del
+  simulacro y quiz en grupo), por qué la buena es la buena y las otras no. En lecciones, fichas y
+  glosario explica el concepto con un ejemplo y cómo sale en el examen. En la web abre claude.ai con
+  el prompt escrito (y lo copia, por si se abre vacío); en el móvil abre el menú de compartir.
 - **`learn`**: una lección por *task statement* (30), como una página de `man`: resumen, ideas clave,
   trampas típicas del examen y un ejemplo. Desde cada una se practican sus preguntas. Para que se entienda
   a cualquier nivel, cada lección trae además una analogía cotidiana ("dicho sencillo"), un diagrama que
@@ -87,6 +96,47 @@ EXPO_PUBLIC_SYNC_URL=http://localhost:8787
 
 Una APK de prueba con otro servidor se lanza a mano con los parámetros `sync_url` y `sync_key` del
 workflow de la APK; así no se publica release.
+
+## Quiz en grupo
+
+Para las sesiones de estudio en llamada. Quien presenta abre `$ cca-quest live` → presentar en la
+pantalla que comparte (mejor la web en el PC), elige preguntas (nivel examen o banco base), cuántas
+(5, 10 o 15) y el tiempo de cada una (60–180 s). Sale un código de sala de 5 letras y un QR que abre
+la web con `?quiz=CÓDIGO`; cada jugador entra desde el móvil con su nombre, en la app o en la web.
+
+- Todos ven la misma pregunta con las opciones en el mismo orden, así que "la B" es la B para todos.
+  Cada uno la lee en su idioma.
+- Puntos como en Kahoot!: 1000 por acertar al instante, 500 en el último segundo y 0 al fallar.
+- Se corrige al acabarse el tiempo, en cuanto contestan todos o con "corregir ya". Al corregir se ve
+  cuántos eligieron cada opción, el porqué de cada una y la clasificación; el presentador pasa a la
+  siguiente cuando acaba la discusión.
+- Quien recarga la página o se cae vuelve a entrar con sus puntos.
+- Al acabar, cada jugador gana XP en su progreso: la de una ronda por cada respuesta, más 30, 20 o
+  10 por el podio. No toca las preguntas ni la racha. El presentador no juega desde su pantalla (todos
+  verían su respuesta); si quiere jugar, entra también desde el móvil.
+- Cada partida se suma a la clasificación del quiz (puntos, partidas y victorias), al final del
+  inicio. La escribe el presentador al acabar, y la vuelve a leer para comprobar que quedó.
+
+Va por Supabase Realtime en el mismo proyecto que la sincronización (broadcast para los mensajes y
+presence para saber quién está), sin tablas: la partida vive en la pantalla del presentador. La
+lógica está en [src/live.ts](src/live.ts), el canal en [src/room.ts](src/room.ts) y las pantallas en
+[src/screens/live.tsx](src/screens/live.tsx).
+
+## Clasificación
+
+Al final de la pantalla de inicio (`play`) se ve, de quien se une, nombre, nivel, XP, racha, preparación y preguntas vistas
+(nada de preguntas concretas ni respuestas), y debajo la clasificación del quiz en grupo. Unirse es
+opcional y se puede ocultar en cualquier momento. Se refresca cada 15 s mientras estás en el
+inicio, y tu fila se publica unos segundos después de cada cambio de tu progreso.
+
+El perfil (id, nombre y si sales) va dentro del progreso, así que viaja con la sincronización y el
+móvil y el PC vinculados cuentan como una sola persona. Es el mismo con el que juegas al quiz.
+
+Las dos clasificaciones son documentos en claves fijas del almacén de sync.sql (que solo acepta claves
+`c-<32 hex>`), sin tocar el SQL. Cada uno escribe solo su fila; si dos escriben a la vez y una se
+pierde, quien la perdió la vuelve a poner al comprobarla. Como las claves son públicas igual que la
+app, todo lo que se lee pasa por un lector que descarta lo que no tenga la forma esperada. La lógica
+está en [src/rank.ts](src/rank.ts) y los paneles en [src/screens/rank.tsx](src/screens/rank.tsx).
 
 ## Web
 

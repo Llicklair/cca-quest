@@ -126,7 +126,11 @@ export type Progress = {
   exams: ExamResult[]; // simulacros, el más reciente primero
   examDraft: ExamDraft | null; // simulacro a medias, para seguir otro rato
   stamp: number; // hora (ms) del último cambio, para saber qué copia es la más reciente al sincronizar
+  profile: Profile | null; // quién eres en el quiz en grupo y en la clasificación; viaja con la sincronización
 };
+
+/** El mismo id en todos tus dispositivos vinculados. `public`: si sales en la clasificación con tu progreso. */
+export type Profile = { id: string; name: string; public: boolean };
 
 export type ExamResult = {
   label: string; // 'exam 1'…'exam 4', 'random' o 'quick'
@@ -155,6 +159,7 @@ export function fresh(today: string): Progress {
     exams: [],
     examDraft: null,
     stamp: 0,
+    profile: null,
   };
 }
 
@@ -205,6 +210,9 @@ export const LEVELS = [
 const levelStart = (n: number) => 50 * n * (n - 1);
 
 export type Level = { n: number; title: string; from: number; to: number | null };
+
+/** El nivel como nombre de usuario de terminal: 'Tool Smith' → 'tool_smith'. */
+export const handle = (title: string) => title.toLowerCase().replace(/ /g, '_');
 
 export function levelOf(xp: number): Level {
   let n = 1;

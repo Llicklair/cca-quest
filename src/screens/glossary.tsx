@@ -6,6 +6,7 @@ import { TERMS } from '../glossary.ts';
 import { STR } from '../i18n.ts';
 import { Rich, Tag, Txt } from '../term.tsx';
 import { c, domainColor, font } from '../theme.ts';
+import { AskConcept } from './misses.tsx';
 
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -65,6 +66,7 @@ export function Glossary({ p }: { p: Progress }) {
                 <Tag label={`d${d.n}`} color={domainColor[item.domain]} />
               </View>
               <Rich text={item.def[L]} size={13} />
+              <AskConcept inline lang={L} title={item.term} lines={[item.def[L]]} />
             </View>
           );
         }}

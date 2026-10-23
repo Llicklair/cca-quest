@@ -7,6 +7,7 @@ import {
   dayKey,
   dueCount,
   goalDone,
+  handle,
   heatmap,
   levelOf,
   liveStreak,
@@ -18,6 +19,7 @@ import {
   todo,
   type Lang,
   type Level,
+  type Profile,
   type Progress,
   type Question,
 } from '../game.ts';
@@ -25,7 +27,8 @@ import { FLASHCARDS } from '../flashcards.ts';
 import { LESSONS } from '../lessons.ts';
 import { QUESTIONS } from '../questions.ts';
 import { EXAM_LEVEL } from '../questions-exam.ts';
-import { MissCard, inLang } from './misses.tsx';
+import { AskClaude, MissCard, inLang } from './misses.tsx';
+import { RankPanels } from './rank.tsx';
 import { TERMS } from '../glossary.ts';
 import { STR } from '../i18n.ts';
 import { Banner, Bar, BounceIn, Btn, Cmd, Heatmap, Panel, Pop, Pulse, Rich, Tag, Txt, Typer } from '../term.tsx';
@@ -64,7 +67,6 @@ export function newRound(qs: Question[], label: string): Round {
   };
 }
 
-export const handle = (title: string) => title.toLowerCase().replace(/ /g, '_');
 const LABEL = { agentic: 'agents', tools: 'tools', 'claude-code': 'claude', prompting: 'prompt', context: 'context' } as const;
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
@@ -79,6 +81,8 @@ export function Status({
   onLesson,
   onCards,
   onMisses,
+  onLive,
+  onProfile,
 }: {
   p: Progress;
   update: number | null; // build nueva disponible, si la hay
@@ -88,6 +92,8 @@ export function Status({
   onLesson: (ts: string) => void;
   onCards: () => void;
   onMisses: () => void;
+  onLive: () => void;
+  onProfile: (profile: Profile) => void;
 }) {
   const t = dayKey(new Date());
   const lvl = levelOf(p.xp);
@@ -200,6 +206,20 @@ export function Status({
         </Txt>
       </Pressable>
 
+      <Pressable onPress={onLive} style={({ pressed }) => [s.exam, { borderColor: c.cyan, marginTop: 0 }, pressed && { backgroundColor: c.greenBg }]}>
+        <View style={{ flex: 1 }}>
+          <Txt bold color={c.cyan}>
+            $ cca-quest live
+          </Txt>
+          <Txt size={12} color={c.muted}>
+            {T.liveSub}
+          </Txt>
+        </View>
+        <Txt bold color={c.cyan}>
+          ›
+        </Txt>
+      </Pressable>
+
       <Panel title={T.activity}>
         <Heatmap weeks={heatmap(p, t, 16)} labels={T.days} less={T.less} more={T.more} />
       </Panel>
@@ -228,6 +248,8 @@ export function Status({
           {T.masteryNote}
         </Txt>
       </Panel>
+
+      <RankPanels p={p} onProfile={onProfile} />
 
       <Txt size={11} color={c.muted} style={{ textAlign: 'center', marginTop: 4 }}>
         {T.footer(QUESTIONS.length, LESSONS.length, FLASHCARDS.length, TERMS.length)}
@@ -352,6 +374,8 @@ export function RoundView({
             <Rich text={tx.rule} bold color={c.amber} />
           </Panel>
         )}
+        {/* Antes de contestar, para entender la pregunta (sin la respuesta); después, para entender la corrección. */}
+        <AskClaude q={q} lang={lang} order={order} picked={answered ? order[round.picked!] : undefined} reveal={answered} />
         {answered && hasLesson && <Btn small label={T.readLesson(q.ts!)} onPress={() => onLesson(q.ts!)} />}
       </ScrollView>
 

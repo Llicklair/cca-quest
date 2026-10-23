@@ -18,7 +18,7 @@ import {
   type Question,
 } from '../game.ts';
 import { STR } from '../i18n.ts';
-import { MissCard, inLang } from './misses.tsx';
+import { AskClaude, MissCard, inLang } from './misses.tsx';
 import { QUESTIONS } from '../questions.ts';
 import { EXAM_LEVEL } from '../questions-exam.ts';
 import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer } from '../term.tsx';
@@ -313,6 +313,8 @@ export function Exam({
               </Pressable>
             );
           })}
+          {/* Como en el examen no hay corrección hasta entregar, Claude ayuda a entenderla sin decir la buena. */}
+          <AskClaude q={slot.q} lang={p.lang} order={slot.order} reveal={false} />
         </ScrollView>
         <View style={s.bottom}>
           <View style={s.dots}>

@@ -10,6 +10,7 @@ import { QUESTIONS } from '../questions.ts';
 import { Bar, Btn, Cmd, Panel, Rich, TermContext, Txt, Typer } from '../term.tsx';
 import { c, domainColor } from '../theme.ts';
 import { SeeIt, TryIt } from './extras.tsx';
+import { AskConcept } from './misses.tsx';
 
 // --- Índice de lecciones ---
 
@@ -178,6 +179,11 @@ export function LessonView({
               <Btn kind="amber" label={T.markRead} onPress={onRead} />
             )}
             {nQs > 0 && <Btn kind="primary" label={T.practice(lesson.ts, Math.min(nQs, 5))} onPress={onPractice} />}
+            <AskConcept
+              lang={L}
+              title={`${lesson.ts} ${lesson.title[L]}`}
+              lines={[lesson.tldr[L], ...lesson.ideas.map((x) => `- ${x[L]}`), ...lesson.traps.map((x) => `✗ ${x[L]}`), lesson.example[L]]}
+            />
           </View>
         </ScrollView>
       </TermContext.Provider>
@@ -185,6 +191,9 @@ export function LessonView({
         <Pressable style={s.sheetBack} onPress={() => setTerm(null)}>
           <Panel title={term.term} color={domainColor[term.domain]} titleColor={domainColor[term.domain]}>
             <Rich text={term.def[L]} />
+            <View style={{ marginTop: 10 }}>
+              <AskConcept inline lang={L} title={term.term} lines={[term.def[L]]} />
+            </View>
             <Txt size={12} bold color={c.muted} style={{ marginTop: 10, textAlign: 'right' }}>
               {T.close}
             </Txt>
