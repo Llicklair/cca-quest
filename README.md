@@ -29,8 +29,8 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
   contesta desde su móvil. Ver [Quiz en grupo](#quiz-en-grupo).
 - **✦ ask claude**: el mismo botón en toda la app lleva a Claude lo que estás estudiando para que te
   lo explique con palabras sencillas. En una pregunta sin contestar (rondas y simulacros) explica el
-  escenario y los conceptos sin decir cuál es la buena; ya contestada (rondas, fallos, repaso del
-  simulacro y quiz en grupo), por qué la buena es la buena y las otras no. En lecciones, fichas y
+  escenario y los conceptos sin decir cuál es la buena; ya contestada (rondas, fallos y repaso del
+  simulacro), por qué la buena es la buena y las otras no. En el quiz en grupo no sale. En lecciones, fichas y
   glosario explica el concepto con un ejemplo y cómo sale en el examen. En la web abre claude.ai con
   el prompt escrito (y lo copia, por si se abre vacío); en el móvil abre el menú de compartir.
 - **`learn`**: una lección por *task statement* (30), como una página de `man`: resumen, ideas clave,
@@ -122,6 +122,7 @@ la web con `?quiz=CÓDIGO`; cada jugador entra desde el móvil con su nombre, en
   cuántos eligieron cada opción, el porqué de cada una y la clasificación; el presentador pasa a la
   siguiente cuando acaba la discusión.
 - Quien recarga la página o se cae vuelve a entrar con sus puntos.
+- Sin "pregúntale a Claude", ni siquiera al corregir: el porqué se discute en la llamada.
 - Al acabar, cada jugador gana XP en su progreso: la de una ronda por cada respuesta, más 30, 20 o
   10 por el podio. No toca las preguntas ni la racha. El presentador no juega desde su pantalla (todos
   verían su respuesta); si quiere jugar, entra también desde el móvil.

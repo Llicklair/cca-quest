@@ -41,7 +41,7 @@ import { kvGet, kvPut, newPlayerId } from '../sync.ts';
 import { Bar, Btn, Panel, Rich, Tag, Txt, Typer, confirmAction } from '../term.tsx';
 import { c, domainColor, font } from '../theme.ts';
 import { Qr } from './link.tsx';
-import { AskClaude, inLang } from './misses.tsx';
+import { inLang } from './misses.tsx';
 
 const BY_ID = new Map([...QUESTIONS, ...EXAM_LEVEL].map((q) => [q.id, q]));
 const XP_KEY = 'cca-quest:live-xp'; // partidas que ya dieron XP aquí, por si se recarga en la pantalla final
@@ -477,22 +477,15 @@ function Host({ setup, me, lang, onXp, onExit }: { setup: Setup; me: Me | null; 
             {game.phase === 'question' ? (
               <Btn label={T.liveRevealNow} onPress={() => setGame(reveal)} style={{ flex: 1 }} />
             ) : (
-              <>
-                {q && (
-                  <View style={{ flex: 1 }}>
-                    <AskClaude q={q} lang={lang} order={state.order} />
-                  </View>
-                )}
-                <Btn
-                  kind="primary"
-                  label={game.i + 1 < game.qids.length ? T.liveNext : T.liveFinal}
-                  onPress={() => {
-                    feel.tap();
-                    setGame((g) => advance(g, Date.now()));
-                  }}
-                  style={{ flex: 1 }}
-                />
-              </>
+              <Btn
+                kind="primary"
+                label={game.i + 1 < game.qids.length ? T.liveNext : T.liveFinal}
+                onPress={() => {
+                  feel.tap();
+                  setGame((g) => advance(g, Date.now()));
+                }}
+                style={{ flex: 1 }}
+              />
             )}
           </View>
         </View>
@@ -657,9 +650,6 @@ function Play({ code, me, lang, onXp, onExit }: { code: string; me: Me; lang: La
                 </Txt>
                 {rank > 0 && myStanding && <Txt color={c.text}>{T.liveRank(rank, state.board.length, myStanding.score)}</Txt>}
               </Panel>
-            )}
-            {state.phase === 'reveal' && (
-              <AskClaude q={q} lang={lang} order={state.order} picked={picked === undefined ? null : state.order[picked]} />
             )}
             <Head q={q} tx={inLang(q, lang)} />
             <Options
