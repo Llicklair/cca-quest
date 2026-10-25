@@ -196,6 +196,11 @@ const en = {
   askClaude: '✦ ask claude',
   askCopied: '// also copied: if claude.ai opens empty, paste it',
 
+  // contra las trampas (solo en la web)
+  shieldTitle: '[ hidden ]',
+  shieldAway: '// the question hides while this window is not active. come back to keep going.',
+  shieldShot: '// no screenshots of unanswered questions. tap to keep going.',
+
   // en grupo
   liveSub: 'team quiz, kahoot style · one screen hosts, phones answer',
   liveIntro: '// one screen hosts and shows the questions: share it in the call. everyone answers on their phone, in the app or on the web.',
@@ -459,6 +464,10 @@ const es: Strings = {
 
   askClaude: '✦ pregúntale a claude',
   askCopied: '// también copiada: si claude.ai se abre vacío, pégala',
+
+  shieldTitle: '[ oculto ]',
+  shieldAway: '// la pregunta se oculta mientras esta ventana no está activa. vuelve para seguir.',
+  shieldShot: '// nada de capturas de preguntas sin contestar. toca para seguir.',
 
   liveSub: 'quiz en grupo, estilo kahoot · una pantalla presenta, los móviles contestan',
   liveIntro: '// una pantalla presenta y enseña las preguntas: compártela en la llamada. cada uno contesta desde su móvil, en la app o en la web.',

@@ -37,6 +37,7 @@ import { AskClaude, MissCard, inLang } from './misses.tsx';
 import { RankPanels } from './rank.tsx';
 import { TERMS } from '../glossary.ts';
 import { STR } from '../i18n.ts';
+import { useGuard } from '../shield.tsx';
 import { Banner, Bar, BounceIn, Btn, Cmd, Heatmap, Panel, Pop, Pulse, Rich, Tag, Txt, Typer } from '../term.tsx';
 import { c, domainColor } from '../theme.ts';
 
@@ -296,6 +297,7 @@ export function RoundView({
   const answered = round.picked !== null;
   const multi = isMulti(q);
   const rights = rightOf(q);
+  useGuard(!answered);
   // En las de respuesta múltiple se marcan las opciones y luego se comprueba (App le pone key por pregunta).
   const [marked, setMarked] = useState<number[]>([]);
   const chosen = answered ? pickedOf(q, round.picked!) : marked;

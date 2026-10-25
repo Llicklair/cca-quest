@@ -24,6 +24,7 @@ import { STR } from '../i18n.ts';
 import { AskClaude, MissCard, inLang } from './misses.tsx';
 import { BANK, LEVEL_BANK } from '../bank.ts';
 import { QUESTIONS } from '../questions.ts';
+import { useGuard } from '../shield.tsx';
 import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer } from '../term.tsx';
 import { c, domainColor } from '../theme.ts';
 
@@ -93,6 +94,8 @@ export function Exam({
 
   // Cronómetro: cuenta mientras la pantalla está abierta, guarda cada 15 s y entrega al acabar el tiempo.
   const running = phase.kind === 'run';
+  // Hasta entregar no se ve ninguna corrección: todo el simulacro cuenta como sin contestar.
+  useGuard(running);
   useEffect(() => {
     if (!running) return;
     const id = setInterval(() => {

@@ -36,6 +36,7 @@ import { QUESTIONS } from '../questions.ts';
 import { EXAM_LEVEL } from '../questions-exam.ts';
 import { QUIZ_KEY } from '../rank.ts';
 import { openRoom, type Peer, type Room, type RoomStatus } from '../room.ts';
+import { useGuard } from '../shield.tsx';
 import { kvGet, kvPut, newPlayerId } from '../sync.ts';
 import { Bar, Btn, Panel, Rich, Tag, Txt, Typer, confirmAction } from '../term.tsx';
 import { c, domainColor, font } from '../theme.ts';
@@ -539,6 +540,8 @@ function Play({ code, me, lang, onXp, onExit }: { code: string; me: Me; lang: La
   useEffect(() => {
     creditRef.current = credit;
   });
+  // Solo en los móviles de los jugadores: la pantalla del presentador se comparte en la llamada.
+  useGuard(state?.phase === 'question');
 
   useEffect(() => {
     const r = openRoom(

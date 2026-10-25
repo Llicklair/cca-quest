@@ -155,6 +155,24 @@ La compila y publica GitHub Actions en GitHub Pages en cada push a `main`
 ([.github/workflows/web.yml](.github/workflows/web.yml)). `experiments.baseUrl` en `app.json` hace
 que los recursos se pidan bajo `/cca-quest/`.
 
+### Contra las trampas
+
+Para que no se pueda pasar una pregunta a una IA, en la web:
+
+- **No se copia el texto**: no se puede seleccionar, copiar ni cortar, no sale el menú del botón
+  derecho y al imprimir (o guardar como PDF) sale en blanco. Los campos de texto sí, para poder
+  escribir y pegar el código de sala.
+- **Capturas**: una web no puede impedirlas, pero sí tapar la pregunta antes. Mientras hay una pregunta
+  sin contestar (una ronda, un simulacro sin entregar o el quiz en grupo en el móvil del jugador) la
+  pantalla se pone en negro si la ventana pierde el foco (la herramienta de recortes, otra ventana),
+  mientras se pulsa Win/Cmd (por donde empiezan Win+Shift+S y Cmd+Shift+3/4/5) y, tras un atajo de
+  captura (Impr Pant, Win/Cmd+Shift, Ctrl+Shift+S de Edge y Firefox), hasta que se toca. Con Impr Pant
+  además se vacía el portapapeles. La pantalla del presentador no se tapa: es la que se comparte.
+
+No para una foto con otro móvil ni las capturas del propio móvil, y las respuestas están en el código,
+que es público: es un freno, no un candado. La lógica está en [src/guard.ts](src/guard.ts) y la
+pantalla negra en [src/shield.tsx](src/shield.tsx).
+
 ## Generar el APK
 
 Lo compila GitHub Actions en cada push a `main` ([.github/workflows/apk.yml](.github/workflows/apk.yml)),

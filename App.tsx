@@ -43,6 +43,7 @@ import { Live } from './src/screens/live';
 import { publishMe } from './src/screens/rank';
 import { Done, RoundView, Status, newRound, type Round } from './src/screens/play';
 import { parseRoom } from './src/live';
+import { Shield } from './src/shield';
 import { load, save, wipe } from './src/storage';
 import { useSync } from './src/sync';
 import { Boot, LangToggle, Rain, Txt, confirmAction } from './src/term';
@@ -429,6 +430,7 @@ function Main() {
         </View>
       )}
       {boom > 0 && <Rain key={boom} />}
+      <Shield lang={p.lang} />
     </View>
   );
 }
