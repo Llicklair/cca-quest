@@ -118,14 +118,17 @@ la web con `?quiz=CÓDIGO`; cada jugador entra desde el móvil con su nombre, en
 - Todos ven la misma pregunta con las opciones en el mismo orden, así que "la B" es la B para todos.
   Cada uno la lee en su idioma.
 - Puntos como en Kahoot!: 1000 por acertar al instante, 500 en el último segundo y 0 al fallar.
-- Se corrige al acabarse el tiempo, en cuanto contestan todos o con "corregir ya". Al corregir se ve
-  cuántos eligieron cada opción, el porqué de cada una y la clasificación; el presentador pasa a la
-  siguiente cuando acaba la discusión.
+- Cada uno elige su respuesta y corrige el presentador cuando quiere: hasta entonces nadie ve la buena.
+  El botón de corregir se resalta cuando han contestado todos los conectados o se acaba el tiempo, que
+  solo cierra las respuestas. Al corregir se ve cuántos eligieron cada opción, el porqué de cada una y
+  la clasificación; el presentador pasa a la siguiente cuando acaba la discusión.
 - Quien recarga la página o se cae vuelve a entrar con sus puntos.
 - Sin "pregúntale a Claude", ni siquiera al corregir: el porqué se discute en la llamada.
 - Al acabar, cada jugador gana XP en su progreso: la de una ronda por cada respuesta, más 30, 20 o
-  10 por el podio. No toca las preguntas ni la racha. El presentador no juega desde su pantalla (todos
-  verían su respuesta); si quiere jugar, entra también desde el móvil.
+  10 por el podio. No toca las preguntas ni la racha.
+- El presentador puede jugar ("yo juego"): contesta en su pantalla (en la llamada se ve lo que elige)
+  con un id propio, así que aunque entre también desde su móvil vinculado son dos jugadores. En la XP y
+  en la clasificación solo cuenta su mejor puesto.
 - Cada partida se suma a la clasificación del quiz (puntos, partidas y victorias), al final del
   inicio. La escribe el presentador al acabar, y la vuelve a leer para comprobar que quedó.
 

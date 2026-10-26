@@ -8,6 +8,7 @@ import {
   advance,
   cleanName,
   everyoneIn,
+  hostSeat,
   join,
   liveXp,
   newGame,
@@ -167,6 +168,31 @@ test('el presentador que juega cuenta como uno más', () => {
   const end = advance(reveal(g), 1_000);
   assert.deepEqual(standings(end).map((s) => s.id), ['p', 'a']);
   assert.equal(xpFor(standings(end), 'p'), LIVE_XP.right + LIVE_XP.podium[0]);
+});
+
+test('el presentador que juega y su móvil vinculado son dos jugadores, pero una sola persona', () => {
+  const pres = hostSeat('m'); // el perfil vinculado tiene el mismo id en el PC y en el móvil
+  let g = start(join(join(join(game(1), pres, 'Marcos'), 'm', 'Marcos'), 'a', 'Ana'), 0);
+  const online = ['m', 'a', pres];
+  g = pick(g, 'm', 'Marcos', g.qids[0], g.right[0], 0); // desde el móvil, al instante
+  assert.equal(everyoneIn(g, online), false, 'contestar desde el móvil no contesta por el presentador');
+  g = pick(g, pres, 'Marcos', g.qids[0], g.right[0], 1_000);
+  assert.equal(g.picks[pres]?.pos, g.right[0], 'el presentador también contesta');
+  g = pick(g, 'a', 'Ana', g.qids[0], g.right[0], 30_000);
+  assert.equal(everyoneIn(g, online), true);
+  assert.equal(g.phase, 'question', 'aunque hayan contestado todos, corrige el presentador');
+
+  const end = advance(reveal(g), 40_000);
+  const board = standings(end);
+  assert.deepEqual(board.map((s) => s.id), ['m', pres, 'a']);
+  assert.equal(xpFor(board, 'm'), LIVE_XP.right + LIVE_XP.podium[0]);
+  assert.equal(xpFor(board, pres), null, 'las dos pantallas suman al mismo progreso: solo da XP su mejor puesto');
+  assert.equal(xpFor(board, 'a'), LIVE_XP.right + LIVE_XP.podium[1], 'la misma persona no ocupa dos puestos del podio');
+  const r = addGame(readRanking(null), end, '2026-10-27');
+  assert.deepEqual(Object.keys(r.players).sort(), ['a', 'm'], 'en la clasificación cuenta su perfil, no el id de presentador');
+  assert.equal(r.players.m.points, end.players.m.score);
+  assert.equal(r.players.m.games, 1);
+  assert.equal(r.players.a.podiums, 1);
 });
 
 test('la clasificación suma cada partida una sola vez y solo a quien contestó', () => {

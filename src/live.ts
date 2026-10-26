@@ -36,6 +36,14 @@ export const showRoom = (code: string) => code.toUpperCase();
 
 export const cleanName = (name: string) => name.replace(/\s+/g, ' ').trim().slice(0, LIVE.maxName);
 
+/**
+ * El perfil viaja con el progreso, así que el PC y el móvil vinculados tienen el mismo id. Si el
+ * presentador juega, lo hace con un id propio: así puede entrar también desde su móvil sin que las dos
+ * pantallas cuenten como un solo jugador. La XP y la clasificación de todas las partidas son de la persona.
+ */
+export const hostSeat = (id: string) => `${id}.host`;
+export const personOf = (id: string) => id.replace(/\.host$/, '');
+
 // --- Puntos ---
 
 /** Como Kahoot!: 1000 puntos al contestar bien al instante, 500 en el último segundo y 0 al fallar. */
@@ -109,10 +117,13 @@ export function pick(g: Game, id: string, name: string, qid: string, pos: number
 
 export const timeLeft = (g: Game, now: number) => (g.phase === 'question' ? Math.max(0, g.startedAt + g.limit - now) : 0);
 
-/** ¿Han contestado todos los que están conectados? Entonces no hace falta esperar al reloj. */
+/** ¿Han contestado todos los que están conectados? Se le avisa al presentador, que es quien corrige. */
 export const everyoneIn = (g: Game, online: string[]) => online.length > 0 && online.every((id) => g.picks[id]);
 
-/** Se acaba la pregunta: se enseña la buena y se reparten los puntos. */
+/**
+ * El presentador corrige: se enseña la buena y se reparten los puntos. Ni el reloj ni que hayan
+ * contestado todos corrigen solos; el reloj solo cierra las respuestas.
+ */
 export function reveal(g: Game): Game {
   if (g.phase !== 'question') return g;
   const right = g.right[g.i];
@@ -193,9 +204,18 @@ export function liveXp(s: Standing, rank: number, players: number): number {
   return s.right * LIVE_XP.right + (s.answered - s.right) * LIVE_XP.wrong + podium;
 }
 
-/** La XP de un jugador al acabar, contando solo a quienes contestaron algo; null si él no contestó nada. */
+/** El mejor puesto de cada persona: quien jugó desde dos pantallas cuenta una vez. */
+export function bestSeats(board: Standing[]): Standing[] {
+  const seen = new Set<string>();
+  return board.filter((s) => !seen.has(personOf(s.id)) && !!seen.add(personOf(s.id)));
+}
+
+/**
+ * La XP de un jugador al acabar, contando solo a quienes contestaron algo; null si él no contestó nada
+ * o si su otra pantalla quedó mejor (las dos suman al mismo progreso).
+ */
 export function xpFor(board: Standing[], id: string): number | null {
-  const played = board.filter((x) => x.answered > 0);
+  const played = bestSeats(board.filter((x) => x.answered > 0));
   const mine = played.find((x) => x.id === id);
   return mine ? liveXp(mine, rankOf(played, id), played.length) : null;
 }
@@ -232,12 +252,13 @@ export function readRanking(raw: unknown): Ranking {
 /** Suma una partida acabada. Solo cuentan quienes contestaron algo, y la misma partida no se suma dos veces. */
 export function addGame(r: Ranking, g: Game, day: string): Ranking {
   if (g.phase !== 'end' || r.games.includes(g.gid)) return r;
-  const board = standings(g).filter((s) => s.answered > 0);
+  const board = bestSeats(standings(g).filter((s) => s.answered > 0));
   const players = { ...r.players };
   board.forEach((s, i) => {
-    const cur = players[s.id] ?? { name: s.name, points: 0, games: 0, wins: 0, podiums: 0, right: 0, answered: 0, last: '' };
+    const id = personOf(s.id);
+    const cur = players[id] ?? { name: s.name, points: 0, games: 0, wins: 0, podiums: 0, right: 0, answered: 0, last: '' };
     const placed = board.length >= 2 && s.score > 0;
-    players[s.id] = {
+    players[id] = {
       name: s.name,
       points: cur.points + s.score,
       games: cur.games + 1,

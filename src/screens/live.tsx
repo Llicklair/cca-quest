@@ -15,6 +15,7 @@ import {
   advance,
   cleanName,
   everyoneIn,
+  hostSeat,
   join,
   newGame,
   newRoom,
@@ -27,6 +28,7 @@ import {
   standings,
   start,
   stateOf,
+  timeLeft,
   xpFor,
   type Game,
   type LiveState,
@@ -88,7 +90,7 @@ export function Live({
   const room = parseRoom(typed);
   const clean = cleanName(name);
   // Eres el mismo jugador en todas las partidas y dispositivos vinculados, también si presentas y
-  // juegas: el perfil va en el progreso.
+  // juegas (con su propio id en la partida, ver hostSeat): el perfil va en el progreso.
   const meNow = (): Me => {
     const me = { id: profile?.id ?? newPlayerId(), name: clean };
     if (profile?.id !== me.id || profile.name !== clean) onProfile({ id: me.id, name: clean, public: profile?.public ?? false });
@@ -186,7 +188,8 @@ export function Live({
           label={T.liveHost}
           onPress={() => {
             feel.tap();
-            setMode({ kind: 'host', setup, me: setup.play ? meNow() : null });
+            const me = setup.play ? meNow() : null;
+            setMode({ kind: 'host', setup, me: me && { id: hostSeat(me.id), name: me.name } });
           }}
           disabled={setup.play && !clean}
           style={{ marginTop: 12 }}
@@ -263,12 +266,10 @@ function Host({ setup, me, lang, onXp, onExit }: { setup: Setup; me: Me | null; 
   const room = useRef<Room | null>(null);
   const players = peers.filter((x) => !x.host);
   const onlineIds = new Set([...players.map((x) => x.id), ...(me ? [me.id] : [])]);
-  // El canal y los temporizadores viven fuera del render: leen lo último de estas refs.
+  // El canal y los temporizadores viven fuera del render: leen lo último de esta ref.
   const latest = useRef(game);
-  const online = useRef<string[]>([]);
   useEffect(() => {
     latest.current = game;
-    online.current = [...onlineIds];
   });
 
   useEffect(() => {
@@ -301,16 +302,14 @@ function Host({ setup, me, lang, onXp, onExit }: { setup: Setup; me: Me | null; 
     return () => clearInterval(id);
   }, []);
 
-  // Se corrige al acabarse el tiempo o en cuanto contestan todos los conectados.
+  // Corrige el presentador cuando quiere: el botón se resalta cuando han contestado todos los
+  // conectados o se acaba el tiempo, pero nadie ve la buena hasta que lo pulse.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const id = setInterval(() => {
-      const t = Date.now();
-      setNow(t);
-      setGame((g) => (g.phase === 'question' && (g.startedAt + g.limit <= t || everyoneIn(g, online.current)) ? reveal(g) : g));
-    }, TICK_MS);
+    const id = setInterval(() => setNow(Date.now()), TICK_MS);
     return () => clearInterval(id);
   }, []);
+  const ready = game.phase !== 'question' ? null : everyoneIn(game, [...onlineIds]) ? 'all' : timeLeft(game, now) === 0 ? 'time' : null;
 
   // Al acabar, la partida se suma a la clasificación de todos (una vez: addGame mira el gid) y, si
   // el presentador jugó, le da su XP como a cualquier jugador.
@@ -432,7 +431,7 @@ function Host({ setup, me, lang, onXp, onExit }: { setup: Setup; me: Me | null; 
             />
             {game.phase === 'question' &&
               (myPick !== undefined ? (
-                <Txt size={12 * k} color={c.cyan}>{`> ${T.liveLocked}`}</Txt>
+                <Txt size={12 * k} color={c.cyan}>{`> ${T.liveHostLocked}`}</Txt>
               ) : (
                 <Txt size={12 * k} color={c.amber}>
                   {hint}
@@ -475,7 +474,15 @@ function Host({ setup, me, lang, onXp, onExit }: { setup: Setup; me: Me | null; 
         <View style={s.bottom}>
           <View style={[s.wide, s.bottomRow]}>
             {game.phase === 'question' ? (
-              <Btn label={T.liveRevealNow} onPress={() => setGame(reveal)} style={{ flex: 1 }} />
+              <Btn
+                kind={ready ? 'primary' : 'ghost'}
+                label={T.liveReveal(ready)}
+                onPress={() => {
+                  feel.tap();
+                  setGame(reveal);
+                }}
+                style={{ flex: 1 }}
+              />
             ) : (
               <Btn
                 kind="primary"
