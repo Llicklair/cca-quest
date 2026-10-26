@@ -126,9 +126,9 @@ la web con `?quiz=CÓDIGO`; cada jugador entra desde el móvil con su nombre, en
 - Sin "pregúntale a Claude", ni siquiera al corregir: el porqué se discute en la llamada.
 - Al acabar, cada jugador gana XP en su progreso: la de una ronda por cada respuesta, más 30, 20 o
   10 por el podio. No toca las preguntas ni la racha.
-- El presentador puede jugar ("yo juego"): contesta en su pantalla (en la llamada se ve lo que elige)
-  con un id propio, así que aunque entre también desde su móvil vinculado son dos jugadores. En la XP y
-  en la clasificación solo cuenta su mejor puesto.
+- El presentador juega por defecto ("yo juego", se puede quitar): contesta en su pantalla (en la
+  llamada se ve lo que elige) con un id propio, así que aunque entre también desde su móvil vinculado
+  son dos jugadores. En la XP y en la clasificación solo cuenta su mejor puesto.
 - Cada partida se suma a la clasificación del quiz (puntos, partidas y victorias), al final del
   inicio. La escribe el presentador al acabar, y la vuelve a leer para comprobar que quedó.
 

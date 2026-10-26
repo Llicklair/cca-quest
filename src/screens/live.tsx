@@ -81,7 +81,7 @@ export function Live({
   });
   const [typed, setTyped] = useState(code ? showRoom(code) : '');
   const [name, setName] = useState(profile?.name ?? '');
-  const [setup, setSetup] = useState<Setup>({ source: 'level', count: LIVE.count, secs: LIVE.limit, play: false });
+  const [setup, setSetup] = useState<Setup>({ source: 'level', count: LIVE.count, secs: LIVE.limit, play: true }); // el presentador también contesta salvo que diga que no
 
   const running = mode.kind !== 'menu';
   useEffect(() => onRunning(running), [running, onRunning]);
