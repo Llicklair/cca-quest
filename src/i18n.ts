@@ -48,6 +48,13 @@ const en = {
   leaveBody: 'Answers so far are already saved.',
   leave: 'Leave',
   cancel: 'Cancel',
+  // el logo de arriba a la izquierda lleva al inicio
+  home: 'home',
+  homeTitle: 'Go back home?',
+  homeAction: 'Go home',
+  homeSaved: 'Everything you answered is already saved.',
+  homeExam: 'The mock exam is paused: pick it up again from the exam list.',
+  homeLive: 'You leave the team quiz. If you are hosting it, it ends for everyone.',
 
   // resultado
   perfect: 'PERFECT ROUND',
@@ -328,6 +335,12 @@ const es: Strings = {
   leaveBody: 'Lo que has contestado ya está guardado.',
   leave: 'Salir',
   cancel: 'Cancelar',
+  home: 'inicio',
+  homeTitle: '¿Volver al inicio?',
+  homeAction: 'Volver',
+  homeSaved: 'Todo lo que has contestado ya está guardado.',
+  homeExam: 'El simulacro queda en pausa: lo retomas desde la lista de simulacros.',
+  homeLive: 'Sales del quiz en grupo. Si lo presentas tú, se acaba para todos.',
 
   perfect: 'RONDA PERFECTA',
   complete: 'RONDA COMPLETADA',

@@ -275,13 +275,33 @@ function Main() {
   const inRound = tab === 'play' && view === 'round';
   const open = lesson ? LESSONS.find((l) => l.ts === lesson) : undefined;
 
+  // El logo de arriba a la izquierda lleva siempre al inicio. Si hay algo a medias, se pregunta antes.
+  // Simulacro y fichas no avisan de que paran al cerrarse, así que se les quita aquí el "en curso".
+  const goHome = () => {
+    const leave = () => {
+      feel.tap();
+      if (view === 'round') remind(p);
+      setExamRunning(false);
+      setDeckRunning(false);
+      setLiveRunning(false);
+      setLesson(null);
+      setView('status');
+      setTab('play');
+    };
+    const body = liveRunning ? T.homeLive : examRunning ? T.homeExam : view === 'round' || deckRunning ? T.homeSaved : null;
+    if (body) confirmAction(T.homeTitle, body, T.homeAction, T.cancel, leave);
+    else leave();
+  };
+
   return (
     <View style={[s.fill, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      {/* Un único botón de idioma, siempre arriba a la derecha: cambia toda la app. */}
+      {/* A la izquierda, el logo que vuelve al inicio; a la derecha, un único botón de idioma que cambia toda la app. */}
       <View style={s.header}>
-        <Txt size={12} color={c.muted}>
-          ~/cca-quest
-        </Txt>
+        <Pressable onPress={goHome} hitSlop={12} accessibilityRole="button" accessibilityLabel={T.home}>
+          <Txt size={12} color={c.muted}>
+            ~/cca-quest
+          </Txt>
+        </Pressable>
         <LangToggle lang={p.lang} onChange={setLang} />
       </View>
       <View style={s.fill}>

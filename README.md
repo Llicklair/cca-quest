@@ -43,6 +43,9 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
 - **`grep`**: glosario de 68 términos del examen con buscador y filtro por dominio.
 - **`config`**: hora del recordatorio, idioma de la teoría y reinicio del progreso.
 
+El logo `~/cca-quest` de arriba a la izquierda vuelve siempre al inicio, también desde una ronda, un
+simulacro (queda en pausa), las fichas o el quiz en grupo; si hay algo a medias, pregunta antes.
+
 La teoría (lecciones, fichas y glosario) está en inglés y en español de España, con un botón `[EN|ES]`.
 Las preguntas van siempre en inglés, como el examen.
 
