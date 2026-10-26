@@ -442,7 +442,7 @@ function Host({ setup, me, lang, onXp, onExit }: { setup: Setup; me: Me | null; 
                 <Panel title={T.remember} color={c.amber} titleColor={c.amber}>
                   <Rich text={inLang(q, lang).rule} bold size={14 * k} color={c.amber} />
                 </Panel>
-                <Board board={state.board} T={T} max={5} gained k={k} />
+                <Board board={state.board} T={T} me={me?.id} max={5} gained k={k} />
               </>
             )}
           </>
@@ -650,13 +650,16 @@ function Play({ code, me, lang, onXp, onExit }: { code: string; me: Me; lang: La
         {state && q && (state.phase === 'question' || state.phase === 'reveal') && (
           <>
             {state.phase === 'reveal' && (
-              <Panel color={ok ? c.green : c.red}>
-                <Txt bold size={18} color={ok ? c.green : c.red}>
-                  {'> '}
-                  {ok ? T.liveRight(myStanding?.gained ?? 0) : counted ? T.liveWrong : picked === undefined ? T.liveNoPick : T.liveLate}
-                </Txt>
-                {rank > 0 && myStanding && <Txt color={c.text}>{T.liveRank(rank, state.board.length, myStanding.score)}</Txt>}
-              </Panel>
+              <>
+                <Panel color={ok ? c.green : c.red}>
+                  <Txt bold size={18} color={ok ? c.green : c.red}>
+                    {'> '}
+                    {ok ? T.liveRight(myStanding?.gained ?? 0) : counted ? T.liveWrong : picked === undefined ? T.liveNoPick : T.liveLate}
+                  </Txt>
+                  {rank > 0 && myStanding && <Txt color={c.text}>{T.liveRank(rank, state.board.length, myStanding.score)}</Txt>}
+                </Panel>
+                <Board board={state.board} T={T} me={me.id} gained />
+              </>
             )}
             <Head q={q} tx={inLang(q, lang)} />
             <Options
@@ -669,6 +672,8 @@ function Play({ code, me, lang, onXp, onExit }: { code: string; me: Me; lang: La
             />
             {state.phase === 'question' && picked !== undefined && <Txt color={c.cyan}>{`> ${T.liveLocked}`}</Txt>}
             {state.phase === 'question' && picked === undefined && <TimeUp deadline={deadline} T={T} />}
+            {/* Mientras se espera a los demás, la clasificación tal como quedó en la anterior. */}
+            {state.phase === 'question' && <Board board={state.board} T={T} me={me.id} />}
             {state.phase === 'reveal' && (
               <Panel title={T.remember} color={c.amber} titleColor={c.amber}>
                 <Rich text={inLang(q, lang).rule} bold color={c.amber} />

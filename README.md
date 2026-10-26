@@ -121,7 +121,8 @@ la web con `?quiz=CÓDIGO`; cada jugador entra desde el móvil con su nombre, en
 - Cada uno elige su respuesta y corrige el presentador cuando quiere: hasta entonces nadie ve la buena.
   El botón de corregir se resalta cuando han contestado todos los conectados o se acaba el tiempo, que
   solo cierra las respuestas. Al corregir se ve cuántos eligieron cada opción, el porqué de cada una y
-  la clasificación; el presentador pasa a la siguiente cuando acaba la discusión.
+  la clasificación; el presentador pasa a la siguiente cuando acaba la discusión. En el móvil, cada
+  jugador ve la clasificación entera al corregir y mientras espera en cada pregunta.
 - Quien recarga la página o se cae vuelve a entrar con sus puntos.
 - Sin "pregúntale a Claude", ni siquiera al corregir: el porqué se discute en la llamada.
 - Al acabar, cada jugador gana XP en su progreso: la de una ronda por cada respuesta, más 30, 20 o
