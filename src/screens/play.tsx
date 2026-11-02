@@ -474,7 +474,7 @@ export function Done({ round, p, onAgain, onHome }: { round: Round; p: Progress;
           <View style={{ gap: 10, marginTop: 8 }}>
             <Cmd>{T.roundMisses(missed.length)}</Cmd>
             {missed.map((m) => (
-              <MissCard key={m.q.id} q={m.q} picked={m.picked} lang={p.lang} T={T} />
+              <MissCard key={m.q.id} q={m.q} picked={m.picked} lang={p.lang} T={T} full />
             ))}
             <Txt size={12} color={c.muted}>
               {T.missedBack}
