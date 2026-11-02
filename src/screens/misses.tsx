@@ -79,12 +79,13 @@ export function AskConcept({ title, lines, lang, inline }: { title: string; line
 /**
  * Una pregunta fallada: escenario, pregunta, lo que contestaste mal (rojo), las buenas (verde) y por
  * qué. `picked` tal como se guarda: índice, máscara en las de respuesta múltiple, o null sin contestar.
+ * `full`: el escenario entero, para los informes al acabar una ronda o un simulacro; si no, recortado.
  */
-export function MissCard({ q, picked, lang, T }: { q: Question; picked: number | null | undefined; lang: Lang; T: Strings }) {
+export function MissCard({ q, picked, lang, T, full }: { q: Question; picked: number | null | undefined; lang: Lang; T: Strings; full?: boolean }) {
   const tx = inLang(q, lang);
   const rights = rightOf(q);
   const wrongPicks = picked === undefined || picked === null ? [] : pickedOf(q, picked).filter((i) => !rights.includes(i));
-  const scenario = tx.scenario.length > 160 ? `${tx.scenario.slice(0, 160).trimEnd()}…` : tx.scenario;
+  const scenario = !full && tx.scenario.length > 160 ? `${tx.scenario.slice(0, 160).trimEnd()}…` : tx.scenario;
   return (
     <Panel color={c.line}>
       <Txt size={11} bold color={domainColor[q.domain]}>

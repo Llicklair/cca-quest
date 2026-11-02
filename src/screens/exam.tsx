@@ -403,7 +403,7 @@ export function Exam({
         </Cmd>
       )}
       {wrong.map((x) => (
-        <MissCard key={x.q.id} q={x.q} picked={x.picked} lang={p.lang} T={T} />
+        <MissCard key={x.q.id} q={x.q} picked={x.picked} lang={p.lang} T={T} full />
       ))}
       <View style={{ gap: 10, marginTop: 6 }}>
         <Btn kind="amber" label={T.examList} onPress={() => setPhase({ kind: 'menu' })} />
