@@ -29,6 +29,14 @@ export const TERMS: Term[] = [
     },
   },
   {
+    term: 'max_tokens',
+    domain: 'agentic',
+    def: {
+      en: 'Request parameter that caps the length of each response. As a `stop_reason` value it means the output was cut off at that limit, not finished.',
+      es: 'Parámetro de la petición que limita la longitud de cada respuesta. Como valor de `stop_reason` significa que la salida se cortó en ese límite, no que terminara.',
+    },
+  },
+  {
     term: 'coordinator',
     domain: 'agentic',
     def: {
@@ -229,6 +237,14 @@ export const TERMS: Term[] = [
     },
   },
   {
+    term: 'Bash',
+    domain: 'tools',
+    def: {
+      en: 'Built-in tool that runs shell commands, such as tests, builds or git. To search or edit files, the dedicated tools are the better choice.',
+      es: 'Herramienta integrada que ejecuta comandos de shell, como tests, builds o git. Para buscar o editar ficheros, mejor las herramientas dedicadas.',
+    },
+  },
+  {
     term: 'CLAUDE.md',
     domain: 'claude-code',
     def: {
@@ -381,6 +397,14 @@ export const TERMS: Term[] = [
     },
   },
   {
+    term: 'strict: true',
+    domain: 'prompting',
+    def: {
+      en: 'Strict mode on a tool definition: the tool input always matches the JSON schema. It removes syntax errors, not semantic ones.',
+      es: 'Modo estricto en la definición de una herramienta: la entrada cumple siempre el JSON schema. Elimina los errores de sintaxis, no los semánticos.',
+    },
+  },
+  {
     term: 'semantic error',
     domain: 'prompting',
     def: {
@@ -397,6 +421,14 @@ export const TERMS: Term[] = [
     },
   },
   {
+    term: 'Pydantic',
+    domain: 'prompting',
+    def: {
+      en: 'Python library that validates data against a typed model. In extraction it checks the output and gives the specific errors to send back on retry.',
+      es: 'Librería de Python que valida datos contra un modelo tipado. En extracción comprueba la salida y da los errores concretos que se reenvían al reintentar.',
+    },
+  },
+  {
     term: 'detected_pattern',
     domain: 'prompting',
     def: {
@@ -408,8 +440,8 @@ export const TERMS: Term[] = [
     term: 'Message Batches API',
     domain: 'prompting',
     def: {
-      en: 'API for asynchronous bulk requests: 50% cheaper, up to 24 hours to process, no latency SLA, no multi-turn tool calling per request.',
-      es: 'API para peticiones masivas asíncronas: un 50% más barata, hasta 24 horas de procesamiento, sin SLA de latencia ni tool calling multi-turno por petición.',
+      en: 'API for asynchronous bulk requests: 50% cheaper, up to 24 hours to process, no latency SLA, no multi-turn tool calling per request. You poll it until processing ends.',
+      es: 'API para peticiones masivas asíncronas: un 50% más barata, hasta 24 horas de procesamiento, sin SLA de latencia ni tool calling multi-turno por petición. Se consulta (polling) hasta que termina.',
     },
   },
   {
@@ -458,6 +490,14 @@ export const TERMS: Term[] = [
     def: {
       en: 'Effect where models reliably process the beginning and end of long inputs but may omit findings from the middle sections.',
       es: 'Efecto por el que el modelo procesa bien el principio y el final de una entrada larga, pero puede omitir lo que está en las secciones centrales.',
+    },
+  },
+  {
+    term: 'token budget',
+    domain: 'context',
+    def: {
+      en: 'The context window seen as a fixed budget shared by the system prompt, history, tool results and answer; trimming tool output and extracting key facts protect it.',
+      es: 'La ventana de contexto vista como un presupuesto fijo que comparten el system prompt, el historial, los resultados de herramientas y la respuesta; recortar la salida de las herramientas y extraer los datos clave lo protegen.',
     },
   },
   {

@@ -31,6 +31,10 @@ export const LESSONS: Lesson[] = [
         en: 'Model-driven: Claude picks the next tool by reasoning over the context. That is different from a pre-configured decision tree or fixed tool sequence.',
         es: 'Decisión guiada por el modelo: Claude elige la siguiente herramienta según el contexto. No es un árbol de decisión ni una secuencia fija preprogramada.',
       },
+      {
+        en: '`max_tokens` caps the length of each response. If Claude hits it, `stop_reason` is `max_tokens`: the output was cut off, so it is not a finished answer and a tool call at the end may be incomplete.',
+        es: '`max_tokens` limita la longitud de cada respuesta. Si Claude llega al límite, `stop_reason` es `max_tokens`: la salida se ha cortado, así que no es una respuesta terminada y una llamada a herramienta al final puede estar incompleta.',
+      },
     ],
     traps: [
       {
@@ -48,6 +52,10 @@ export const LESSONS: Lesson[] = [
       {
         en: 'Do not drop tool results between iterations; if they are not in the context, the model cannot use the new information.',
         es: 'No descartes los resultados de las herramientas entre iteraciones: si no están en el contexto, el modelo no puede usar esa información nueva.',
+      },
+      {
+        en: 'Do not raise `max_tokens` to fix how the agent decides or when it stops; it only gives each response more room to write.',
+        es: 'No subas `max_tokens` para arreglar cómo decide el agente o cuándo para; solo da a cada respuesta más espacio para escribir.',
       },
     ],
     example: {
@@ -641,6 +649,10 @@ export const LESSONS: Lesson[] = [
         es: '`Read` y `Write` trabajan con ficheros completos. `Edit` hace cambios puntuales localizando un fragmento de texto único en el fichero.',
       },
       {
+        en: '`Bash` runs shell commands such as tests, builds or git. To search, read or change files, use the dedicated tools (`Grep`, `Glob`, `Read`, `Edit`) instead.',
+        es: '`Bash` ejecuta comandos de shell, como tests, builds o git. Para buscar, leer o cambiar ficheros, usa en su lugar las herramientas dedicadas (`Grep`, `Glob`, `Read`, `Edit`).',
+      },
+      {
         en: 'If `Edit` fails because its anchor text is not unique, fall back to `Read` the full file, then `Write` the modified version.',
         es: 'Si `Edit` falla porque el texto ancla no es único, recurre a `Read` del fichero completo y después a `Write` con la versión modificada.',
       },
@@ -1136,6 +1148,10 @@ export const LESSONS: Lesson[] = [
         es: '`tool_use` con un JSON schema es la vía más fiable para obtener salida conforme al schema; elimina los errores de sintaxis JSON.',
       },
       {
+        en: 'Strict mode (`strict: true` on the tool definition) guarantees the tool input validates against the schema: correct types and every required field present. The values can still be wrong.',
+        es: 'El modo estricto (`strict: true` en la definición de la herramienta) garantiza que la entrada valida contra el schema: tipos correctos y todos los campos obligatorios presentes. Los valores pueden seguir siendo erróneos.',
+      },
+      {
         en: '`tool_choice` `"auto"` lets the model reply with text; `"any"` forces a call to some tool; a forced tool forces that specific named tool.',
         es: '`tool_choice` `"auto"` permite responder con texto; `"any"` obliga a llamar a alguna herramienta; forzar una herramienta obliga a usar esa en concreto.',
       },
@@ -1203,6 +1219,10 @@ export const LESSONS: Lesson[] = [
         es: 'Los errores semánticos (valores que no suman, campos mal colocados) sobreviven a tool use; los errores de sintaxis del schema no.',
       },
       {
+        en: 'Validate each extraction in code, e.g. with a Pydantic model: types plus custom checks such as line items summing to the total. Its validation error is what you send back on retry.',
+        es: 'Valida cada extracción en código, p. ej. con un modelo de Pydantic: tipos y comprobaciones propias, como que las líneas sumen el total. Su error de validación es lo que reenvías al reintentar.',
+      },
+      {
         en: 'Extract `calculated_total` next to `stated_total` to flag discrepancies, and add a `conflict_detected` boolean for inconsistent source data.',
         es: 'Extrae `calculated_total` junto a `stated_total` para detectar discrepancias y añade un booleano `conflict_detected` si la fuente es incoherente.',
       },
@@ -1256,6 +1276,10 @@ export const LESSONS: Lesson[] = [
       {
         en: 'Give every request a `custom_id` to match each response to its request and to resubmit only the failed items.',
         es: 'Pon un `custom_id` en cada petición para emparejar cada respuesta con su petición y reenviar solo las que fallaron.',
+      },
+      {
+        en: 'A batch is asynchronous: you submit it, poll its status until processing has ended, then fetch the results. They can arrive in any order, so match them by `custom_id`, never by position.',
+        es: 'Un batch es asíncrono: lo envías, consultas su estado (polling) hasta que termina el procesamiento y luego descargas los resultados. Pueden llegar en cualquier orden, así que emparéjalos por `custom_id`, nunca por posición.',
       },
       {
         en: 'Set submission frequency from the SLA: with 24-hour processing and a 30-hour SLA, submit every 4 hours (4 + 24 = 28 hours worst case).',
@@ -1370,6 +1394,10 @@ export const LESSONS: Lesson[] = [
       {
         en: 'Tool results pile up and use tokens out of proportion to their value. Trim each one to the relevant fields (e.g. 5 of 40+ order fields) before it accumulates.',
         es: 'Los resultados de herramientas se acumulan y gastan más tokens de lo que aportan. Recórtalos a los campos útiles (p. ej. 5 de 40+) antes de que se acumulen.',
+      },
+      {
+        en: 'Treat the context window as a token budget: the system prompt, history, tool results and the answer all share it, so every irrelevant field takes room the next step may need.',
+        es: 'Trata la ventana de contexto como un presupuesto de tokens: el system prompt, el historial, los resultados de herramientas y la respuesta lo comparten, así que cada campo irrelevante quita sitio que puede necesitar el siguiente paso.',
       },
       {
         en: 'Pass the complete conversation history in every later API request to keep the conversation coherent.',
