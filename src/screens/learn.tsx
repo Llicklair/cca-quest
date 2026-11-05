@@ -8,7 +8,7 @@ import { STR } from '../i18n.ts';
 import { LESSONS } from '../lessons.ts';
 import { QUESTIONS } from '../questions.ts';
 import { Bar, Btn, Cmd, Panel, Rich, TermContext, Txt, Typer } from '../term.tsx';
-import { c, domainColor } from '../theme.ts';
+import { c, domainColor, themed } from '../theme.ts';
 import { SeeIt, TryIt } from './extras.tsx';
 import { AskConcept } from './misses.tsx';
 
@@ -215,12 +215,14 @@ function Section({ name, children }: { name: string; children: React.ReactNode }
   );
 }
 
-const s = StyleSheet.create({
-  page: { padding: 16, gap: 6 },
-  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: c.line },
-  item: { flexDirection: 'row', gap: 10 },
-  example: { borderLeftWidth: 2, borderLeftColor: c.lineHi, paddingLeft: 10 },
-  plain: { borderLeftWidth: 2, borderLeftColor: c.amber, paddingLeft: 10 },
-  sheetBack: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end', padding: 16 },
-});
+const s = themed(() =>
+  StyleSheet.create({
+    page: { padding: 16, gap: 6 },
+    head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7, paddingHorizontal: 4, borderBottomWidth: 1, borderBottomColor: c.line },
+    item: { flexDirection: 'row', gap: 10 },
+    example: { borderLeftWidth: 2, borderLeftColor: c.lineHi, paddingLeft: 10 },
+    plain: { borderLeftWidth: 2, borderLeftColor: c.amber, paddingLeft: 10 },
+    sheetBack: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end', padding: 16 },
+  }),
+);

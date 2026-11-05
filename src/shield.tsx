@@ -7,7 +7,7 @@ import type { Lang } from './game.ts';
 import { IDLE, covered, installGuard, step, type GuardEvent } from './guard.ts';
 import { STR } from './i18n.ts';
 import { Txt } from './term.tsx';
-import { c } from './theme.ts';
+import { c, themed } from './theme.ts';
 
 const web = Platform.OS === 'web' && typeof document !== 'undefined';
 
@@ -59,18 +59,20 @@ export function Shield({ lang }: { lang: Lang }) {
   );
 }
 
-const s = StyleSheet.create({
-  shield: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1000,
-    backgroundColor: c.bg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    padding: 24,
-  },
-});
+const s = themed(() =>
+  StyleSheet.create({
+    shield: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      zIndex: 1000,
+      backgroundColor: c.bg,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+      padding: 24,
+    },
+  }),
+);

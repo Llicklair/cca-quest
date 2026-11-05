@@ -9,7 +9,7 @@ import type { Lang } from '../game.ts';
 import { STR } from '../i18n.ts';
 import { newPairCode, pairedChannel, parseCode, QR_PREFIX, showCode, type useSync } from '../sync.ts';
 import { Btn, Panel, Txt } from '../term.tsx';
-import { c, font } from '../theme.ts';
+import { c, font, themed } from '../theme.ts';
 
 type Sync = ReturnType<typeof useSync>;
 
@@ -194,19 +194,21 @@ export function SyncPanel({ lang, sync }: { lang: Lang; sync: Sync }) {
   );
 }
 
-const s = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  qr: { backgroundColor: '#fff', borderRadius: 4 },
-  camera: { width: '100%', aspectRatio: 1, borderRadius: 4, overflow: 'hidden' },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: c.lineHi,
-    borderRadius: 3,
-    color: c.text,
-    fontFamily: font.regular,
-    fontSize: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-});
+const s = themed(() =>
+  StyleSheet.create({
+    row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    qr: { backgroundColor: '#fff', borderRadius: 4 },
+    camera: { width: '100%', aspectRatio: 1, borderRadius: 4, overflow: 'hidden' },
+    input: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: c.lineHi,
+      borderRadius: 3,
+      color: c.text,
+      fontFamily: font.regular,
+      fontSize: 14,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+  }),
+);
