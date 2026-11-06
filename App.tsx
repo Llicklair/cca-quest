@@ -1,6 +1,6 @@
 import { JetBrainsMono_400Regular, JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
 import { useFonts } from 'expo-font';
-import { StatusBar } from 'expo-status-bar';
+import { StatusBar, setStatusBarStyle } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState, BackHandler, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +25,7 @@ import {
   type Profile,
   type Progress,
   type Question,
+  type Theme,
 } from './src/game';
 import { FLASHCARDS } from './src/flashcards';
 import { TERMS } from './src/glossary';
@@ -46,8 +47,8 @@ import { parseRoom } from './src/live';
 import { Shield } from './src/shield';
 import { load, save, wipe } from './src/storage';
 import { useSync } from './src/sync';
-import { Boot, LangToggle, Rain, Txt, confirmAction } from './src/term';
-import { c } from './src/theme';
+import { Boot, LangToggle, Rain, ThemeToggle, Txt, confirmAction } from './src/term';
+import { c, setTheme, themed } from './src/theme';
 
 type Tab = 'play' | 'learn' | 'cards' | 'grep' | 'config';
 type PlayView = 'status' | 'round' | 'done' | 'exam' | 'misses' | 'live';
@@ -158,6 +159,12 @@ function Main() {
     return () => clearTimeout(id);
   }, [p]);
 
+  // Antes de pintar nada: así toda la app sale ya con los colores del tema elegido.
+  if (p) setTheme(p.theme);
+  useEffect(() => {
+    if (p) setStatusBarStyle(p.theme === 'light' ? 'dark' : 'light');
+  }, [p?.theme]);
+
   if (!p || !fontsReady) return <View style={s.fill} />;
   if (!booted) {
     return (
@@ -249,6 +256,11 @@ function Main() {
     remind(next); // los avisos ya programados pasan al idioma nuevo
   };
 
+  const changeTheme = (theme: Theme) => {
+    feel.tap();
+    commit({ ...p, theme });
+  };
+
   // El perfil (nombre, id y si sales en la clasificación) va en el progreso: así viaja con la sincronización.
   const setProfile = (profile: Profile) => commit({ ...p, profile });
 
@@ -295,14 +307,17 @@ function Main() {
 
   return (
     <View style={[s.fill, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      {/* A la izquierda, el logo que vuelve al inicio; a la derecha, un único botón de idioma que cambia toda la app. */}
+      {/* A la izquierda, el logo que vuelve al inicio; a la derecha, el tema y el idioma, que cambian toda la app. */}
       <View style={s.header}>
         <Pressable onPress={goHome} hitSlop={12} accessibilityRole="button" accessibilityLabel={T.home}>
           <Txt size={12} color={c.muted}>
             ~/cca-quest
           </Txt>
         </Pressable>
-        <LangToggle lang={p.lang} onChange={setLang} />
+        <View style={s.toggles}>
+          <ThemeToggle theme={p.theme} onChange={changeTheme} labels={T.themeNames} />
+          <LangToggle lang={p.lang} onChange={setLang} />
+        </View>
       </View>
       <View style={s.fill}>
         {tab === 'play' && view === 'status' && (
@@ -455,17 +470,20 @@ function Main() {
   );
 }
 
-const s = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: c.bg },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: c.line,
-  },
-  tabs: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: c.lineHi, backgroundColor: c.panel, paddingHorizontal: 6, paddingVertical: 6, gap: 4 },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 3 },
-});
+const s = themed(() =>
+  StyleSheet.create({
+    fill: { flex: 1, backgroundColor: c.bg },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 16,
+      paddingVertical: 6,
+      borderBottomWidth: 1,
+      borderBottomColor: c.line,
+    },
+    tabs: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: c.lineHi, backgroundColor: c.panel, paddingHorizontal: 6, paddingVertical: 6, gap: 4 },
+    toggles: { flexDirection: 'row', gap: 8 },
+    tab: { flex: 1, alignItems: 'center', paddingVertical: 8, borderRadius: 3 },
+  }),
+);

@@ -41,7 +41,7 @@ import { openRoom, type Peer, type Room, type RoomStatus } from '../room.ts';
 import { useGuard } from '../shield.tsx';
 import { kvGet, kvPut, newPlayerId } from '../sync.ts';
 import { Bar, Btn, Panel, Rich, Tag, Txt, Typer, confirmAction } from '../term.tsx';
-import { c, domainColor, font } from '../theme.ts';
+import { c, domainColor, font, themed } from '../theme.ts';
 import { Qr } from './link.tsx';
 import { inLang } from './misses.tsx';
 
@@ -849,32 +849,34 @@ function Over({ T, k = 1 }: { T: Strings; k?: number }) {
   );
 }
 
-const s = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: c.bg },
-  page: { padding: 16, gap: 12 },
-  wide: { width: '100%', maxWidth: 1100, alignSelf: 'center' },
-  bottom: { borderTopWidth: 1, borderTopColor: c.lineHi, backgroundColor: c.panel, paddingHorizontal: 16, paddingVertical: 10 },
-  bottomRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
-  top: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  opt: { borderWidth: 1, borderRadius: 3, padding: 12, gap: 6, backgroundColor: c.panel },
-  optRow: { flexDirection: 'row', gap: 10 },
-  votes: { flexDirection: 'row', alignItems: 'center' },
-  lobby: { gap: 16, alignItems: 'center' },
-  names: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  boardRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 3 },
-  choiceRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
-  choice: { flexDirection: 'row', borderWidth: 1, borderColor: c.lineHi, borderRadius: 3, overflow: 'hidden', flexWrap: 'wrap' },
-  choiceItem: { paddingHorizontal: 10, paddingVertical: 5 },
-  input: {
-    borderWidth: 1,
-    borderColor: c.lineHi,
-    borderRadius: 3,
-    color: c.text,
-    fontFamily: font.regular,
-    fontSize: 15,
-    paddingHorizontal: 10,
-    paddingVertical: 9,
-  },
-  codeInput: { fontFamily: font.bold, fontSize: 20, letterSpacing: 6 },
-});
+const s = themed(() =>
+  StyleSheet.create({
+    fill: { flex: 1, backgroundColor: c.bg },
+    page: { padding: 16, gap: 12 },
+    wide: { width: '100%', maxWidth: 1100, alignSelf: 'center' },
+    bottom: { borderTopWidth: 1, borderTopColor: c.lineHi, backgroundColor: c.panel, paddingHorizontal: 16, paddingVertical: 10 },
+    bottomRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
+    top: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line },
+    tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+    opt: { borderWidth: 1, borderRadius: 3, padding: 12, gap: 6, backgroundColor: c.panel },
+    optRow: { flexDirection: 'row', gap: 10 },
+    votes: { flexDirection: 'row', alignItems: 'center' },
+    lobby: { gap: 16, alignItems: 'center' },
+    names: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+    boardRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 3 },
+    choiceRow: { flexDirection: 'row', alignItems: 'center', marginTop: 10 },
+    choice: { flexDirection: 'row', borderWidth: 1, borderColor: c.lineHi, borderRadius: 3, overflow: 'hidden', flexWrap: 'wrap' },
+    choiceItem: { paddingHorizontal: 10, paddingVertical: 5 },
+    input: {
+      borderWidth: 1,
+      borderColor: c.lineHi,
+      borderRadius: 3,
+      color: c.text,
+      fontFamily: font.regular,
+      fontSize: 15,
+      paddingHorizontal: 10,
+      paddingVertical: 9,
+    },
+    codeInput: { fontFamily: font.bold, fontSize: 20, letterSpacing: 6 },
+  }),
+);

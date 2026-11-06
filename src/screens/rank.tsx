@@ -10,7 +10,7 @@ import { LIVE, cleanName, rankingList, readRanking, type RankRow } from '../live
 import { BOARD_KEY, QUIZ_KEY, boardList, daysAgo, publish, readBoard, summary, type Board, type BoardRow } from '../rank.ts';
 import { kvGet, kvPut, newPlayerId } from '../sync.ts';
 import { Btn, Cmd, Panel, Txt } from '../term.tsx';
-import { c, font } from '../theme.ts';
+import { c, font, themed } from '../theme.ts';
 
 const REFRESH_MS = 15_000;
 const MEDALS = ['🥇', '🥈', '🥉'];
@@ -207,20 +207,22 @@ export function RankPanels({ p, onProfile }: { p: Progress; onProfile: (profile:
   );
 }
 
-const s = StyleSheet.create({
-  block: { gap: 12, marginTop: 6 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  player: { paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: c.line },
-  input: {
-    flex: 1,
-    minWidth: 0, // en la web el campo trae un ancho propio y empujaba el botón fuera de la pantalla
-    borderWidth: 1,
-    borderColor: c.lineHi,
-    borderRadius: 3,
-    color: c.text,
-    fontFamily: font.regular,
-    fontSize: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-});
+const s = themed(() =>
+  StyleSheet.create({
+    block: { gap: 12, marginTop: 6 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    player: { paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: c.line },
+    input: {
+      flex: 1,
+      minWidth: 0, // en la web el campo trae un ancho propio y empujaba el botón fuera de la pantalla
+      borderWidth: 1,
+      borderColor: c.lineHi,
+      borderRadius: 3,
+      color: c.text,
+      fontFamily: font.regular,
+      fontSize: 14,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+    },
+  }),
+);
