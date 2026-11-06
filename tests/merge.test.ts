@@ -26,6 +26,13 @@ test('los avisos son de cada dispositivo y no viajan', () => {
   assert.deepEqual(merge(pc, shared(movil)).reminder, pc.reminder);
 });
 
+test('el tema también es de cada dispositivo', () => {
+  const movil = at({ ...fresh(HOY), theme: 'light' as const }, 200);
+  const pc = at(fresh(HOY), 100);
+  assert.equal('theme' in shared(movil), false);
+  assert.equal(merge(pc, shared(movil)).theme, 'dark');
+});
+
 test('si se estudió en los dos sin sincronizar, se quedan todas las preguntas', () => {
   const base = at(answer(fresh(HOY), 'q1', true, 0, HOY).progress, 10);
   const movil = at(answer(base, 'q2', true, 0, HOY).progress, 20);

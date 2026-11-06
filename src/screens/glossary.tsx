@@ -5,7 +5,7 @@ import { DOMAINS, type Domain, type Progress } from '../game.ts';
 import { TERMS } from '../glossary.ts';
 import { STR } from '../i18n.ts';
 import { Rich, Tag, Txt } from '../term.tsx';
-import { c, domainColor, font } from '../theme.ts';
+import { c, domainColor, font, themed } from '../theme.ts';
 import { AskConcept } from './misses.tsx';
 
 const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
@@ -85,21 +85,23 @@ function Chip({ label, on, color, onPress }: { label: string; on: boolean; color
   );
 }
 
-const s = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: c.bg },
-  page: { padding: 16, gap: 10 },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  input: {
-    flex: 1,
-    color: c.text,
-    fontFamily: font.regular,
-    fontSize: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: c.green,
-    paddingVertical: 4,
-  },
-  chips: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  chip: { borderWidth: 1, borderRadius: 3, paddingHorizontal: 8, paddingVertical: 2 },
-  row: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line, gap: 4 },
-  termRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-});
+const s = themed(() =>
+  StyleSheet.create({
+    fill: { flex: 1, backgroundColor: c.bg },
+    page: { padding: 16, gap: 10 },
+    head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    input: {
+      flex: 1,
+      color: c.text,
+      fontFamily: font.regular,
+      fontSize: 14,
+      borderBottomWidth: 1,
+      borderBottomColor: c.green,
+      paddingVertical: 4,
+    },
+    chips: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+    chip: { borderWidth: 1, borderRadius: 3, paddingHorizontal: 8, paddingVertical: 2 },
+    row: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line, gap: 4 },
+    termRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  }),
+);

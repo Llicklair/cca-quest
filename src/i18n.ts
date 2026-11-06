@@ -50,6 +50,7 @@ const en = {
   cancel: 'Cancel',
   // el logo de arriba a la izquierda lleva al inicio
   home: 'home',
+  themeNames: { dark: 'dark mode', light: 'light mode' },
   homeTitle: 'Go back home?',
   homeAction: 'Go home',
   homeSaved: 'Everything you answered is already saved.',
@@ -339,6 +340,7 @@ const es: Strings = {
   leave: 'Salir',
   cancel: 'Cancelar',
   home: 'inicio',
+  themeNames: { dark: 'modo oscuro', light: 'modo claro' },
   homeTitle: '¿Volver al inicio?',
   homeAction: 'Volver',
   homeSaved: 'Todo lo que has contestado ya está guardado.',

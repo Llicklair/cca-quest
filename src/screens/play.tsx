@@ -40,7 +40,7 @@ import { TERMS } from '../glossary.ts';
 import { STR } from '../i18n.ts';
 import { useGuard } from '../shield.tsx';
 import { Banner, Bar, BounceIn, Btn, Cmd, Heatmap, Panel, Pop, Pulse, Rich, Tag, Txt, Typer } from '../term.tsx';
-import { c, domainColor } from '../theme.ts';
+import { c, domainColor, themed } from '../theme.ts';
 
 export type Item = { q: Question; order: number[] }; // order[pos] = índice original de la opción
 export type Round = {
@@ -125,7 +125,7 @@ export function Status({
         </Txt>
       </View>
       {update !== null && (
-        <Pressable onPress={onUpdate} style={({ pressed }) => [s.update, pressed && { backgroundColor: '#2A2110' }]}>
+        <Pressable onPress={onUpdate} style={({ pressed }) => [s.update, pressed && { backgroundColor: c.amberBg }]}>
           <Txt bold size={13} color={c.amber}>
             {T.updateBanner(update)}
           </Txt>
@@ -198,7 +198,7 @@ export function Status({
         })}
       </Panel>
 
-      <Pressable onPress={onExam} style={({ pressed }) => [s.exam, pressed && { backgroundColor: '#2A2110' }]}>
+      <Pressable onPress={onExam} style={({ pressed }) => [s.exam, pressed && { backgroundColor: c.amberBg }]}>
         <View style={{ flex: 1 }}>
           <Txt bold color={c.amber}>
             $ cca-quest exam --mock
@@ -491,17 +491,19 @@ export function Done({ round, p, onAgain, onHome }: { round: Round; p: Progress;
   );
 }
 
-const s = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: c.bg },
-  page: { padding: 16, gap: 12 },
-  row: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
-  domRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
-  update: { borderWidth: 1, borderColor: c.amber, borderRadius: 4, padding: 12 },
-  todo: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
-  exam: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: c.amber, borderRadius: 4, padding: 14, marginTop: 4 },
-  top: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  opt: { borderWidth: 1, borderRadius: 3, padding: 12, gap: 6, backgroundColor: c.panel },
-  optRow: { flexDirection: 'row', gap: 10 },
-  bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: c.panel, borderTopWidth: 2, padding: 16, gap: 10 },
-});
+const s = themed(() =>
+  StyleSheet.create({
+    fill: { flex: 1, backgroundColor: c.bg },
+    page: { padding: 16, gap: 12 },
+    row: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
+    domRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
+    update: { borderWidth: 1, borderColor: c.amber, borderRadius: 4, padding: 12 },
+    todo: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 6 },
+    exam: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: c.amber, borderRadius: 4, padding: 14, marginTop: 4 },
+    top: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line },
+    tags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
+    opt: { borderWidth: 1, borderRadius: 3, padding: 12, gap: 6, backgroundColor: c.panel },
+    optRow: { flexDirection: 'row', gap: 10 },
+    bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: c.panel, borderTopWidth: 2, padding: 16, gap: 10 },
+  }),
+);

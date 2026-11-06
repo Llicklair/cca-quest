@@ -2,11 +2,11 @@
 // ninguna. Lógica pura, sin React ni Expo, para poder probarla con node --test.
 import type { Card, ExamResult, Progress } from './game.ts';
 
-/** Lo que viaja al servidor: todo menos los avisos, que son de cada dispositivo. */
-export type Shared = Omit<Progress, 'reminder'>;
+/** Lo que viaja al servidor: todo menos los avisos y el tema, que son de cada dispositivo. */
+export type Shared = Omit<Progress, 'reminder' | 'theme'>;
 
 export function shared(p: Progress): Shared {
-  const { reminder: _, ...rest } = p;
+  const { reminder: _, theme: __, ...rest } = p;
   return rest;
 }
 
@@ -59,6 +59,7 @@ export function merge(local: Progress, remote: Shared): Progress {
     cards: union(local.cards, remote.cards, (a, b) => pickCard(a, b, remoteNewer)),
     lessons: union(local.lessons, remote.lessons, (a, b) => (a && b ? (a < b ? a : b) : (a ?? b)!)),
     lang: newer.lang,
+    theme: local.theme,
     streak: goalFrom.streak,
     best: Math.max(local.best, remote.best),
     goalDay: goalFrom.goalDay,

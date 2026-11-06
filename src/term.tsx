@@ -16,8 +16,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import type { Lang } from './game.ts';
-import { c, font } from './theme.ts';
+import type { Lang, Theme } from './game.ts';
+import { c, font, themed } from './theme.ts';
 
 type TxtProps = {
   children: React.ReactNode;
@@ -325,6 +325,29 @@ export function LangToggle({ lang, onChange }: { lang: Lang; onChange: (l: Lang)
   );
 }
 
+/** Selector [☾|☀]: tema oscuro (el de siempre) o claro. */
+export function ThemeToggle({ theme, onChange, labels }: { theme: Theme; onChange: (t: Theme) => void; labels: Record<Theme, string> }) {
+  return (
+    <View style={s.toggle}>
+      {(['dark', 'light'] as const).map((t) => (
+        <Pressable
+          key={t}
+          onPress={() => onChange(t)}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={labels[t]}
+          accessibilityState={{ selected: theme === t }}
+          style={[s.toggleItem, theme === t && { backgroundColor: c.green }]}
+        >
+          <Txt size={14} bold color={theme === t ? c.bg : c.muted}>
+            {t === 'dark' ? '☾' : '☀'}
+          </Txt>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 /** Confirmación antes de algo que no se deshace. En la web, el confirm del navegador. */
 export function confirmAction(title: string, message: string, action: string, cancel: string, onConfirm: () => void) {
   if (Platform.OS === 'web') {
@@ -346,16 +369,18 @@ export function Tag({ label, color = c.muted }: { label: string; color?: string 
   );
 }
 
-const s = StyleSheet.create({
-  term: { textDecorationLine: 'underline', textDecorationStyle: 'dotted', textDecorationColor: c.cyan },
-  panel: { borderWidth: 1, borderRadius: 4, padding: 14, paddingTop: 16, backgroundColor: c.panel, marginTop: 8 },
-  panelTitle: { position: 'absolute', top: -10, left: 10, backgroundColor: c.bg },
-  btn: { borderWidth: 1, borderRadius: 3, paddingVertical: 13, paddingHorizontal: 14, alignItems: 'center' },
-  btnSmall: { paddingVertical: 7, paddingHorizontal: 10 },
-  pop: { position: 'absolute', alignSelf: 'center', top: '40%', fontSize: 30, fontFamily: font.bold },
-  toggle: { flexDirection: 'row', borderWidth: 1, borderColor: c.lineHi, borderRadius: 3, overflow: 'hidden' },
-  toggleItem: { paddingHorizontal: 14, paddingVertical: 6, minWidth: 48, alignItems: 'center' },
-});
+const s = themed(() =>
+  StyleSheet.create({
+    term: { textDecorationLine: 'underline', textDecorationStyle: 'dotted', textDecorationColor: c.cyan },
+    panel: { borderWidth: 1, borderRadius: 4, padding: 14, paddingTop: 16, backgroundColor: c.panel, marginTop: 8 },
+    panelTitle: { position: 'absolute', top: -10, left: 10, backgroundColor: c.bg },
+    btn: { borderWidth: 1, borderRadius: 3, paddingVertical: 13, paddingHorizontal: 14, alignItems: 'center' },
+    btnSmall: { paddingVertical: 7, paddingHorizontal: 10 },
+    pop: { position: 'absolute', alignSelf: 'center', top: '40%', fontSize: 30, fontFamily: font.bold },
+    toggle: { flexDirection: 'row', borderWidth: 1, borderColor: c.lineHi, borderRadius: 3, overflow: 'hidden' },
+    toggleItem: { paddingHorizontal: 14, paddingVertical: 6, minWidth: 48, alignItems: 'center' },
+  }),
+);
 
 // Rótulo en letras de caja (estilo “Calvin S”), compuesto glifo a glifo para que no se descuadre.
 const GLYPH: Record<string, [string, string, string]> = {
@@ -378,7 +403,8 @@ export function Banner({ text, color = c.green, size = 15 }: { text: string; col
   );
 }
 
-const HEAT = [c.line, '#1E5A37', c.greenDim, '#3CC873', c.green];
+// Una función y no una constante: los colores cambian con el tema.
+const heat = () => [c.line, c.heatLo, c.greenDim, c.heatHi, c.green];
 const heatLevel = (n: number) => (n === 0 ? 0 : n < 5 ? 1 : n < 10 ? 2 : n < 20 ? 3 : 4);
 
 /** Mapa de actividad estilo GitHub: filas lunes→domingo, columnas semanas. */
@@ -402,7 +428,7 @@ export function Heatmap({
             {weeks.map((w, i) => {
               const n = w[day];
               return (
-                <Text key={i} style={{ color: n === null ? 'transparent' : HEAT[heatLevel(n)] }}>
+                <Text key={i} style={{ color: n === null ? 'transparent' : heat()[heatLevel(n)] }}>
                   ■{' '}
                 </Text>
               );
@@ -412,7 +438,7 @@ export function Heatmap({
       ))}
       <Text style={{ fontFamily: font.regular, fontSize: 11, color: c.muted, marginTop: 4 }}>
         {less}{' '}
-        {HEAT.map((col, i) => (
+        {heat().map((col, i) => (
           <Text key={i} style={{ color: col }}>
             ■{' '}
           </Text>

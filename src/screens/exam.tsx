@@ -30,7 +30,7 @@ import { BANK, LEVEL_BANK, LEVEL_POOL } from '../bank.ts';
 import { QUESTIONS } from '../questions.ts';
 import { useGuard } from '../shield.tsx';
 import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer } from '../term.tsx';
-import { c, domainColor } from '../theme.ts';
+import { c, domainColor, themed } from '../theme.ts';
 
 export type Slot = { q: Question; order: number[]; picked: number | null }; // picked = índice original, o máscara en las de respuesta múltiple
 type Run = { label: string; slots: Slot[]; i: number; per: number; limit: number };
@@ -325,7 +325,7 @@ export function Exam({
               <Pressable
                 key={pos}
                 onPress={() => choose(orig)}
-                style={({ pressed }) => [s.opt, on && { borderColor: c.amber, backgroundColor: '#2A2110' }, pressed && { backgroundColor: c.greenBg }]}
+                style={({ pressed }) => [s.opt, on && { borderColor: c.amber, backgroundColor: c.amberBg }, pressed && { backgroundColor: c.greenBg }]}
               >
                 <View style={s.optRow}>
                   <Txt bold color={on ? c.amber : c.muted}>
@@ -464,15 +464,17 @@ function ExamRow({
   );
 }
 
-const s = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: c.bg },
-  page: { padding: 16, gap: 12 },
-  top: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line },
-  tags: { flexDirection: 'row', gap: 8, marginBottom: 8 },
-  opt: { borderWidth: 1, borderColor: c.lineHi, borderRadius: 3, padding: 12, backgroundColor: c.panel },
-  optRow: { flexDirection: 'row', gap: 10 },
-  bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: c.panel, borderTopWidth: 1, borderTopColor: c.lineHi, padding: 12, gap: 8 },
-  dots: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, justifyContent: 'center' },
-  histRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.line },
-});
+const s = themed(() =>
+  StyleSheet.create({
+    fill: { flex: 1, backgroundColor: c.bg },
+    page: { padding: 16, gap: 12 },
+    top: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line },
+    tags: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+    opt: { borderWidth: 1, borderColor: c.lineHi, borderRadius: 3, padding: 12, backgroundColor: c.panel },
+    optRow: { flexDirection: 'row', gap: 10 },
+    bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: c.panel, borderTopWidth: 1, borderTopColor: c.lineHi, padding: 12, gap: 8 },
+    dots: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, justifyContent: 'center' },
+    histRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
+    row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.line },
+  }),
+);

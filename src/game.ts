@@ -111,6 +111,7 @@ export function review(card: Card | undefined, correct: boolean, today: string, 
 export const GOAL = 5; // preguntas al día para mantener la racha
 
 export type Lang = 'en' | 'es';
+export type Theme = 'dark' | 'light';
 
 /** Lo traducible de una pregunta. */
 export type QuestionText = { scenario: string; ask: string; options: string[]; why: string[]; rule: string };
@@ -135,6 +136,7 @@ export type Progress = {
   cards: Record<string, Card>; // preguntas y fichas, cada una por su id
   lessons: Record<string, string>; // task statement → día en que se leyó la lección
   lang: Lang;
+  theme: Theme; // oscuro o claro; de cada dispositivo, como los avisos
   streak: number; // días seguidos cumpliendo la meta, hasta goalDay
   best: number;
   goalDay: string | null; // último día en que se cumplió la meta
@@ -168,6 +170,7 @@ export function fresh(today: string): Progress {
     cards: {},
     lessons: {},
     lang: 'en',
+    theme: 'dark',
     streak: 0,
     best: 0,
     goalDay: null,

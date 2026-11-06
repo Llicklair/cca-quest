@@ -7,7 +7,7 @@ import * as feel from '../feel.ts';
 import { shuffle, type Drill, type Lang, type Side, type Visual } from '../game.ts';
 import type { Strings } from '../i18n.ts';
 import { BounceIn, Btn, Panel, Rich, Txt } from '../term.tsx';
-import { c } from '../theme.ts';
+import { c, themed } from '../theme.ts';
 
 const toneColor = (t: Side['tone']) => (t === 'bad' ? c.red : t === 'good' ? c.green : c.cyan);
 const toneMark = (t: Side['tone']) => (t === 'bad' ? '✗ ' : t === 'good' ? '✓ ' : '');
@@ -170,14 +170,16 @@ export function TryIt({ d, lang, T }: { d: Drill; lang: Lang; T: Strings }) {
   );
 }
 
-const s = StyleSheet.create({
-  step: { flexDirection: 'row', gap: 10, padding: 8, borderWidth: 1, borderColor: 'transparent', borderRadius: 3 },
-  stepOn: { borderColor: c.green, backgroundColor: c.greenBg },
-  note: { marginTop: 10, borderLeftWidth: 2, borderLeftColor: c.green, paddingLeft: 10 },
-  row: { flexDirection: 'row', gap: 10, marginTop: 10 },
-  tab: { flex: 1, borderWidth: 1, borderRadius: 3, paddingVertical: 6, paddingHorizontal: 8, alignItems: 'center' },
-  code: { marginTop: 10, borderLeftWidth: 2, paddingLeft: 10, paddingVertical: 4 },
-  case: { gap: 6, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { borderWidth: 1, borderRadius: 3, paddingVertical: 5, paddingHorizontal: 10 },
-});
+const s = themed(() =>
+  StyleSheet.create({
+    step: { flexDirection: 'row', gap: 10, padding: 8, borderWidth: 1, borderColor: 'transparent', borderRadius: 3 },
+    stepOn: { borderColor: c.green, backgroundColor: c.greenBg },
+    note: { marginTop: 10, borderLeftWidth: 2, borderLeftColor: c.green, paddingLeft: 10 },
+    row: { flexDirection: 'row', gap: 10, marginTop: 10 },
+    tab: { flex: 1, borderWidth: 1, borderRadius: 3, paddingVertical: 6, paddingHorizontal: 8, alignItems: 'center' },
+    code: { marginTop: 10, borderLeftWidth: 2, paddingLeft: 10, paddingVertical: 4 },
+    case: { gap: 6, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+    chip: { borderWidth: 1, borderRadius: 3, paddingVertical: 5, paddingHorizontal: 10 },
+  }),
+);

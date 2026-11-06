@@ -6,7 +6,7 @@ import { DOMAINS, dayKey, deckDue, deckSession, MASTERED, type Flashcard, type L
 import { FLASHCARDS } from '../flashcards.ts';
 import { STR } from '../i18n.ts';
 import { Bar, Btn, Cmd, Panel, Pop, Rich, Tag, Txt, Typer } from '../term.tsx';
-import { c, domainColor } from '../theme.ts';
+import { c, domainColor, themed } from '../theme.ts';
 import { AskConcept } from './misses.tsx';
 
 type Run = { cards: Flashcard[]; i: number; flipped: boolean; knew: number; again: number; xp: number; gain: number };
@@ -161,11 +161,13 @@ export function Cards({
   );
 }
 
-const s = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: c.bg },
-  page: { padding: 16, gap: 12 },
-  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  top: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line },
-  bottom: { padding: 16, borderTopWidth: 1, borderTopColor: c.line, backgroundColor: c.panel },
-  domRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
-});
+const s = themed(() =>
+  StyleSheet.create({
+    fill: { flex: 1, backgroundColor: c.bg },
+    page: { padding: 16, gap: 12 },
+    head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    top: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line },
+    bottom: { padding: 16, borderTopWidth: 1, borderTopColor: c.line, backgroundColor: c.panel },
+    domRow: { flexDirection: 'row', alignItems: 'center', marginTop: 3 },
+  }),
+);
