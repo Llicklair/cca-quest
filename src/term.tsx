@@ -94,8 +94,12 @@ export function Panel({
 }) {
   return (
     <View style={[s.panel, { borderColor: color }, style]}>
+      {/* El título va sobre el borde, como la leyenda de un fieldset. Ocupa su sitio, así que si no cabe en una
+          línea empuja el contenido en vez de taparlo; y es transparente salvo una franja que corta el borde,
+          para que no se vea como una caja de otro color, ni en el tema claro ni en el oscuro. */}
       {title ? (
         <View style={s.panelTitle}>
+          <View style={s.panelGap} />
           <Txt size={12} color={titleColor} bold>
             {` ${title} `}
           </Txt>
@@ -373,7 +377,8 @@ const s = themed(() =>
   StyleSheet.create({
     term: { textDecorationLine: 'underline', textDecorationStyle: 'dotted', textDecorationColor: c.cyan },
     panel: { borderWidth: 1, borderRadius: 4, padding: 14, paddingTop: 16, backgroundColor: c.panel, marginTop: 8 },
-    panelTitle: { position: 'absolute', top: -10, left: 10, backgroundColor: c.bg },
+    panelTitle: { alignSelf: 'flex-start', marginTop: -26, marginHorizontal: -4, marginBottom: 8 },
+    panelGap: { position: 'absolute', left: 0, right: 0, top: 8, height: 2, backgroundColor: c.bg },
     btn: { borderWidth: 1, borderRadius: 3, paddingVertical: 13, paddingHorizontal: 14, alignItems: 'center' },
     btnSmall: { paddingVertical: 7, paddingHorizontal: 10 },
     pop: { position: 'absolute', alignSelf: 'center', top: '40%', fontSize: 30, fontFamily: font.bold },

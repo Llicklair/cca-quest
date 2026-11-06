@@ -451,7 +451,7 @@ const es: Strings = {
   leftPaused: (clock) => `⏱ quedan ${clock} · reloj parado`,
   resume: '▶ SEGUIR',
   discard: 'DESCARTAR',
-  fullMock: (clock) => `simulacro completo · 60 preguntas · ${clock}`,
+  fullMock: (clock) => `completo · 60 preguntas · ${clock}`,
   fullNote: '// como el real: 4 de 6 escenarios, 15 preguntas de cada uno y sin corrección hasta entregar. puedes pausarlo.',
   examLabel: (label) =>
     label === EXAM_LEVEL_LABEL
