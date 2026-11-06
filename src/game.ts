@@ -564,6 +564,8 @@ export type ExamDraft = {
   i: number;
   elapsed: number; // segundos consumidos
   limit: number; // segundos totales
+  flags?: boolean[]; // marcadas para revisar, como el "Flag question" del examen (no están en borradores antiguos)
+  notes?: string[]; // el comentario que dejaste en cada pregunta, que sale luego en el informe
 };
 
 /** Nota de un simulacro. `picked` es el índice original elegido (la máscara, en las de respuesta múltiple) o null si se quedó sin contestar. */
