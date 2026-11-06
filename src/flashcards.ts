@@ -965,6 +965,42 @@ export const FLASHCARDS: Flashcard[] = [
     },
   },
   {
+    id: 'f-3.6-bare',
+    ts: '3.6',
+    front: {
+      en: 'Your `claude -p` job behaves differently on each CI runner because of the hooks and MCP servers it finds there. Which flag makes every run start the same?',
+      es: 'Tu job con `claude -p` se comporta distinto en cada runner de CI por los hooks y servidores MCP que encuentra allí. ¿Qué flag hace que todas las ejecuciones empiecen igual?',
+    },
+    back: {
+      en: '`--bare`. It skips auto-discovery of hooks, skills, plugins, MCP servers, auto memory and `CLAUDE.md`, so you pass in what the job needs. It is the recommended mode for scripted and CI calls.',
+      es: '`--bare`. Se salta el autodescubrimiento de hooks, skills, plugins, servidores MCP, memoria automática y `CLAUDE.md`, así que le pasas lo que necesita el job. Es el modo recomendado para llamadas desde scripts y CI.',
+    },
+  },
+  {
+    id: 'f-3.6-bare-context',
+    ts: '3.6',
+    front: {
+      en: "In bare mode, how does the job get the team's review rules from `CLAUDE.md`?",
+      es: 'En modo bare, ¿cómo recibe el job las reglas de revisión del equipo que están en `CLAUDE.md`?',
+    },
+    back: {
+      en: "Pass them in, e.g. `--append-system-prompt-file CLAUDE.md`. Bare mode loads no `CLAUDE.md` at all, not even `~/.claude/CLAUDE.md`, and appending keeps Claude Code's default prompt.",
+      es: 'Pásaselas explícitamente, p. ej. `--append-system-prompt-file CLAUDE.md`. El modo bare no carga ningún `CLAUDE.md`, ni siquiera `~/.claude/CLAUDE.md`, y añadirlas mantiene el prompt por defecto de Claude Code.',
+    },
+  },
+  {
+    id: 'f-3.6-bare-not-print',
+    ts: '3.6',
+    front: {
+      en: 'Does `--bare` make Claude Code run non-interactively in CI?',
+      es: '¿`--bare` hace que Claude Code se ejecute en modo no interactivo en CI?',
+    },
+    back: {
+      en: 'No. `--bare` only skips auto-discovery; `-p` is what makes the run non-interactive (process the prompt, print, exit). CI jobs usually use both: `claude --bare -p`.',
+      es: 'No. `--bare` solo se salta el autodescubrimiento; lo que hace que la ejecución no sea interactiva es `-p` (procesa el prompt, escribe y termina). En CI se suelen usar los dos: `claude --bare -p`.',
+    },
+  },
+  {
     id: 'f-3.6-independent-review',
     ts: '3.6',
     front: {

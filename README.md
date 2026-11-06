@@ -74,6 +74,12 @@ dentro de los dos simulacros nivel real. Solo cuenta acertar las dos, sin puntos
 Los simulacros fijos 1–4 siguen siendo solo de una respuesta para que las notas se puedan comparar
 ([src/bank.ts](src/bank.ts) junta todo).
 
+Los temas que quien ya hizo el examen se encontró y no estaban en el banco van también aparte, en
+[src/questions-reported.ts](src/questions-reported.ts), comprobados contra la documentación de Claude Code.
+De momento son 3 preguntas de `--bare` en CI (que no es lo mismo que `-p`, y con el que el contexto se pasa
+con `--append-system-prompt-file`). Entran en las rondas, en el repaso de su lección y en los simulacros
+aleatorio y rápido, pero no en los fijos. La lección 3.6, el glosario y las fichas también los cuentan.
+
 Lecciones, fichas y glosario están en [src/lessons.ts](src/lessons.ts), [src/flashcards.ts](src/flashcards.ts)
 y [src/glossary.ts](src/glossary.ts), y los extras de cada lección en [src/extras.ts](src/extras.ts).
 

@@ -357,6 +357,22 @@ export const TERMS: Term[] = [
     },
   },
   {
+    term: '--bare',
+    domain: 'claude-code',
+    def: {
+      en: 'CLI flag for minimal mode: skips auto-discovery of hooks, skills, plugins, MCP servers, auto memory and every `CLAUDE.md`, so scripted and CI runs start the same on every machine. Context is passed with flags. It is not the same as `-p`.',
+      es: 'Flag de la CLI para el modo mínimo: se salta el autodescubrimiento de hooks, skills, plugins, servidores MCP, memoria automática y cualquier `CLAUDE.md`, para que las ejecuciones desde scripts y CI empiecen igual en todas las máquinas. El contexto se pasa con flags. No es lo mismo que `-p`.',
+    },
+  },
+  {
+    term: '--append-system-prompt',
+    domain: 'claude-code',
+    def: {
+      en: "CLI flag that adds text to the end of Claude Code's default system prompt (`--append-system-prompt-file` reads it from a file). `--system-prompt` instead replaces the whole default prompt.",
+      es: 'Flag de la CLI que añade texto al final del system prompt por defecto de Claude Code (`--append-system-prompt-file` lo lee de un fichero). `--system-prompt`, en cambio, sustituye todo el prompt por defecto.',
+    },
+  },
+  {
     term: 'explicit criteria',
     domain: 'prompting',
     def: {
