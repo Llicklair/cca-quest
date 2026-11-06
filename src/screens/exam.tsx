@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
 
 import * as feel from '../feel.ts';
 import {
@@ -30,9 +30,10 @@ import { BANK, LEVEL_BANK, LEVEL_BANK_60 } from '../bank.ts';
 import { QUESTIONS } from '../questions.ts';
 import { useGuard } from '../shield.tsx';
 import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer } from '../term.tsx';
-import { c, domainColor, themed } from '../theme.ts';
+import { c, domainColor, font, themed } from '../theme.ts';
 
-export type Slot = { q: Question; order: number[]; picked: number | null }; // picked = índice original, o máscara en las de respuesta múltiple
+// picked = índice original, o máscara en las de respuesta múltiple; flag y note, lo marcado y comentado para revisar.
+export type Slot = { q: Question; order: number[]; picked: number | null; flag?: boolean; note?: string };
 type Run = { label: string; slots: Slot[]; i: number; per: number; limit: number };
 type Phase = { kind: 'menu' } | { kind: 'run' } | { kind: 'report'; result: ExamResult; slots: Slot[]; gained: number };
 
@@ -78,6 +79,9 @@ export function Exam({
   const [elapsed, setElapsed] = useState(0);
   const runRef = useRef<Run | null>(null);
   const elapsedRef = useRef(0);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const { width } = useWindowDimensions();
+  const wide = width >= 900;
   const T = STR[p.lang];
   const text = (q: Question) => inLang(q, p.lang);
 
@@ -89,6 +93,8 @@ export function Exam({
     i: r.i,
     elapsed: secs,
     limit: r.limit,
+    flags: r.slots.map((s) => Boolean(s.flag)),
+    notes: r.slots.map((s) => s.note ?? ''),
   });
 
   const update = (r: Run) => {
@@ -142,7 +148,7 @@ export function Exam({
     const byId = new Map([...BANK, ...LEVEL_BANK].map((q) => [q.id, q]));
     const slots = d.ids.flatMap((id, k) => {
       const q = byId.get(id);
-      return q ? [{ q, order: d.orders[k], picked: d.picked[k] }] : [];
+      return q ? [{ q, order: d.orders[k], picked: d.picked[k], flag: d.flags?.[k], note: d.notes?.[k] || undefined }] : [];
     });
     update({ label: d.label, slots, i: Math.min(d.i, slots.length - 1), per: perOf(d.label), limit: d.limit });
     elapsedRef.current = d.elapsed;
@@ -177,7 +183,30 @@ export function Exam({
     feel.tap();
   };
 
-  const go = (i: number) => run && update({ ...run, i });
+  const go = (i: number) => {
+    if (!run) return;
+    setNoteOpen(false);
+    const next = { ...run, i };
+    update(next);
+    onSaveDraft(draftOf(next, elapsedRef.current));
+  };
+
+  const patchSlot = (change: Partial<Slot>) => {
+    if (!run) return null;
+    const next = { ...run, slots: run.slots.map((s, k) => (k === run.i ? { ...s, ...change } : s)) };
+    update(next);
+    return next;
+  };
+
+  const toggleFlag = () => {
+    const next = patchSlot({ flag: !run?.slots[run.i].flag });
+    if (next) onSaveDraft(draftOf(next, elapsedRef.current));
+    feel.tap();
+  };
+
+  // El comentario no se guarda a cada letra ni al salir del cuadro (eso se comía el toque siguiente):
+  // va con el guardado de cada 15 s y al pasar de pregunta, pausar o entregar.
+  const writeNote = (note: string) => patchSlot({ note });
 
   // --- Menú de simulacros ---
   if (phase.kind === 'menu') {
@@ -297,14 +326,86 @@ export function Exam({
   }
 
   // --- Examen en marcha ---
+  // En pantallas anchas, como en el examen de verdad: el caso a la izquierda y la pregunta a la derecha.
   if (phase.kind === 'run' && run) {
     const slot = run.slots[run.i];
     const left = Math.max(0, run.limit - elapsed);
     const scenarioIdx = Math.floor(run.i / run.per);
     const firstOfScenario = run.i % run.per === 0;
     const answered = run.slots.filter((x) => x.picked !== null).length;
+    const flaggedCount = run.slots.filter((x) => x.flag).length;
     const dom = DOMAINS.find((d) => d.id === slot.q.domain)!;
     const last = run.i + 1 === run.slots.length;
+    const showNote = noteOpen || Boolean(slot.note);
+
+    const scenario = (
+      <>
+        {slot.q.setting && (
+          <Txt bold size={12} color={firstOfScenario ? c.amber : c.muted}>
+            {T.scenarioOf(T.examLabel(run.label), scenarioIdx + 1, Math.ceil(run.slots.length / run.per), SETTINGS[slot.q.setting].name.toLowerCase())}
+          </Txt>
+        )}
+        <Panel color={c.lineHi}>
+          <Txt bold size={13} color={domainColor[slot.q.domain]} style={{ marginBottom: 8 }}>
+            {T.domainOf(dom.n, dom.name)}
+          </Txt>
+          <Rich text={text(slot.q).scenario} size={15} />
+        </Panel>
+      </>
+    );
+
+    const question = (
+      <>
+        <View style={s.qHead}>
+          <Txt bold>{T.questionOf(run.i + 1, run.slots.length)}</Txt>
+          <View style={{ flex: 1 }} />
+          <Pressable onPress={() => setNoteOpen((o) => !o)} hitSlop={8} accessibilityRole="button">
+            <Txt bold size={12} color={showNote ? c.cyan : c.muted}>
+              {T.comment}
+            </Txt>
+          </Pressable>
+          <Pressable onPress={toggleFlag} hitSlop={8} accessibilityRole="button" accessibilityState={{ selected: Boolean(slot.flag) }}>
+            <Txt bold size={12} color={slot.flag ? c.amber : c.muted}>
+              {slot.flag ? T.flagged : T.flag}
+            </Txt>
+          </Pressable>
+        </View>
+        {showNote && (
+          <TextInput
+            value={slot.note ?? ''}
+            onChangeText={writeNote}
+            placeholder={T.commentPh}
+            placeholderTextColor={c.muted}
+            multiline
+            style={s.note}
+          />
+        )}
+        <Txt bold size={15} color={c.green}>
+          ? {text(slot.q).ask}
+        </Txt>
+        {isMulti(slot.q) && <Tag label={T.selectN(rightOf(slot.q).length)} color={c.cyan} />}
+        {slot.order.map((orig, pos) => {
+          const on = isMulti(slot.q) ? ((slot.picked ?? 0) & (1 << orig)) !== 0 : slot.picked === orig;
+          return (
+            <Pressable
+              key={pos}
+              onPress={() => choose(orig)}
+              style={({ pressed }) => [s.opt, on && { borderColor: c.amber, backgroundColor: c.amberBg }, pressed && { backgroundColor: c.greenBg }]}
+            >
+              <View style={s.optRow}>
+                <Txt bold color={on ? c.amber : c.muted}>
+                  [{on ? (isMulti(slot.q) ? '■' : '●') : 'ABCDE'[pos]}]
+                </Txt>
+                <Rich text={text(slot.q).options[orig]} style={{ flex: 1 }} />
+              </View>
+            </Pressable>
+          );
+        })}
+        {/* Como en el examen no hay corrección hasta entregar, Claude ayuda a entenderla sin decir la buena. */}
+        <AskClaude q={slot.q} lang={p.lang} order={slot.order} reveal={false} />
+      </>
+    );
+
     return (
       <View style={s.fill}>
         <View style={s.top}>
@@ -321,56 +422,36 @@ export function Exam({
             </Txt>
           </Pressable>
         </View>
-        <ScrollView contentContainerStyle={[s.page, { paddingBottom: 170 }]} key={run.i}>
-          {slot.q.setting && (
-            <Txt bold size={12} color={firstOfScenario ? c.amber : c.muted}>
-              {T.scenarioOf(T.examLabel(run.label), scenarioIdx + 1, Math.ceil(run.slots.length / run.per), SETTINGS[slot.q.setting].name.toLowerCase())}
-            </Txt>
-          )}
-          <Panel color={c.lineHi}>
-            <View style={s.tags}>
-              <Tag label={`d${dom.n} ${dom.short.toLowerCase()}`} color={domainColor[slot.q.domain]} />
-            </View>
-            <Rich text={text(slot.q).scenario} size={15} />
-          </Panel>
-          <Txt bold size={15} color={c.green}>
-            ? {text(slot.q).ask}
-          </Txt>
-          {isMulti(slot.q) && <Tag label={T.selectN(rightOf(slot.q).length)} color={c.cyan} />}
-          {slot.order.map((orig, pos) => {
-            const on = isMulti(slot.q) ? ((slot.picked ?? 0) & (1 << orig)) !== 0 : slot.picked === orig;
-            return (
-              <Pressable
-                key={pos}
-                onPress={() => choose(orig)}
-                style={({ pressed }) => [s.opt, on && { borderColor: c.amber, backgroundColor: c.amberBg }, pressed && { backgroundColor: c.greenBg }]}
-              >
-                <View style={s.optRow}>
-                  <Txt bold color={on ? c.amber : c.muted}>
-                    [{on ? (isMulti(slot.q) ? '■' : '●') : 'ABCDE'[pos]}]
-                  </Txt>
-                  <Rich text={text(slot.q).options[orig]} style={{ flex: 1 }} />
-                </View>
-              </Pressable>
-            );
-          })}
-          {/* Como en el examen no hay corrección hasta entregar, Claude ayuda a entenderla sin decir la buena. */}
-          <AskClaude q={slot.q} lang={p.lang} order={slot.order} reveal={false} />
-        </ScrollView>
+        {wide ? (
+          <View style={[s.split, { paddingBottom: 130 }]}>
+            <ScrollView style={s.pane} contentContainerStyle={s.page} key={`case${run.i}`}>
+              {scenario}
+            </ScrollView>
+            <ScrollView style={[s.pane, { flex: 1.3 }]} contentContainerStyle={s.page} key={`q${run.i}`}>
+              {question}
+            </ScrollView>
+          </View>
+        ) : (
+          <ScrollView contentContainerStyle={[s.page, { paddingBottom: 170 }]} key={run.i}>
+            {scenario}
+            {question}
+          </ScrollView>
+        )}
         <View style={s.bottom}>
           <View style={s.dots}>
             {run.slots.map((x, k) => (
               <Pressable key={k} onPress={() => go(k)} hitSlop={3}>
-                <Txt size={12} bold color={k === run.i ? c.green : x.picked !== null ? c.amber : c.lineHi}>
-                  {k === run.i ? '◆' : x.picked !== null ? '■' : '□'}
+                <Txt size={12} bold color={k === run.i ? c.green : x.flag ? c.cyan : x.picked !== null ? c.amber : c.lineHi}>
+                  {k === run.i ? '◆' : x.flag ? '⚑' : x.picked !== null ? '■' : '□'}
                 </Txt>
               </Pressable>
             ))}
           </View>
           <Txt size={11} color={c.muted} style={{ textAlign: 'center' }}>
             {T.answeredN(answered, run.slots.length)}
+            {flaggedCount > 0 ? ` · ${T.flaggedN(flaggedCount)}` : ''}
           </Txt>
-          <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={[{ flexDirection: 'row', gap: 10 }, wide && { alignSelf: 'flex-end', width: 420 }]}>
             <Btn label={T.prev} onPress={() => go(Math.max(0, run.i - 1))} disabled={run.i === 0} style={{ flex: 1 }} />
             {last ? (
               <Btn kind="amber" label={T.submit} onPress={finish} style={{ flex: 1 }} />
@@ -439,7 +520,7 @@ export function Exam({
         </Cmd>
       )}
       {wrong.map((x) => (
-        <MissCard key={x.q.id} q={x.q} picked={x.picked} lang={p.lang} T={T} full />
+        <MissCard key={x.q.id} q={x.q} picked={x.picked} lang={p.lang} T={T} full note={x.note} />
       ))}
       <View style={{ gap: 10, marginTop: 6 }}>
         <Btn kind="amber" label={T.examList} onPress={() => setPhase({ kind: 'menu' })} />
@@ -487,7 +568,10 @@ const s = themed(() =>
     fill: { flex: 1, backgroundColor: c.bg },
     page: { padding: 16, gap: 12 },
     top: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line },
-    tags: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+    split: { flex: 1, flexDirection: 'row' },
+    pane: { flex: 1, borderRightWidth: 1, borderRightColor: c.line },
+    qHead: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+    note: { borderWidth: 1, borderColor: c.cyan, borderRadius: 3, padding: 10, minHeight: 64, color: c.text, backgroundColor: c.panel, fontFamily: font.regular, fontSize: 13 },
     opt: { borderWidth: 1, borderColor: c.lineHi, borderRadius: 3, padding: 12, backgroundColor: c.panel },
     optRow: { flexDirection: 'row', gap: 10 },
     bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: c.panel, borderTopWidth: 1, borderTopColor: c.lineHi, padding: 12, gap: 8 },

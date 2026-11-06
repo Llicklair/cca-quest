@@ -81,7 +81,21 @@ export function AskConcept({ title, lines, lang, inline }: { title: string; line
  * qué. `picked` tal como se guarda: índice, máscara en las de respuesta múltiple, o null sin contestar.
  * `full`: el escenario entero, para los informes al acabar una ronda o un simulacro; si no, recortado.
  */
-export function MissCard({ q, picked, lang, T, full }: { q: Question; picked: number | null | undefined; lang: Lang; T: Strings; full?: boolean }) {
+export function MissCard({
+  q,
+  picked,
+  lang,
+  T,
+  full,
+  note,
+}: {
+  q: Question;
+  picked: number | null | undefined;
+  lang: Lang;
+  T: Strings;
+  full?: boolean;
+  note?: string; // el comentario que dejaste en el simulacro
+}) {
   const tx = inLang(q, lang);
   const rights = rightOf(q);
   const wrongPicks = picked === undefined || picked === null ? [] : pickedOf(q, picked).filter((i) => !rights.includes(i));
@@ -104,6 +118,7 @@ export function MissCard({ q, picked, lang, T, full }: { q: Question; picked: nu
         </View>
       ))}
       <Rich text={`// ${tx.rule}`} size={12} color={c.amber} style={{ marginTop: 4 }} />
+      {note ? <Rich text={`${T.yourNote}: ${note}`} size={12} color={c.cyan} style={{ marginTop: 4 }} /> : null}
       <View style={{ marginTop: 8 }}>
         <AskClaude q={q} lang={lang} picked={picked} />
       </View>
