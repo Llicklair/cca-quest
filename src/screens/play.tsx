@@ -20,6 +20,7 @@ import {
   pickedOf,
   readiness,
   rightOf,
+  scoreOf,
   roundPool,
   shuffle,
   todo,
@@ -31,7 +32,7 @@ import {
 } from '../game.ts';
 import { FLASHCARDS } from '../flashcards.ts';
 import { LESSONS } from '../lessons.ts';
-import { BANK, LEVEL_BANK } from '../bank.ts';
+import { BANK, LEVEL_POOL } from '../bank.ts';
 import { QUESTIONS } from '../questions.ts';
 import { AskClaude, MissCard, inLang } from './misses.tsx';
 import { RankPanels } from './rank.tsx';
@@ -107,7 +108,7 @@ export function Status({
   const streak = liveStreak(p, t);
   const doneToday = goalDone(p, t);
   const todayCount = Math.min(GOAL, p.day === t ? p.answered : 0);
-  const pool = roundPool(BANK, LEVEL_BANK, p);
+  const pool = roundPool(BANK, LEVEL_POOL, p);
   const due = dueCount(pool, p, t);
   const unseen = BANK.filter((q) => !p.cards[q.id]).length;
   const atRisk = streak > 0 && !doneToday;
@@ -205,7 +206,7 @@ export function Status({
           <Txt size={12} color={c.muted}>
             {p.examDraft
               ? T.examDraftSub(T.examLabel(p.examDraft.label), p.examDraft.picked.filter((x) => x !== null).length, p.examDraft.ids.length)
-              : T.examSub(lastExam ? Math.round((100 * lastExam.right) / lastExam.total) : null)}
+              : T.examSub(lastExam ? Math.round(100 * scoreOf(lastExam)) : null)}
           </Txt>
         </View>
         <Txt bold color={c.amber}>

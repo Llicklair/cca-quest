@@ -13,6 +13,7 @@ import {
   EXAM,
   dayKey,
   examResult,
+  scoreOf,
   isRight,
   levelOf,
   liveStreak,
@@ -32,7 +33,7 @@ import { STR } from './src/i18n';
 import { LESSONS } from './src/lessons';
 import { ensurePermission, reschedule, testNotification } from './src/notify';
 import { checkUpdate, type UpdateInfo } from './src/update';
-import { BANK, LEVEL_BANK } from './src/bank';
+import { BANK, LEVEL_POOL } from './src/bank';
 import { Cards } from './src/screens/cards';
 import { Config } from './src/screens/config';
 import { Exam, type Slot } from './src/screens/exam';
@@ -60,7 +61,7 @@ const quizLink = Platform.OS === 'web' && typeof window !== 'undefined' ? parseR
 
 const today = () => dayKey(new Date());
 // Los avisos cuentan lo que toca repasar, también las preguntas nivel examen ya vistas.
-const remind = (p: Progress) => reschedule(roundPool(BANK, LEVEL_BANK, p), p);
+const remind = (p: Progress) => reschedule(roundPool(BANK, LEVEL_POOL, p), p);
 
 export default function App() {
   return (
@@ -172,7 +173,7 @@ function Main() {
     feel.big();
   };
 
-  const start = (qs: Question[] = roundPool(BANK, LEVEL_BANK, p), label = 'daily') => {
+  const start = (qs: Question[] = roundPool(BANK, LEVEL_POOL, p), label = 'daily') => {
     const picked = buildSession(qs, rollDay(p, today()), today(), Math.min(5, qs.length));
     feel.tap();
     setRound(newRound(picked, label));
@@ -261,7 +262,7 @@ function Main() {
     next = { ...next, exams: [result, ...next.exams].slice(0, 30), examDraft: null };
     commit(next);
     remind(next);
-    if (levelOf(next.xp).n > levelOf(p.xp).n || result.right / result.total >= EXAM.target) celebrate();
+    if (levelOf(next.xp).n > levelOf(p.xp).n || scoreOf(result) >= EXAM.target) celebrate();
     return { result, gained: next.xp - p.xp };
   };
 

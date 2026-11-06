@@ -2,7 +2,8 @@
 // regalen la respuesta, en los dos idiomas, y fuera de las rondas hasta que se ven en su simulacro.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DOMAINS, EXAM, SETTINGS, levelExam, roundPool, type Progress } from '../src/game.ts';
+import { DOMAINS, EXAM, SETTINGS, examResult, levelExam, perFromDraft, roundPool, scoreOf, type Progress } from '../src/game.ts';
+import { LEVEL_BANK, LEVEL_POOL } from '../src/bank.ts';
 import { QUESTIONS } from '../src/questions.ts';
 import { EXAM_LEVEL } from '../src/questions-exam.ts';
 import { EXAM_LEVEL_ES } from '../src/questions-exam-es.ts';
@@ -27,10 +28,26 @@ test('10 preguntas por escenario, completas y con ids que no chocan con el banco
   }
 });
 
-test('cubren todos los task statements y siguen el peso de cada dominio', () => {
-  for (const ts of TS) assert.ok(EXAM_LEVEL.some((q) => q.ts === ts), `sin pregunta nivel examen para ${ts}`);
+test('el simulacro nivel real: 60 preguntas, 10 por escenario con una de elegir 2, en 2 h', () => {
+  const exam = levelExam(LEVEL_BANK);
+  assert.equal(LEVEL_BANK.length, 60);
+  assert.equal(exam.length, 60);
+  for (const s of Object.keys(SETTINGS)) {
+    assert.equal(exam.filter((q) => q.setting === s).length, EXAM.levelPerScenario, s);
+    assert.equal(exam.filter((q) => q.setting === s && q.answers).length, 1, `${s}: una de elegir 2`);
+  }
+  assert.equal(exam.length * EXAM.secsPerQuestion, 7200);
+});
+
+test('el simulacro nivel real cubre todos los task statements y sigue el peso de cada dominio', () => {
+  const exam = levelExam(LEVEL_BANK);
+  for (const ts of TS) assert.ok(exam.some((q) => q.ts === ts), `sin pregunta nivel examen para ${ts}`);
+  const expected: Record<string, number> = {};
+  DOMAINS.forEach((d, k) => (expected[d.id] = [16, 11, 12, 12, 9][k]));
   for (const d of DOMAINS) {
-    const share = (100 * EXAM_LEVEL.filter((q) => q.domain === d.id).length) / EXAM_LEVEL.length;
+    const n = exam.filter((q) => q.domain === d.id).length;
+    assert.equal(n, expected[d.id], d.id);
+    const share = (100 * n) / exam.length;
     assert.ok(Math.abs(share - d.weight) <= 2, `${d.id}: ${share.toFixed(1)}% frente a ${d.weight}%`);
   }
 });
@@ -90,4 +107,33 @@ test('las de nivel examen entran en las rondas solo cuando ya han salido en su s
   assert.equal(pool.length, QUESTIONS.length + 1);
   assert.ok(pool.includes(seen));
   assert.ok(!pool.includes(unseen));
+});
+
+test('la nota del simulacro real pondera por dominio con el banco de verdad', () => {
+  const qs = levelExam(LEVEL_BANK);
+  const right = (q: (typeof qs)[number]) => (q.answers ? q.answers.reduce((m, i) => m | (1 << i), 0) : q.answer);
+  const all = examResult(qs.map((q) => ({ q, picked: right(q) })), '2026-10-10', 1, 'exam-level');
+  assert.equal(scoreOf(all), 1);
+  for (const d of DOMAINS) {
+    const r = examResult(qs.map((q) => ({ q, picked: q.domain === d.id ? null : right(q) })), '2026-10-10', 1, 'exam-level');
+    assert.ok(Math.abs(scoreOf(r) - (1 - d.weight / 100)) < 1e-12, d.id);
+  }
+});
+
+test('las preguntas retiradas del simulacro siguen en el repaso de quien ya las vio', () => {
+  const retired = LEVEL_POOL.filter((q) => !LEVEL_BANK.includes(q));
+  assert.equal(LEVEL_POOL.length, 66);
+  assert.equal(retired.length, 6);
+  const [seen, unseen] = retired;
+  const p = { cards: { [seen.id]: { box: 1, due: '2026-10-14', seen: 1, right: 0 } } } as unknown as Progress;
+  const pool = roundPool(QUESTIONS, LEVEL_POOL, p);
+  assert.ok(pool.includes(seen));
+  assert.ok(!pool.includes(unseen));
+});
+
+test('un borrador del simulacro real agrupa por escenario según sus ids, sea de 66 o de 60', () => {
+  const draft = (n: number) => ({ label: 'exam-level', ids: Array.from({ length: n }, (_, i) => `q${i}`) });
+  assert.equal(perFromDraft(draft(66), 10), 11);
+  assert.equal(perFromDraft(draft(60), 10), 10);
+  assert.equal(perFromDraft({ label: 'quick', ids: ['a'] }, 5), 5);
 });

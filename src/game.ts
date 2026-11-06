@@ -459,7 +459,7 @@ export function heatmap(p: Progress, today: string, weeks = 12): (number | null)
 // --- Simulacros de examen ---
 
 // Como el real: 60 preguntas en 120 minutos, 4 escenarios de 6 con 15 preguntas cada uno.
-// El de nivel examen tiene los 6 escenarios con 10 preguntas cada uno.
+// El de nivel examen tiene los 6 escenarios con 10 preguntas cada uno (9 largas y 1 de elegir 2): 60 en 2 h.
 export const EXAM = { scenarios: 4, perScenario: 15, quickPerScenario: 5, levelPerScenario: 10, secsPerQuestion: 120, target: 0.72 };
 
 // Los cuatro simulacros fijos, para poder repetirlos y comparar. Cada escenario sale en 2 o 3.
@@ -552,6 +552,11 @@ export function roundPool(base: Question[], level: Question[], p: Progress): Que
   return [...base, ...level.filter((q) => p.cards[q.id])];
 }
 
+/** Preguntas por escenario de un simulacro, deducidas de sus ids si es el de nivel real (un borrador viejo puede ser de 66). */
+export function perFromDraft(d: Pick<ExamDraft, 'label' | 'ids'>, fallback: number): number {
+  return d.label === EXAM_LEVEL_LABEL ? d.ids.length / Object.keys(SETTINGS).length : fallback;
+}
+
 /** Simulacro a medias: lo justo para retomarlo donde se dejó. */
 export type ExamDraft = {
   label: string;
@@ -576,10 +581,36 @@ export function examResult(items: { q: Question; picked: number | null }[], day:
   return { label, day, right, total: items.length, secs, byDomain };
 }
 
+/** Etiqueta del simulacro "nivel real", el único cuya nota pondera por dominio. */
+export const EXAM_LEVEL_LABEL = 'exam-level';
+
+/** Nota ponderada por el peso oficial de cada dominio, de 0 a 1. Solo cuentan los dominios con preguntas (se renormaliza). */
+export function weightedScore(byDomain: ExamResult['byDomain']): number {
+  let sum = 0;
+  let weights = 0;
+  for (const d of DOMAINS) {
+    const [r, t] = byDomain[d.id] ?? [0, 0];
+    if (t > 0) {
+      sum += (d.weight * r) / t;
+      weights += d.weight;
+    }
+  }
+  return weights ? sum / weights : 0;
+}
+
+/** Si la nota de este simulacro se pondera por dominio. */
+export const isWeighted = (label: string): boolean => label === EXAM_LEVEL_LABEL;
+
+/** Nota de un intento (de 0 a 1): ponderada en el nivel real, aciertos/preguntas en el resto. */
+export function scoreOf(e: ExamResult): number {
+  if (isWeighted(e.label)) return weightedScore(e.byDomain);
+  return e.total ? e.right / e.total : 0;
+}
+
 /** Mejor nota (de 0 a 1) de un simulacro concreto, o null si no se ha hecho. */
 export function bestScore(p: Progress, label: string): number | null {
   const mine = p.exams.filter((e) => e.label === label);
-  return mine.length ? Math.max(...mine.map((e) => e.right / e.total)) : null;
+  return mine.length ? Math.max(...mine.map(scoreOf)) : null;
 }
 
 // --- Fallos ---

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Platform, ScrollView, Share, StyleSheet, View } from 'react-native';
 
 import { claudePrompt, claudeUrl, conceptPrompt } from '../ask.ts';
-import { BANK, BANK_ES, LEVEL_BANK } from '../bank.ts';
+import { BANK, BANK_ES, LEVEL_POOL } from '../bank.ts';
 import { misses, pickedOf, rightOf, roundPool, type Lang, type Progress, type Question } from '../game.ts';
 import { STR, type Strings } from '../i18n.ts';
 import { Btn, Cmd, Panel, Rich, Txt, Typer } from '../term.tsx';
@@ -114,7 +114,7 @@ export function MissCard({ q, picked, lang, T, full }: { q: Question; picked: nu
 /** Todas las preguntas falladas la última vez que salieron, para repasarlas cuando quieras. */
 export function Misses({ p, onPractice, onBack }: { p: Progress; onPractice: (qs: Question[]) => void; onBack: () => void }) {
   const T = STR[p.lang];
-  const list = misses(roundPool(BANK, LEVEL_BANK, p), p);
+  const list = misses(roundPool(BANK, LEVEL_POOL, p), p);
   return (
     <ScrollView contentContainerStyle={s.page}>
       <Typer text="$ git log --failed" bold color={c.green} />

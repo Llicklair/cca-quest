@@ -1,6 +1,6 @@
 // Textos de la interfaz en inglés y en español. Las preguntas no pasan por aquí: van
 // siempre en inglés, como el examen. Los “$ comandos” se quedan igual en los dos idiomas.
-import type { Lang } from './game.ts';
+import { EXAM_LEVEL_LABEL, type Lang } from './game.ts';
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
 
@@ -175,6 +175,8 @@ const en = {
   levelTitle: (n: number, clock: string) => `exam-level · ${n} q · ${clock}`,
   levelNote:
     "// long questions like the real exam: twice the reading, two defensible options and a detail that decides. people who passed say the real one is longer to read, not harder. its questions don't show up in daily rounds until you've done this mock.",
+  levelWeighted: '// score weighted by domain, as in the real exam: D1 27 · D2 18 · D3 20 · D4 20 · D5 15',
+  rawHits: (r: number, t: number) => `${r}/${t} correct`,
   levelSub: (scenarios: number, per: number) => `all ${scenarios} scenarios · ${per} questions each`,
   quickTitle: (clock: string) => `quick · 20 q · ${clock}`,
   quickSub: '4 random scenarios · 5 questions each',
@@ -190,6 +192,7 @@ const en = {
   submit: 'SUBMIT ✓',
   score: 'score',
   scoreLine: (r: number, t: number, clock: string, xp: number) => `${r}/${t} right · ${clock} · +${xp} xp`,
+  timeLine: (clock: string, xp: number) => `${clock} · +${xp} xp`,
   onTrack: '// on track. keep the streak going.',
   below: (pct: number) => `// below the ~${pct}% target. review the misses below.`,
   noAnswer: '(no answer)',
@@ -448,11 +451,13 @@ const es: Strings = {
   fullMock: (clock) => `simulacro completo · 60 preguntas · ${clock}`,
   fullNote: '// como el real: 4 de 6 escenarios, 15 preguntas de cada uno y sin corrección hasta entregar. puedes pausarlo.',
   examLabel: (label) =>
-    label === 'exam-level' ? 'nivel real' : label.replace('exam', 'examen').replace('random', 'aleatorio').replace('quick', 'rápido'),
+    label === EXAM_LEVEL_LABEL ? 'nivel real' : label.replace('exam', 'examen').replace('random', 'aleatorio').replace('quick', 'rápido'),
   randomSub: '4 escenarios al azar · distinto cada vez',
   levelTitle: (n, clock) => `nivel real · ${n} preguntas · ${clock}`,
   levelNote:
     '// preguntas largas como las del examen: el doble de lectura, dos opciones defendibles y un detalle que decide. quien ya aprobó cuenta que el real no es más difícil, sino más largo de leer. sus preguntas no salen en las rondas hasta que hagas este simulacro.',
+  levelWeighted: '// nota ponderada por dominio, como en el examen real: D1 27 · D2 18 · D3 20 · D4 20 · D5 15',
+  rawHits: (r, t) => `${r}/${t} aciertos`,
   levelSub: (scenarios, per) => `los ${scenarios} escenarios · ${per} preguntas de cada uno`,
   quickTitle: (clock) => `rápido · 20 preguntas · ${clock}`,
   quickSub: '4 escenarios al azar · 5 preguntas de cada uno',
@@ -468,6 +473,7 @@ const es: Strings = {
   submit: 'ENTREGAR ✓',
   score: 'nota',
   scoreLine: (r, t, clock, xp) => `${r}/${t} aciertos · ${clock} · +${xp} xp`,
+  timeLine: (clock, xp) => `${clock} · +${xp} xp`,
   onTrack: '// vas bien. mantén la racha.',
   below: (pct) => `// por debajo del ~${pct}%. repasa los fallos de abajo.`,
   noAnswer: '(sin contestar)',

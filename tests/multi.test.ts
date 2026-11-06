@@ -2,10 +2,9 @@
 // buenas, en los dos idiomas, y metidas en las rondas y el simulacro nivel examen sin tocar los fijos.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BANK, LEVEL_BANK } from '../src/bank.ts';
+import { BANK, LEVEL_BANK, LEVEL_POOL } from '../src/bank.ts';
 import { DOMAINS, SETTINGS, fixedExams, levelExam, roundPool, type Question, type QuestionText } from '../src/game.ts';
 import { QUESTIONS } from '../src/questions.ts';
-import { EXAM_LEVEL } from '../src/questions-exam.ts';
 import { EXAM_LEVEL_MULTI, EXAM_LEVEL_MULTI_ES } from '../src/questions-exam-multi.ts';
 import { MULTI, MULTI_ES } from '../src/questions-multi.ts';
 
@@ -76,7 +75,7 @@ test('las de nivel examen son largas como las demás de su simulacro', () => {
 });
 
 test('ids únicos en todo el banco', () => {
-  const ids = [...BANK, ...LEVEL_BANK].map((q) => q.id);
+  const ids = [...BANK, ...LEVEL_POOL].map((q) => q.id);
   assert.equal(new Set(ids).size, ids.length);
 });
 
@@ -85,7 +84,8 @@ test('entran en las rondas y en el simulacro nivel examen, pero no en los fijos'
   const pool = roundPool(BANK, LEVEL_BANK, fresh);
   for (const q of MULTI) assert.ok(pool.includes(q), q.id);
   const level = levelExam(LEVEL_BANK);
-  assert.equal(level.length, EXAM_LEVEL.length + EXAM_LEVEL_MULTI.length);
+  assert.equal(level.length, LEVEL_BANK.length);
+  assert.equal(level.length, 60);
   for (const q of EXAM_LEVEL_MULTI) assert.ok(level.includes(q), q.id);
   const fixed = fixedExams(QUESTIONS).flat();
   assert.ok(fixed.every((q) => !q.answers), 'los fijos siguen siendo de una respuesta');
