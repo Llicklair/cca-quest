@@ -5,10 +5,10 @@ import * as feel from '../feel.ts';
 import {
   DOMAINS,
   EXAM,
+  EXAM_LEVEL_60_LABEL,
   EXAM_LEVEL_LABEL,
   FIXED_EXAMS,
   SETTINGS,
-  perFromDraft,
   bestScore,
   buildExam,
   fixedExams,
@@ -26,7 +26,7 @@ import {
 } from '../game.ts';
 import { STR } from '../i18n.ts';
 import { AskClaude, MissCard, inLang } from './misses.tsx';
-import { BANK, LEVEL_BANK, LEVEL_POOL } from '../bank.ts';
+import { BANK, LEVEL_BANK, LEVEL_BANK_60 } from '../bank.ts';
 import { QUESTIONS } from '../questions.ts';
 import { useGuard } from '../shield.tsx';
 import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer } from '../term.tsx';
@@ -38,9 +38,19 @@ type Phase = { kind: 'menu' } | { kind: 'run' } | { kind: 'report'; result: Exam
 
 // Los fijos salen solo de las de una respuesta, para que no cambien al crecer el banco (ver bank.ts).
 const FIXED = fixedExams(QUESTIONS);
+// Los dos de nivel real, con los 6 escenarios: el de 60 en 2 h, como el examen, y el completo con las 66.
+const LEVEL_60 = levelExam(LEVEL_BANK_60);
 const LEVEL = levelExam(LEVEL_BANK);
+const LEVEL_60_PER = LEVEL_60.length / Object.keys(SETTINGS).length;
 const LEVEL_PER = LEVEL.length / Object.keys(SETTINGS).length;
-const perOf = (label: string) => (label === 'quick' ? EXAM.quickPerScenario : label === EXAM_LEVEL_LABEL ? LEVEL_PER : EXAM.perScenario);
+const perOf = (label: string) =>
+  label === 'quick'
+    ? EXAM.quickPerScenario
+    : label === EXAM_LEVEL_60_LABEL
+      ? LEVEL_60_PER
+      : label === EXAM_LEVEL_LABEL
+        ? LEVEL_PER
+        : EXAM.perScenario;
 const clock = (secs: number) => {
   const h = Math.floor(secs / 3600);
   const m = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
@@ -129,12 +139,12 @@ export function Exam({
   };
 
   const resume = (d: ExamDraft) => {
-    const byId = new Map([...BANK, ...LEVEL_POOL].map((q) => [q.id, q]));
+    const byId = new Map([...BANK, ...LEVEL_BANK].map((q) => [q.id, q]));
     const slots = d.ids.flatMap((id, k) => {
       const q = byId.get(id);
       return q ? [{ q, order: d.orders[k], picked: d.picked[k] }] : [];
     });
-    update({ label: d.label, slots, i: Math.min(d.i, slots.length - 1), per: perFromDraft(d, perOf(d.label)), limit: d.limit });
+    update({ label: d.label, slots, i: Math.min(d.i, slots.length - 1), per: perOf(d.label), limit: d.limit });
     elapsedRef.current = d.elapsed;
     setElapsed(d.elapsed);
     setPhase({ kind: 'run' });
@@ -217,13 +227,21 @@ export function Exam({
           />
         </Panel>
 
-        <Panel title={T.levelTitle(LEVEL.length, clock(LEVEL.length * EXAM.secsPerQuestion))} color={c.amber} titleColor={c.amber}>
+        <Panel title={T.levelTitle} color={c.amber} titleColor={c.amber}>
           <Txt size={12} color={c.muted} style={{ marginBottom: 6 }}>
             {T.levelNote}
           </Txt>
           <ExamRow
+            title={T.examLabel(EXAM_LEVEL_60_LABEL)}
+            sub={T.level60Sub(clock(LEVEL_60.length * EXAM.secsPerQuestion), LEVEL_60_PER)}
+            best={bestScore(p, EXAM_LEVEL_60_LABEL)}
+            bestLabel={T.bestPct}
+            disabled={Boolean(d) || LEVEL_60.length === 0}
+            onPress={() => begin(EXAM_LEVEL_60_LABEL, LEVEL_60, LEVEL_60_PER)}
+          />
+          <ExamRow
             title={T.examLabel(EXAM_LEVEL_LABEL)}
-            sub={T.levelSub(Object.keys(SETTINGS).length, LEVEL_PER)}
+            sub={T.levelAllSub(LEVEL.length, clock(LEVEL.length * EXAM.secsPerQuestion), LEVEL_PER)}
             best={bestScore(p, EXAM_LEVEL_LABEL)}
             bestLabel={T.bestPct}
             disabled={Boolean(d) || LEVEL.length === 0}

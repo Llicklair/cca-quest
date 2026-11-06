@@ -156,7 +156,7 @@ export type Progress = {
 export type Profile = { id: string; name: string; public: boolean };
 
 export type ExamResult = {
-  label: string; // 'exam 1'…'exam 4', 'random' o 'quick'
+  label: string; // 'exam 1'…'exam 4', 'random', 'quick', 'exam-level' (66) o 'exam-level 60'
   day: string;
   right: number;
   total: number;
@@ -462,7 +462,7 @@ export function heatmap(p: Progress, today: string, weeks = 12): (number | null)
 // --- Simulacros de examen ---
 
 // Como el real: 60 preguntas en 120 minutos, 4 escenarios de 6 con 15 preguntas cada uno.
-// El de nivel examen tiene los 6 escenarios con 10 preguntas cada uno (9 largas y 1 de elegir 2): 60 en 2 h.
+// Los de nivel real tienen los 6 escenarios: el completo, 11 de cada uno (66, 2h12); el de 2 h, 10 de cada uno (60).
 export const EXAM = { scenarios: 4, perScenario: 15, quickPerScenario: 5, levelPerScenario: 10, secsPerQuestion: 120, target: 0.72 };
 
 // Los cuatro simulacros fijos, para poder repetirlos y comparar. Cada escenario sale en 2 o 3.
@@ -555,11 +555,6 @@ export function roundPool(base: Question[], level: Question[], p: Progress): Que
   return [...base, ...level.filter((q) => p.cards[q.id])];
 }
 
-/** Preguntas por escenario de un simulacro, deducidas de sus ids si es el de nivel real (un borrador viejo puede ser de 66). */
-export function perFromDraft(d: Pick<ExamDraft, 'label' | 'ids'>, fallback: number): number {
-  return d.label === EXAM_LEVEL_LABEL ? d.ids.length / Object.keys(SETTINGS).length : fallback;
-}
-
 /** Simulacro a medias: lo justo para retomarlo donde se dejó. */
 export type ExamDraft = {
   label: string;
@@ -584,8 +579,9 @@ export function examResult(items: { q: Question; picked: number | null }[], day:
   return { label, day, right, total: items.length, secs, byDomain };
 }
 
-/** Etiqueta del simulacro "nivel real", el único cuya nota pondera por dominio. */
+/** Los dos simulacros "nivel real", los únicos cuya nota pondera por dominio: el completo (66) y el de 60 en 2 h. */
 export const EXAM_LEVEL_LABEL = 'exam-level';
+export const EXAM_LEVEL_60_LABEL = 'exam-level 60';
 
 /** Nota ponderada por el peso oficial de cada dominio, de 0 a 1. Solo cuentan los dominios con preguntas (se renormaliza). */
 export function weightedScore(byDomain: ExamResult['byDomain']): number {
@@ -602,7 +598,7 @@ export function weightedScore(byDomain: ExamResult['byDomain']): number {
 }
 
 /** Si la nota de este simulacro se pondera por dominio. */
-export const isWeighted = (label: string): boolean => label === EXAM_LEVEL_LABEL;
+export const isWeighted = (label: string): boolean => label === EXAM_LEVEL_LABEL || label === EXAM_LEVEL_60_LABEL;
 
 /** Nota de un intento (de 0 a 1): ponderada en el nivel real, aciertos/preguntas en el resto. */
 export function scoreOf(e: ExamResult): number {

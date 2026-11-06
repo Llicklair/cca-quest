@@ -19,8 +19,9 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
   preguntas), uno aleatorio de 60 y uno rápido de 20 (estos dos sacan primero las que aún no has
   acertado). Se pueden pausar y retomar con el reloj parado. Al
   final, nota por dominio, repaso de los fallos e historial de intentos.
-- **Simulacro nivel real**: 60 preguntas largas como las del examen, en 2 horas (los 6 escenarios, 10 de cada uno,
-  una de ellas de "elige 2").
+- **Simulacro nivel real**, con preguntas largas como las del examen y los 6 escenarios, en dos versiones: la de
+  60 preguntas en 2 horas, como el examen (10 de cada escenario, una de ellas de "elige 2"), y la completa con
+  las 66 en 2h12 (11 de cada escenario).
   Quien ya aprobó cuenta que el examen real no es más difícil en conceptos, sino más largo de leer: un
   simulacro de 60 preguntas cortas se hace en una hora y el real deja 15 minutos de margen. Estas tienen
   el doble de lectura, datos que no importan y dos opciones defendibles que solo desempata un detalle del
@@ -62,13 +63,14 @@ El banco ([src/questions.ts](src/questions.ts)) tiene 253 preguntas (42 por esce
 de la guía (v1.0, julio 2026). Las preguntas oficiales no son públicas: estas imitan su formato
 (evidencia de producción → "most effective…", 4 opciones con trampas plausibles) sin copiarlas.
 Las 60 largas de nivel real están aparte, en [src/questions-exam.ts](src/questions-exam.ts), para que los simulacros
-1–4 no cambien; el simulacro usa 54 de ellas (las otras 6 quedan para el repaso de quien ya las vio) más las 6 de "elige 2".
+1–4 no cambien. El de 60 en 2 h usa 54 de ellas (deja fuera una por escenario, para que el reparto por dominio quede
+16/11/12/12/9 como en la guía) más las 6 de "elige 2"; el completo, todas.
 
 La guía v1.0 dice que el examen tiene preguntas de una respuesta y de **respuesta múltiple** ("each item
 states how many responses to select"). Por eso hay 18 de "elige 2", con 5 opciones y 2 buenas: 12 cortas
 (2 por escenario, [src/questions-multi.ts](src/questions-multi.ts)) que entran en las rondas, el repaso y los
 simulacros aleatorio y rápido, y 6 largas (una por escenario, [src/questions-exam-multi.ts](src/questions-exam-multi.ts))
-dentro del simulacro nivel real, que queda en 60 preguntas. Solo cuenta acertar las dos, sin puntos parciales.
+dentro de los dos simulacros nivel real. Solo cuenta acertar las dos, sin puntos parciales.
 Los simulacros fijos 1–4 siguen siendo solo de una respuesta para que las notas se puedan comparar
 ([src/bank.ts](src/bank.ts) junta todo).
 

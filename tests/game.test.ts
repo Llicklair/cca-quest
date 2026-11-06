@@ -431,12 +431,13 @@ test('nota ponderada: se renormaliza sin un dominio, vacío da 0 y un dominio en
   assert.equal(weightedScore({ agentic: [0, 0] }), 0);
 });
 
-test('scoreOf: ponderada solo en el nivel real, cruda en el resto', () => {
+test('scoreOf: ponderada solo en los dos de nivel real, cruda en el resto', () => {
   const byDomain = { agentic: [0, 10], tools: [10, 10] } as ExamResult['byDomain'];
   const mk = (label: string): ExamResult => ({ label, day: HOY, right: 10, total: 20, secs: 1, byDomain });
   assert.equal(scoreOf(mk('quick')), 0.5);
   assert.equal(scoreOf(mk('exam 1')), 0.5);
   assert.ok(Math.abs(scoreOf(mk('exam-level')) - 18 / 45) < 1e-12);
+  assert.ok(Math.abs(scoreOf(mk('exam-level 60')) - 18 / 45) < 1e-12);
   const p = fresh(HOY);
   p.exams = [mk('exam-level')];
   assert.ok(Math.abs(bestScore(p, 'exam-level')! - 18 / 45) < 1e-12);
