@@ -470,7 +470,11 @@ export function Exam({
   const weighted = isWeighted(result.label);
   const score = pct(scoreOf(result));
   const passed = score >= EXAM.target * 100;
-  const wrong = phase.slots.filter((x) => !isRight(x.q, x.picked));
+  // Cada pregunta con su número en el examen, para que el índice de marcadas y las fichas casen.
+  const numbered = phase.slots.map((x, k) => ({ ...x, n: k + 1, ok: isRight(x.q, x.picked) }));
+  const wrong = numbered.filter((x) => !x.ok);
+  const marked = numbered.filter((x) => x.flag || x.note);
+  const headOf = (x: (typeof numbered)[number]) => `${T.qN(x.n)}${x.flag ? ' · ⚑' : ''}`;
   return (
     <ScrollView contentContainerStyle={s.page}>
       <Typer text={`$ cca-quest exam --report "${result.label}"`} bold color={c.green} />
@@ -514,13 +518,37 @@ export function Exam({
           );
         })}
       </Panel>
+      {marked.length > 0 && (
+        <>
+          <Cmd>{T.marked(marked.length)}</Cmd>
+          <Panel color={c.cyan}>
+            <Txt size={11} color={c.muted}>
+              {T.markedHint}
+            </Txt>
+            {marked.map((x) => (
+              <View key={x.q.id} style={{ marginTop: 8 }}>
+                <Txt bold size={12} color={x.ok ? c.green : c.red}>
+                  {x.ok ? '✓' : '✗'} {headOf(x)}
+                </Txt>
+                <Rich text={inLang(x.q, p.lang).ask} size={12} />
+                {x.note ? <Rich text={`${T.yourNote}: ${x.note}`} size={12} color={c.cyan} /> : null}
+              </View>
+            ))}
+          </Panel>
+          {marked
+            .filter((x) => x.ok)
+            .map((x) => (
+              <MissCard key={`ok${x.q.id}`} q={x.q} picked={x.picked} lang={p.lang} T={T} full note={x.note} head={`✓ ${headOf(x)}`} />
+            ))}
+        </>
+      )}
       {wrong.length > 0 && (
         <Cmd>
           git diff --misses <Txt color={c.muted}>({wrong.length})</Txt>
         </Cmd>
       )}
       {wrong.map((x) => (
-        <MissCard key={x.q.id} q={x.q} picked={x.picked} lang={p.lang} T={T} full note={x.note} />
+        <MissCard key={x.q.id} q={x.q} picked={x.picked} lang={p.lang} T={T} full note={x.note} head={headOf(x)} />
       ))}
       <View style={{ gap: 10, marginTop: 6 }}>
         <Btn kind="amber" label={T.examList} onPress={() => setPhase({ kind: 'menu' })} />

@@ -88,6 +88,7 @@ export function MissCard({
   T,
   full,
   note,
+  head,
 }: {
   q: Question;
   picked: number | null | undefined;
@@ -95,6 +96,7 @@ export function MissCard({
   T: Strings;
   full?: boolean;
   note?: string; // el comentario que dejaste en el simulacro
+  head?: string; // delante del dominio, p. ej. "P12 · ⚑" en el informe del simulacro
 }) {
   const tx = inLang(q, lang);
   const rights = rightOf(q);
@@ -103,6 +105,7 @@ export function MissCard({
   return (
     <Panel color={c.line}>
       <Txt size={11} bold color={domainColor[q.domain]}>
+        {head ? `${head} · ` : ''}
         {q.ts ? `task ${q.ts}` : q.domain}
       </Txt>
       <Rich text={scenario} size={12} color={c.muted} style={{ marginTop: 2 }} />
