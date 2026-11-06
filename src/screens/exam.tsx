@@ -5,6 +5,8 @@ import * as feel from '../feel.ts';
 import {
   DOMAINS,
   EXAM,
+  EXAM_LEVEL_60_LABEL,
+  EXAM_LEVEL_LABEL,
   FIXED_EXAMS,
   SETTINGS,
   bestScore,
@@ -12,8 +14,10 @@ import {
   fixedExams,
   isMulti,
   isRight,
+  isWeighted,
   levelExam,
   rightOf,
+  scoreOf,
   shuffle,
   type ExamDraft,
   type ExamResult,
@@ -22,7 +26,7 @@ import {
 } from '../game.ts';
 import { STR } from '../i18n.ts';
 import { AskClaude, MissCard, inLang } from './misses.tsx';
-import { BANK, LEVEL_BANK } from '../bank.ts';
+import { BANK, LEVEL_BANK, LEVEL_BANK_60 } from '../bank.ts';
 import { QUESTIONS } from '../questions.ts';
 import { useGuard } from '../shield.tsx';
 import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer } from '../term.tsx';
@@ -34,16 +38,26 @@ type Phase = { kind: 'menu' } | { kind: 'run' } | { kind: 'report'; result: Exam
 
 // Los fijos salen solo de las de una respuesta, para que no cambien al crecer el banco (ver bank.ts).
 const FIXED = fixedExams(QUESTIONS);
+// Los dos de nivel real, con los 6 escenarios: el de 60 en 2 h, como el examen, y el completo con las 66.
+const LEVEL_60 = levelExam(LEVEL_BANK_60);
 const LEVEL = levelExam(LEVEL_BANK);
+const LEVEL_60_PER = LEVEL_60.length / Object.keys(SETTINGS).length;
 const LEVEL_PER = LEVEL.length / Object.keys(SETTINGS).length;
-const perOf = (label: string) => (label === 'quick' ? EXAM.quickPerScenario : label === 'exam-level' ? LEVEL_PER : EXAM.perScenario);
+const perOf = (label: string) =>
+  label === 'quick'
+    ? EXAM.quickPerScenario
+    : label === EXAM_LEVEL_60_LABEL
+      ? LEVEL_60_PER
+      : label === EXAM_LEVEL_LABEL
+        ? LEVEL_PER
+        : EXAM.perScenario;
 const clock = (secs: number) => {
   const h = Math.floor(secs / 3600);
   const m = String(Math.floor((secs % 3600) / 60)).padStart(2, '0');
   const s = String(secs % 60).padStart(2, '0');
   return h ? `${h}:${m}:${s}` : `${m}:${s}`;
 };
-const pct = (r: number, t: number) => (t ? Math.round((100 * r) / t) : 0);
+const pct = (x: number) => Math.round(100 * x);
 const toSlots = (qs: Question[]): Slot[] => qs.map((q) => ({ q, order: shuffle(q.options.map((_, k) => k)), picked: null }));
 
 export function Exam({
@@ -213,17 +227,25 @@ export function Exam({
           />
         </Panel>
 
-        <Panel title={T.levelTitle(LEVEL.length, clock(LEVEL.length * EXAM.secsPerQuestion))} color={c.amber} titleColor={c.amber}>
+        <Panel title={T.levelTitle} color={c.amber} titleColor={c.amber}>
           <Txt size={12} color={c.muted} style={{ marginBottom: 6 }}>
             {T.levelNote}
           </Txt>
           <ExamRow
-            title={T.examLabel('exam-level')}
-            sub={T.levelSub(Object.keys(SETTINGS).length, LEVEL_PER)}
-            best={bestScore(p, 'exam-level')}
+            title={T.examLabel(EXAM_LEVEL_60_LABEL)}
+            sub={T.level60Sub(clock(LEVEL_60.length * EXAM.secsPerQuestion), LEVEL_60_PER)}
+            best={bestScore(p, EXAM_LEVEL_60_LABEL)}
+            bestLabel={T.bestPct}
+            disabled={Boolean(d) || LEVEL_60.length === 0}
+            onPress={() => begin(EXAM_LEVEL_60_LABEL, LEVEL_60, LEVEL_60_PER)}
+          />
+          <ExamRow
+            title={T.examLabel(EXAM_LEVEL_LABEL)}
+            sub={T.levelAllSub(LEVEL.length, clock(LEVEL.length * EXAM.secsPerQuestion), LEVEL_PER)}
+            best={bestScore(p, EXAM_LEVEL_LABEL)}
             bestLabel={T.bestPct}
             disabled={Boolean(d) || LEVEL.length === 0}
-            onPress={() => begin('exam-level', LEVEL, LEVEL_PER)}
+            onPress={() => begin(EXAM_LEVEL_LABEL, LEVEL, LEVEL_PER)}
           />
         </Panel>
 
@@ -248,7 +270,8 @@ export function Exam({
             <Txt color={c.muted}>{T.noAttempts}</Txt>
           ) : (
             p.exams.slice(0, 8).map((e, k) => {
-              const score = pct(e.right, e.total);
+              const frac = scoreOf(e);
+              const score = pct(frac);
               const ok = score >= EXAM.target * 100;
               return (
                 <View key={k} style={s.histRow}>
@@ -256,7 +279,7 @@ export function Exam({
                     {e.day.slice(5)}
                   </Txt>
                   <Txt style={{ width: 92 }}>{T.examLabel(e.label)}</Txt>
-                  <Bar value={e.right / e.total} width={8} color={ok ? c.green : c.amber} />
+                  <Bar value={frac} width={8} color={ok ? c.green : c.amber} />
                   <Txt bold color={ok ? c.green : c.amber}>
                     {String(score).padStart(3)}%
                   </Txt>
@@ -363,7 +386,8 @@ export function Exam({
   // --- Informe ---
   if (phase.kind !== 'report') return null;
   const { result, gained } = phase;
-  const score = pct(result.right, result.total);
+  const weighted = isWeighted(result.label);
+  const score = pct(scoreOf(result));
   const passed = score >= EXAM.target * 100;
   const wrong = phase.slots.filter((x) => !isRight(x.q, x.picked));
   return (
@@ -371,10 +395,22 @@ export function Exam({
       <Typer text={`$ cca-quest exam --report "${result.label}"`} bold color={c.green} />
       <BounceIn>
         <Panel title={T.score} color={passed ? c.green : c.amber} titleColor={passed ? c.green : c.amber}>
-          <Txt bold size={34} color={passed ? c.green : c.amber}>
-            {score}%
-          </Txt>
-          <Txt>{T.scoreLine(result.right, result.total, clock(result.secs), gained)}</Txt>
+          <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
+            <Txt bold size={34} color={passed ? c.green : c.amber}>
+              {score}%
+            </Txt>
+            {weighted && (
+              <Txt bold color={c.muted}>
+                {T.rawHits(result.right, result.total)}
+              </Txt>
+            )}
+          </View>
+          {weighted && (
+            <Txt size={11} color={c.muted}>
+              {T.levelWeighted}
+            </Txt>
+          )}
+          <Txt>{weighted ? T.timeLine(clock(result.secs), gained) : T.scoreLine(result.right, result.total, clock(result.secs), gained)}</Txt>
           <Txt size={12} color={passed ? c.green : c.amber} style={{ marginTop: 4 }}>
             {passed ? T.onTrack : T.below(EXAM.target * 100)}
           </Txt>
@@ -391,7 +427,7 @@ export function Exam({
               </Txt>
               <Bar value={r / t} width={10} color={domainColor[d.id]} />
               <Txt color={c.muted}>
-                {String(pct(r, t)).padStart(3)}% {r}/{t}
+                {String(pct(r / t)).padStart(3)}% {r}/{t}{weighted ? ` ×${d.weight}%` : ''}
               </Txt>
             </View>
           );

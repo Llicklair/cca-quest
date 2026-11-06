@@ -8,6 +8,8 @@ import {
   addDays,
   answer,
   bestScore,
+  scoreOf,
+  weightedScore,
   buildExam,
   buildSession,
   daysBetween,
@@ -30,6 +32,7 @@ import {
   sessionBonus,
   shuffle,
   todo,
+  type ExamResult,
   type Progress,
   type Question,
 } from '../src/game.ts';
@@ -410,4 +413,32 @@ test('respuesta múltiple: lo elegido es una máscara y solo vale acertar las do
   assert.equal(isRight(single, null), false);
   const r = examResult([{ q: multi, picked: maskOf([1, 3]) }, { q: single, picked: 0 }], '2026-10-23', 60);
   assert.equal(r.right, 1);
+});
+
+test('nota ponderada por dominio: el ejemplo trabajado', () => {
+  const byDomain = { agentic: [14, 18], tools: [9, 12], 'claude-code': [10, 13], prompting: [10, 13], context: [7, 10] } as ExamResult['byDomain'];
+  const expected = (27 * (14 / 18) + 18 * (9 / 12) + 20 * (10 / 13) + 20 * (10 / 13) + 15 * (7 / 10)) / 100;
+  assert.ok(Math.abs(weightedScore(byDomain) - expected) < 1e-12);
+  assert.ok(Math.abs(weightedScore(byDomain) - 0.758) < 0.001);
+});
+
+test('nota ponderada: se renormaliza sin un dominio, vacío da 0 y un dominio entero fallado resta su peso', () => {
+  const perfect = { agentic: [5, 5], tools: [5, 5], 'claude-code': [5, 5], prompting: [5, 5] } as ExamResult['byDomain'];
+  assert.equal(weightedScore(perfect), 1);
+  assert.equal(weightedScore({}), 0);
+  const noD5 = { ...perfect, context: [0, 5] } as ExamResult['byDomain'];
+  assert.ok(Math.abs(weightedScore(noD5) - 0.85) < 1e-12);
+  assert.equal(weightedScore({ agentic: [0, 0] }), 0);
+});
+
+test('scoreOf: ponderada solo en los dos de nivel real, cruda en el resto', () => {
+  const byDomain = { agentic: [0, 10], tools: [10, 10] } as ExamResult['byDomain'];
+  const mk = (label: string): ExamResult => ({ label, day: HOY, right: 10, total: 20, secs: 1, byDomain });
+  assert.equal(scoreOf(mk('quick')), 0.5);
+  assert.equal(scoreOf(mk('exam 1')), 0.5);
+  assert.ok(Math.abs(scoreOf(mk('exam-level')) - 18 / 45) < 1e-12);
+  assert.ok(Math.abs(scoreOf(mk('exam-level 60')) - 18 / 45) < 1e-12);
+  const p = fresh(HOY);
+  p.exams = [mk('exam-level')];
+  assert.ok(Math.abs(bestScore(p, 'exam-level')! - 18 / 45) < 1e-12);
 });

@@ -13,6 +13,7 @@ import {
   EXAM,
   dayKey,
   examResult,
+  scoreOf,
   isRight,
   levelOf,
   liveStreak,
@@ -273,7 +274,7 @@ function Main() {
     next = { ...next, exams: [result, ...next.exams].slice(0, 30), examDraft: null };
     commit(next);
     remind(next);
-    if (levelOf(next.xp).n > levelOf(p.xp).n || result.right / result.total >= EXAM.target) celebrate();
+    if (levelOf(next.xp).n > levelOf(p.xp).n || scoreOf(result) >= EXAM.target) celebrate();
     return { result, gained: next.xp - p.xp };
   };
 

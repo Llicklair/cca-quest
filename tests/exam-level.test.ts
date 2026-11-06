@@ -2,7 +2,19 @@
 // regalen la respuesta, en los dos idiomas, y fuera de las rondas hasta que se ven en su simulacro.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DOMAINS, EXAM, SETTINGS, levelExam, roundPool, type Progress } from '../src/game.ts';
+import {
+  DOMAINS,
+  EXAM,
+  EXAM_LEVEL_60_LABEL,
+  EXAM_LEVEL_LABEL,
+  SETTINGS,
+  examResult,
+  levelExam,
+  roundPool,
+  scoreOf,
+  type Progress,
+} from '../src/game.ts';
+import { LEVEL_BANK, LEVEL_BANK_60 } from '../src/bank.ts';
 import { QUESTIONS } from '../src/questions.ts';
 import { EXAM_LEVEL } from '../src/questions-exam.ts';
 import { EXAM_LEVEL_ES } from '../src/questions-exam-es.ts';
@@ -27,10 +39,36 @@ test('10 preguntas por escenario, completas y con ids que no chocan con el banco
   }
 });
 
-test('cubren todos los task statements y siguen el peso de cada dominio', () => {
-  for (const ts of TS) assert.ok(EXAM_LEVEL.some((q) => q.ts === ts), `sin pregunta nivel examen para ${ts}`);
+test('nivel real de 60: 10 por escenario con una de elegir 2, en 2 h', () => {
+  const exam = levelExam(LEVEL_BANK_60);
+  assert.equal(exam.length, 60);
+  for (const s of Object.keys(SETTINGS)) {
+    assert.equal(exam.filter((q) => q.setting === s).length, EXAM.levelPerScenario, s);
+    assert.equal(exam.filter((q) => q.setting === s && q.answers).length, 1, `${s}: una de elegir 2`);
+  }
+  assert.equal(exam.length * EXAM.secsPerQuestion, 7200);
+});
+
+test('nivel real completo: las 66, 11 por escenario, y el de 60 sale de ellas', () => {
+  const exam = levelExam(LEVEL_BANK);
+  assert.equal(exam.length, 66);
+  for (const s of Object.keys(SETTINGS)) assert.equal(exam.filter((q) => q.setting === s).length, 11, s);
+  assert.equal(exam.length * EXAM.secsPerQuestion, 7920);
+  assert.ok(LEVEL_BANK_60.every((q) => LEVEL_BANK.includes(q)));
+  const out = LEVEL_BANK.filter((q) => !LEVEL_BANK_60.includes(q));
+  assert.equal(out.length, 6);
+  for (const s of Object.keys(SETTINGS)) assert.equal(out.filter((q) => q.setting === s && !q.answers).length, 1, `${s}: se queda fuera una larga`);
+});
+
+test('nivel real de 60: cubre todos los task statements y sigue el peso de cada dominio', () => {
+  const exam = levelExam(LEVEL_BANK_60);
+  for (const ts of TS) assert.ok(exam.some((q) => q.ts === ts), `sin pregunta nivel examen para ${ts}`);
+  const expected: Record<string, number> = {};
+  DOMAINS.forEach((d, k) => (expected[d.id] = [16, 11, 12, 12, 9][k]));
   for (const d of DOMAINS) {
-    const share = (100 * EXAM_LEVEL.filter((q) => q.domain === d.id).length) / EXAM_LEVEL.length;
+    const n = exam.filter((q) => q.domain === d.id).length;
+    assert.equal(n, expected[d.id], d.id);
+    const share = (100 * n) / exam.length;
     assert.ok(Math.abs(share - d.weight) <= 2, `${d.id}: ${share.toFixed(1)}% frente a ${d.weight}%`);
   }
 });
@@ -90,4 +128,20 @@ test('las de nivel examen entran en las rondas solo cuando ya han salido en su s
   assert.equal(pool.length, QUESTIONS.length + 1);
   assert.ok(pool.includes(seen));
   assert.ok(!pool.includes(unseen));
+});
+
+test('la nota de los dos simulacros reales pondera por dominio con el banco de verdad', () => {
+  for (const [label, bank] of [
+    [EXAM_LEVEL_60_LABEL, LEVEL_BANK_60],
+    [EXAM_LEVEL_LABEL, LEVEL_BANK],
+  ] as const) {
+    const qs = levelExam(bank);
+    const right = (q: (typeof qs)[number]) => (q.answers ? q.answers.reduce((m, i) => m | (1 << i), 0) : q.answer);
+    const all = examResult(qs.map((q) => ({ q, picked: right(q) })), '2026-10-10', 1, label);
+    assert.equal(scoreOf(all), 1);
+    for (const d of DOMAINS) {
+      const r = examResult(qs.map((q) => ({ q, picked: q.domain === d.id ? null : right(q) })), '2026-10-10', 1, label);
+      assert.ok(Math.abs(scoreOf(r) - (1 - d.weight / 100)) < 1e-12, `${label} ${d.id}`);
+    }
+  }
 });
