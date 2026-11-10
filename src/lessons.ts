@@ -966,8 +966,8 @@ export const LESSONS: Lesson[] = [
       es: 'Claude Code en pipelines de CI/CD',
     },
     tldr: {
-      en: 'In CI, run Claude Code with `-p` so it never waits for input, use `--output-format json` with `--json-schema` for parseable results, and give project context via `CLAUDE.md`.',
-      es: 'En CI, ejecuta Claude Code con `-p` para que nunca espere entrada, usa `--output-format json` con `--json-schema` para resultados parseables y da el contexto del proyecto con `CLAUDE.md`.',
+      en: 'In CI, run Claude Code with `-p` so it never waits for input, add `--bare` so every machine starts the same, and use `--output-format json` with `--json-schema` for parseable results. Project context comes from `CLAUDE.md`, or from `--append-system-prompt-file` in bare mode.',
+      es: 'En CI, ejecuta Claude Code con `-p` para que nunca espere entrada, añade `--bare` para que todas las máquinas empiecen igual y usa `--output-format json` con `--json-schema` para resultados parseables. El contexto del proyecto viene de `CLAUDE.md`, o de `--append-system-prompt-file` en modo bare.',
     },
     ideas: [
       {
@@ -981,6 +981,18 @@ export const LESSONS: Lesson[] = [
       {
         en: '`CLAUDE.md` gives CI-invoked Claude Code its project context: testing standards, fixture conventions and review criteria.',
         es: '`CLAUDE.md` da a Claude Code en CI el contexto del proyecto: estándares de testing, convenciones de fixtures y criterios de revisión.',
+      },
+      {
+        en: "Without `--bare`, `claude -p` auto-loads what an interactive session would: `CLAUDE.md`, hooks, skills, plugins, MCP servers and auto memory, including anything in the runner's `~/.claude`. `--bare` skips that auto-discovery so every machine gives the same result; Anthropic recommends it for scripted and CI calls.",
+        es: 'Sin `--bare`, `claude -p` carga lo mismo que una sesión interactiva: `CLAUDE.md`, hooks, skills, plugins, servidores MCP y memoria automática, también lo que haya en el `~/.claude` del runner. `--bare` se salta ese autodescubrimiento para que todas las máquinas den el mismo resultado; Anthropic lo recomienda para llamadas desde scripts y CI.',
+      },
+      {
+        en: "In bare mode nothing loads on its own: pass what the job needs with flags, e.g. `--append-system-prompt-file` for the repo's review rules, `--settings` or `--mcp-config`. It authenticates with `ANTHROPIC_API_KEY` (or an `apiKeyHelper`), not with your subscription login.",
+        es: 'En modo bare no se carga nada por su cuenta: pasa lo que necesita el job con flags, p. ej. `--append-system-prompt-file` para las reglas de revisión del repo, `--settings` o `--mcp-config`. Se autentica con `ANTHROPIC_API_KEY` (o un `apiKeyHelper`), no con el login de tu suscripción.',
+      },
+      {
+        en: "`--append-system-prompt` (or `--append-system-prompt-file`) adds instructions and keeps Claude Code's default system prompt; `--system-prompt` replaces the whole default prompt.",
+        es: '`--append-system-prompt` (o `--append-system-prompt-file`) añade instrucciones y mantiene el system prompt por defecto de Claude Code; `--system-prompt` sustituye todo el prompt por defecto.',
       },
       {
         en: 'The session that generated code is less effective at reviewing it; use an independent review instance instead of self-review.',
@@ -999,6 +1011,18 @@ export const LESSONS: Lesson[] = [
       {
         en: 'Do not fix a hanging CI job with stdin redirection or made-up options like a `CLAUDE_HEADLESS` variable or a `--batch` flag; use `-p`.',
         es: 'No arregles un job de CI colgado redirigiendo stdin ni con opciones inventadas como una variable `CLAUDE_HEADLESS` o un flag `--batch`; usa `-p`.',
+      },
+      {
+        en: 'Do not confuse `--bare` with `-p`: `--bare` only skips auto-discovery and does not make the run non-interactive. A hanging job still needs `-p`; CI jobs usually use both.',
+        es: 'No confundas `--bare` con `-p`: `--bare` solo se salta el autodescubrimiento y no hace que la ejecución sea no interactiva. Un job colgado sigue necesitando `-p`; en CI se suelen usar los dos.',
+      },
+      {
+        en: 'Do not expect bare mode to fall back to a global `CLAUDE.md`: it skips every `CLAUDE.md`, `~/.claude/CLAUDE.md` included. Pass the rules in explicitly.',
+        es: 'No esperes que el modo bare recurra a un `CLAUDE.md` global: se salta todos los `CLAUDE.md`, también `~/.claude/CLAUDE.md`. Pasa las reglas explícitamente.',
+      },
+      {
+        en: "Do not use `--system-prompt` just to add a few rules: it replaces Claude Code's default prompt. Use `--append-system-prompt`.",
+        es: 'No uses `--system-prompt` solo para añadir unas reglas: sustituye el prompt por defecto de Claude Code. Usa `--append-system-prompt`.',
       },
       {
         en: 'Do not ask the same session that wrote the code to review it; an independent review instance catches more.',
