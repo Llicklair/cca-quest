@@ -29,7 +29,7 @@ import { AskClaude, MissCard, inLang } from './misses.tsx';
 import { BANK, LEVEL_BANK, LEVEL_BANK_60 } from '../bank.ts';
 import { QUESTIONS } from '../questions.ts';
 import { useGuard } from '../shield.tsx';
-import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer } from '../term.tsx';
+import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer, confirmAction } from '../term.tsx';
 import { c, domainColor, font, themed } from '../theme.ts';
 
 // picked = índice original, o máscara en las de respuesta múltiple; flag y note, lo marcado y comentado para revisar.
@@ -204,6 +204,14 @@ export function Exam({
     feel.tap();
   };
 
+  // Como en el examen, "Flag" es para volver antes de entregar: si quedan marcadas, se avisa.
+  // Solo con el botón; al acabarse el tiempo se entrega sin preguntar.
+  const submit = () => {
+    const flagged = run ? run.slots.filter((x) => x.flag).length : 0;
+    if (flagged === 0) return finish();
+    confirmAction(T.submitFlaggedTitle, T.submitFlagged(flagged), T.submitAnyway, T.review, finish);
+  };
+
   // El comentario no se guarda a cada letra ni al salir del cuadro (eso se comía el toque siguiente):
   // va con el guardado de cada 15 s y al pasar de pregunta, pausar o entregar.
   const writeNote = (note: string) => patchSlot({ note });
@@ -356,19 +364,23 @@ export function Exam({
 
     const question = (
       <>
+        {/* Si no cabe todo en una fila, el número de pregunta no se parte: comentario y marca bajan a la derecha. */}
         <View style={s.qHead}>
-          <Txt bold>{T.questionOf(run.i + 1, run.slots.length)}</Txt>
-          <View style={{ flex: 1 }} />
-          <Pressable onPress={() => setNoteOpen((o) => !o)} hitSlop={8} accessibilityRole="button">
-            <Txt bold size={12} color={showNote ? c.cyan : c.muted}>
-              {T.comment}
-            </Txt>
-          </Pressable>
-          <Pressable onPress={toggleFlag} hitSlop={8} accessibilityRole="button" accessibilityState={{ selected: Boolean(slot.flag) }}>
-            <Txt bold size={12} color={slot.flag ? c.amber : c.muted}>
-              {slot.flag ? T.flagged : T.flag}
-            </Txt>
-          </Pressable>
+          <Txt bold style={{ flexShrink: 0 }}>
+            {T.questionOf(run.i + 1, run.slots.length)}
+          </Txt>
+          <View style={s.qTools}>
+            <Pressable onPress={() => setNoteOpen((o) => !o)} hitSlop={8} accessibilityRole="button">
+              <Txt bold size={12} color={showNote ? c.cyan : c.muted}>
+                {T.comment}
+              </Txt>
+            </Pressable>
+            <Pressable onPress={toggleFlag} hitSlop={8} accessibilityRole="button" accessibilityState={{ selected: Boolean(slot.flag) }}>
+              <Txt bold size={12} color={slot.flag ? c.amber : c.muted}>
+                {slot.flag ? T.flagged : T.flag}
+              </Txt>
+            </Pressable>
+          </View>
         </View>
         {showNote && (
           <TextInput
@@ -441,7 +453,7 @@ export function Exam({
           <View style={s.dots}>
             {run.slots.map((x, k) => (
               <Pressable key={k} onPress={() => go(k)} hitSlop={3}>
-                <Txt size={12} bold color={k === run.i ? c.green : x.flag ? c.cyan : x.picked !== null ? c.amber : c.lineHi}>
+                <Txt size={12} bold color={k === run.i ? c.green : x.picked !== null ? c.amber : x.flag ? c.cyan : c.lineHi}>
                   {k === run.i ? '◆' : x.flag ? '⚑' : x.picked !== null ? '■' : '□'}
                 </Txt>
               </Pressable>
@@ -454,7 +466,7 @@ export function Exam({
           <View style={[{ flexDirection: 'row', gap: 10 }, wide && { alignSelf: 'flex-end', width: 420 }]}>
             <Btn label={T.prev} onPress={() => go(Math.max(0, run.i - 1))} disabled={run.i === 0} style={{ flex: 1 }} />
             {last ? (
-              <Btn kind="amber" label={T.submit} onPress={finish} style={{ flex: 1 }} />
+              <Btn kind="amber" label={T.submit} onPress={submit} style={{ flex: 1 }} />
             ) : (
               <Btn kind="primary" label={T.next} onPress={() => go(run.i + 1)} style={{ flex: 1 }} />
             )}
@@ -598,7 +610,8 @@ const s = themed(() =>
     top: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: c.line },
     split: { flex: 1, flexDirection: 'row' },
     pane: { flex: 1, borderRightWidth: 1, borderRightColor: c.line },
-    qHead: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+    qHead: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 12, rowGap: 4 },
+    qTools: { flexDirection: 'row', gap: 12, marginLeft: 'auto' },
     note: { borderWidth: 1, borderColor: c.cyan, borderRadius: 3, padding: 10, minHeight: 64, color: c.text, backgroundColor: c.panel, fontFamily: font.regular, fontSize: 13 },
     opt: { borderWidth: 1, borderColor: c.lineHi, borderRadius: 3, padding: 12, backgroundColor: c.panel },
     optRow: { flexDirection: 'row', gap: 10 },
