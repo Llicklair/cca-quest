@@ -65,6 +65,7 @@ export const printKey = (k: Keys) => (k.ctrlKey || k.metaKey) && k.code === 'Key
 
 const CSS = `
 * { user-select: none !important; -webkit-user-select: none !important; -webkit-touch-callout: none !important; }
+[data-lesson-copy], [data-lesson-copy] * { user-select: text !important; -webkit-user-select: text !important; -webkit-touch-callout: default !important; }
 input, textarea, [contenteditable] { user-select: text !important; -webkit-user-select: text !important; }
 @media print { #root { display: none !important; } } /* si se imprime desde el menú del navegador */
 `;
@@ -78,7 +79,10 @@ export function installGuard(send: (e: GuardEvent) => void) {
   const editable = (t: EventTarget | null) =>
     t instanceof HTMLElement && (t.isContentEditable || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
   const block = (e: Event) => {
-    if (!editable(e.target)) e.preventDefault();
+    const selection = window.getSelection();
+    const lesson = selection?.anchorNode?.parentElement?.closest('[data-lesson-copy]');
+    const copyingLesson = (e.type === 'copy' || e.type === 'cut') && lesson && lesson.contains(selection?.focusNode ?? null);
+    if (!editable(e.target) && !copyingLesson && !(e.target instanceof Element && e.target.closest('[data-lesson-copy]'))) e.preventDefault();
   };
   for (const type of ['copy', 'cut', 'contextmenu', 'selectstart', 'dragstart']) document.addEventListener(type, block, true);
 
