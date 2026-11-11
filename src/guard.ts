@@ -2,7 +2,8 @@
 // sin contestar para pegársela a una IA. En la app del móvil no hace nada.
 //
 // Copiar: en toda la web no se selecciona texto, ni se copia, ni sale el menú del botón derecho,
-// ni se imprime (los campos de texto sí: hay que poder escribir y pegar el código de sala).
+// ni se imprime (los campos de texto sí: hay que poder escribir y pegar el código de sala). Las
+// lecciones tampoco, que no son preguntas: se puede copiar un trozo o preguntarle a Claude por él.
 //
 // Capturas: una web no puede impedirlas, pero sí tapar la pregunta antes de que se hagan. Mientras
 // hay una pregunta sin contestar en pantalla se tapa todo cuando:
@@ -63,9 +64,12 @@ export const screenshotKey = (k: Keys) => k.key === 'PrintScreen' || (k.metaKey 
 /** Ctrl/Cmd+P: imprimir (o guardar como PDF) es otra forma de copiar el texto. */
 export const printKey = (k: Keys) => (k.ctrlKey || k.metaKey) && k.code === 'KeyP';
 
+/** Marca el contenido de una lección (learn.tsx): ahí se puede seleccionar y copiar. */
+export const LESSON = '[data-lesson-copy]';
+
 const CSS = `
 * { user-select: none !important; -webkit-user-select: none !important; -webkit-touch-callout: none !important; }
-[data-lesson-copy], [data-lesson-copy] * { user-select: text !important; -webkit-user-select: text !important; -webkit-touch-callout: default !important; }
+${LESSON}, ${LESSON} * { user-select: text !important; -webkit-user-select: text !important; -webkit-touch-callout: default !important; }
 input, textarea, [contenteditable] { user-select: text !important; -webkit-user-select: text !important; }
 @media print { #root { display: none !important; } } /* si se imprime desde el menú del navegador */
 `;
@@ -78,11 +82,18 @@ export function installGuard(send: (e: GuardEvent) => void) {
 
   const editable = (t: EventTarget | null) =>
     t instanceof HTMLElement && (t.isContentEditable || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
+  // `selectstart` llega con el nodo de texto como target, que no tiene closest(): se mira su elemento.
+  const lessonOf = (n: EventTarget | Node | null | undefined) =>
+    (n instanceof Element ? n : n instanceof Node ? n.parentElement : null)?.closest(LESSON) ?? null;
   const block = (e: Event) => {
-    const selection = window.getSelection();
-    const lesson = selection?.anchorNode?.parentElement?.closest('[data-lesson-copy]');
-    const copyingLesson = (e.type === 'copy' || e.type === 'cut') && lesson && lesson.contains(selection?.focusNode ?? null);
-    if (!editable(e.target) && !copyingLesson && !(e.target instanceof Element && e.target.closest('[data-lesson-copy]'))) e.preventDefault();
+    if (editable(e.target)) return;
+    if (e.type === 'copy' || e.type === 'cut') {
+      // Copiar llega desde donde está el foco, no desde el texto: cuenta que lo seleccionado sea de una lección.
+      const sel = window.getSelection();
+      const lesson = lessonOf(sel?.anchorNode);
+      if (lesson && sel?.focusNode && lesson.contains(sel.focusNode)) return;
+    } else if (lessonOf(e.target)) return;
+    e.preventDefault();
   };
   for (const type of ['copy', 'cut', 'contextmenu', 'selectstart', 'dragstart']) document.addEventListener(type, block, true);
 

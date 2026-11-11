@@ -2,7 +2,8 @@
 // palabras sencillas. Para cuando la explicación de la app no basta. Tres casos:
 // - una pregunta antes de contestar: el escenario y los conceptos, sin decir cuál es la buena;
 // - una pregunta ya contestada: por qué la buena es la buena y las otras no;
-// - un concepto (lección, ficha o término del glosario): con un ejemplo y cómo sale en el examen.
+// - un concepto (lección, ficha o término del glosario): con un ejemplo y cómo sale en el examen;
+// - un trozo de una lección (en la web, al seleccionarlo): la lección de contexto y la duda sobre él.
 import type { Lang, QuestionText } from './game.ts';
 
 const TEXT = {
@@ -13,6 +14,9 @@ const TEXT = {
     after:
       'Help me understand this practice question: explain in simple words why the right answer is right, why each of the others is wrong, and the concept behind it.',
     concept: 'Explain this concept in simple words, with a concrete example and how it usually shows up in exam questions.',
+    lesson: 'This is a lesson from my study app:',
+    passage: 'My question is about this passage from the lesson:',
+    explainPassage: 'Explain it in simple words, with a concrete example and how it usually shows up in exam questions.',
     scenario: 'Scenario',
     question: 'Question',
     right: 'Right answer(s)',
@@ -27,6 +31,9 @@ const TEXT = {
     after:
       'Ayúdame a entender esta pregunta de práctica: explícame con palabras sencillas por qué la buena es la buena, por qué cada una de las otras está mal y el concepto que hay detrás.',
     concept: 'Explícame este concepto con palabras sencillas, con un ejemplo concreto y cómo suele salir en las preguntas del examen.',
+    lesson: 'Esta es una lección de mi app de estudio:',
+    passage: 'Mi duda es sobre este fragmento de la lección:',
+    explainPassage: 'Explícamelo con palabras sencillas, con un ejemplo concreto y cómo suele salir en las preguntas del examen.',
     scenario: 'Escenario',
     question: 'Pregunta',
     right: 'Respuesta(s) buena(s)',
@@ -83,9 +90,21 @@ export function conceptPrompt(lang: Lang, title: string, lines: string[]): strin
 /** Abre un chat nuevo de claude.ai con el prompt ya escrito. */
 export const claudeUrl = (prompt: string) => `https://claude.ai/new?q=${encodeURIComponent(prompt)}`;
 
-/** A selected lesson passage; the optional question stays separate from the quoted source. */
-export function selectionPrompt(lang: Lang, title: string, passage: string, question = '', context: string[] = []): string {
+/**
+ * Un trozo de una lección: la lección entera de contexto, el trozo y la duda. Sin duda, que lo
+ * explique. Una sola petición al final, para que Claude no explique además la lección entera.
+ */
+export function selectionPrompt(lang: Lang, title: string, passage: string, question = '', lines: string[] = []): string {
   const t = TEXT[lang];
-  return [conceptPrompt(lang, title, context), '', lang === 'es' ? 'Céntrate en este fragmento de la lección:' : 'Focus on this selected passage from the lesson:', passage,
-    '', question.trim() || t.concept].join('\n');
+  return clean([
+    `${t.exam} ${t.lesson}`,
+    '',
+    title,
+    ...lines.filter((x) => x.trim()),
+    '',
+    t.passage,
+    passage.trim(),
+    '',
+    question.trim() || t.explainPassage,
+  ]);
 }
