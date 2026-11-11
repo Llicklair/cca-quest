@@ -198,15 +198,15 @@ function Main() {
     feel.big();
   };
 
-  const start = (qs: Question[] = roundPool(BANK, LEVEL_BANK, p), label = 'daily') => {
+  const start = (qs: Question[] = roundPool(BANK, LEVEL_BANK, p), label = 'daily', lessonTs?: string) => {
     const picked = buildSession(qs, rollDay(p, today()), today(), Math.min(5, qs.length));
     feel.tap();
-    setRound(newRound(picked, label));
+    setRound({ ...newRound(picked, label), lessonTs });
     setTab('play');
     setView('round');
   };
 
-  const practice = (ts: string) => start(BANK.filter((q) => q.ts === ts), `task ${ts}`);
+  const practice = (ts: string) => start(BANK.filter((q) => q.ts === ts), `task ${ts}`, ts);
 
   // `chosen`: el índice original elegido, o la máscara de lo marcado en las de respuesta múltiple.
   const pick = (chosen: number) => {
@@ -304,6 +304,14 @@ function Main() {
   };
 
   const inRound = tab === 'play' && view === 'round';
+  // La lección que sigue en la guía (ninguna después de la última).
+  const nextLesson = (ts: string) => LESSONS[LESSONS.findIndex((l) => l.ts === ts) + 1]?.ts;
+  const practiced = round?.lessonTs;
+  const afterPracticed = practiced ? nextLesson(practiced) : undefined;
+  const openLesson = (ts: string | null) => {
+    setLesson(ts);
+    setTab('learn');
+  };
   const open = lesson ? LESSONS.find((l) => l.ts === lesson) : undefined;
 
   // El logo de arriba a la izquierda lleva siempre al inicio. Si hay algo a medias, se pregunta antes.
@@ -421,7 +429,16 @@ function Main() {
           />
         )}
         {tab === 'play' && view === 'done' && round && (
-          <Done round={round} p={p} onAgain={() => start()} onHome={() => setView('status')} />
+          <Done
+            round={round}
+            p={p}
+            onAgain={() => (practiced ? practice(practiced) : start())}
+            onHome={() => setView('status')}
+            onLesson={practiced ? () => openLesson(practiced) : undefined}
+            onLessons={practiced ? () => openLesson(null) : undefined}
+            nextLesson={afterPracticed}
+            onNextLesson={afterPracticed ? () => openLesson(afterPracticed) : undefined}
+          />
         )}
         {tab === 'learn' &&
           (open ? (
@@ -432,6 +449,8 @@ function Main() {
               onBack={() => setLesson(null)}
               onRead={() => markRead(open.ts)}
               onPractice={() => practice(open.ts)}
+              nextTs={nextLesson(open.ts)}
+              onNext={() => setLesson(nextLesson(open.ts) ?? null)}
             />
           ) : (
             <LessonList p={p} onOpen={setLesson} />

@@ -69,6 +69,10 @@ const en = {
   levelUp: 'level up',
   missedBack: '// missed questions come back tomorrow. that is how they stick.',
   anotherRound: '▶ ANOTHER ROUND',
+  nextLesson: (ts: string) => `▶ NEXT LESSON ${ts}`,
+  practiceAgain: (ts: string) => `↻ PRACTICE ${ts} AGAIN`,
+  reviewLesson: '‹ REVIEW LESSON',
+  allLessons: '≡ ALL LESSONS',
 
   // lecciones
   lessonsLine: (read: number, total: number) => `${read}/${total} read · one lesson per task statement of the official guide`,
@@ -377,6 +381,10 @@ const es: Strings = {
   levelUp: 'subes de nivel',
   missedBack: '// las falladas vuelven mañana. así es como se quedan.',
   anotherRound: '▶ OTRA RONDA',
+  nextLesson: (ts) => `▶ SIGUIENTE LECCIÓN ${ts}`,
+  practiceAgain: (ts) => `↻ PRACTICAR ${ts} OTRA VEZ`,
+  reviewLesson: '‹ REPASAR LECCIÓN',
+  allLessons: '≡ TODAS LAS LECCIONES',
 
   lessonsLine: (read, total) => `${read}/${total} leídas · una lección por task statement de la guía oficial`,
   readOn: (day) => `// leída el ${day}`,

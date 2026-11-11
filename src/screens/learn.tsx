@@ -79,12 +79,16 @@ export function LessonView({
   onBack,
   onRead,
   onPractice,
+  onNext,
+  nextTs,
 }: {
   lesson: Lesson;
   p: Progress;
   onBack: () => void;
   onRead: () => void;
   onPractice: () => void;
+  onNext?: () => void;
+  nextTs?: string;
 }) {
   const L = p.lang;
   const domain = DOMAINS.find((d) => lesson.ts.startsWith(`${d.n}.`))!;
@@ -184,6 +188,9 @@ export function LessonView({
               title={`${lesson.ts} ${lesson.title[L]}`}
               lines={[lesson.tldr[L], ...lesson.ideas.map((x) => `- ${x[L]}`), ...lesson.traps.map((x) => `✗ ${x[L]}`), lesson.example[L]]}
             />
+            {/* Para seguir: la siguiente cuando ya está leída, o volver al índice. */}
+            {read && nextTs && onNext && <Btn label={T.nextLesson(nextTs)} onPress={onNext} />}
+            <Btn label={T.allLessons} onPress={onBack} />
           </View>
         </ScrollView>
       </TermContext.Provider>
