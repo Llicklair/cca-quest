@@ -182,14 +182,15 @@ export function LessonView({
             ) : (
               <Btn kind="amber" label={T.markRead} onPress={onRead} />
             )}
-            {read && nextTs && onNext && <Btn label={T.nextLesson(nextTs)} onPress={onNext} />}
-            <Btn label={T.allLessons} onPress={onBack} />
             {nQs > 0 && <Btn kind="primary" label={T.practice(lesson.ts, Math.min(nQs, 5))} onPress={onPractice} />}
             <AskConcept
               lang={L}
               title={`${lesson.ts} ${lesson.title[L]}`}
               lines={[lesson.tldr[L], ...lesson.ideas.map((x) => `- ${x[L]}`), ...lesson.traps.map((x) => `✗ ${x[L]}`), lesson.example[L]]}
             />
+            {/* Para seguir: la siguiente cuando ya está leída, o volver al índice. */}
+            {read && nextTs && onNext && <Btn label={T.nextLesson(nextTs)} onPress={onNext} />}
+            <Btn label={T.allLessons} onPress={onBack} />
           </View>
         </ScrollView>
       </TermContext.Provider>

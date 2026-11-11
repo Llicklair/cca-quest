@@ -286,8 +286,10 @@ function Main() {
   };
 
   const inRound = tab === 'play' && view === 'round';
-  const practicedLesson = round?.lessonTs ? LESSONS.find((l) => l.ts === round.lessonTs) : undefined;
-  const nextPracticedLesson = practicedLesson ? LESSONS[LESSONS.indexOf(practicedLesson) + 1] : undefined;
+  // La lección que sigue en la guía (ninguna después de la última).
+  const nextLesson = (ts: string) => LESSONS[LESSONS.findIndex((l) => l.ts === ts) + 1]?.ts;
+  const practiced = round?.lessonTs;
+  const afterPracticed = practiced ? nextLesson(practiced) : undefined;
   const openLesson = (ts: string | null) => {
     setLesson(ts);
     setTab('learn');
@@ -400,12 +402,12 @@ function Main() {
           <Done
             round={round}
             p={p}
-            onAgain={() => round.lessonTs ? practice(round.lessonTs) : start()}
+            onAgain={() => (practiced ? practice(practiced) : start())}
             onHome={() => setView('status')}
-            onLesson={practicedLesson ? () => openLesson(practicedLesson.ts) : undefined}
-            onLessons={practicedLesson ? () => openLesson(null) : undefined}
-            nextLesson={nextPracticedLesson?.ts}
-            onNextLesson={nextPracticedLesson ? () => openLesson(nextPracticedLesson.ts) : undefined}
+            onLesson={practiced ? () => openLesson(practiced) : undefined}
+            onLessons={practiced ? () => openLesson(null) : undefined}
+            nextLesson={afterPracticed}
+            onNextLesson={afterPracticed ? () => openLesson(afterPracticed) : undefined}
           />
         )}
         {tab === 'learn' &&
@@ -417,8 +419,8 @@ function Main() {
               onBack={() => setLesson(null)}
               onRead={() => markRead(open.ts)}
               onPractice={() => practice(open.ts)}
-              onNext={LESSONS[LESSONS.indexOf(open) + 1] ? () => openLesson(LESSONS[LESSONS.indexOf(open) + 1].ts) : undefined}
-              nextTs={LESSONS[LESSONS.indexOf(open) + 1]?.ts}
+              nextTs={nextLesson(open.ts)}
+              onNext={() => setLesson(nextLesson(open.ts) ?? null)}
             />
           ) : (
             <LessonList p={p} onOpen={setLesson} />
@@ -469,7 +471,7 @@ function Main() {
                 key={t}
                 onPress={() => {
                   feel.tap();
-                  if (t === 'learn') setLesson(null);
+                  if (t === 'learn' && tab === 'learn') setLesson(null);
                   setTab(t);
                 }}
                 style={[s.tab, on && { backgroundColor: c.green }]}

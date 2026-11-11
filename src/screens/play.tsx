@@ -54,7 +54,7 @@ export type Round = {
   gain: number;
   levelUp: Level | null;
   goalMet: boolean;
-  lessonTs?: string;
+  lessonTs?: string; // si la ronda es para practicar una lección
   label: string; // “daily” o la tarea que se practica
   picks: number[]; // lo elegido en cada pregunta, en orden (índice original, o máscara en las de respuesta múltiple)
 };
@@ -495,7 +495,7 @@ export function Done({ round, p, onAgain, onHome, onLesson, onLessons, nextLesso
       })()}
       <View style={{ gap: 10, marginTop: 16 }}>
         {nextLesson && onNextLesson && <Btn kind="primary" label={T.nextLesson(nextLesson)} onPress={onNextLesson} />}
-        <Btn kind={onLesson ? 'ghost' : 'primary'} label={round.lessonTs ? T.practiceAgain(round.lessonTs) : T.anotherRound} onPress={onAgain} />
+        <Btn kind={nextLesson ? 'ghost' : 'primary'} label={round.lessonTs ? T.practiceAgain(round.lessonTs) : T.anotherRound} onPress={onAgain} />
         {onLesson && <Btn label={T.reviewLesson} onPress={onLesson} />}
         {onLessons ? <Btn label={T.allLessons} onPress={onLessons} /> : <Btn label="$ cd ~" onPress={onHome} />}
       </View>
