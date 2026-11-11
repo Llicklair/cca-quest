@@ -2,7 +2,7 @@
 // contestar y sin comillas invertidas.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { claudePrompt, claudeUrl, conceptPrompt } from '../src/ask.ts';
+import { claudePrompt, claudeUrl, conceptPrompt, selectionPrompt } from '../src/ask.ts';
 import { QUESTIONS } from '../src/questions.ts';
 import { QUESTIONS_ES } from '../src/questions-es.ts';
 
@@ -49,4 +49,22 @@ test('respuesta múltiple: las dos buenas, las dos elegidas y el porqué de cada
   assert.ok(prompt.includes('Right answer(s): B, E'));
   assert.ok(prompt.includes('My answer(s): A, E'));
   assert.equal(prompt.split('Explanation in my study app').length - 1, 2);
+});
+
+
+test('selected passage preserves source and appends only the optional question', () => {
+  const passage = 'Use `tool_use` then append tool_result.';
+  const prompt = selectionPrompt('en', '1.1 Agentic loops', passage, '  Why append?  ', ['Full lesson summary', 'Key idea: keep history', 'Trap: do not discard results']);
+  assert.ok(prompt.includes('1.1 Agentic loops'));
+  assert.ok(prompt.includes(passage));
+  assert.ok(prompt.includes('Full lesson summary'));
+  assert.ok(prompt.includes('Key idea: keep history'));
+  assert.ok(prompt.includes('Trap: do not discard results'));
+  assert.ok(prompt.endsWith('Why append?'));
+  assert.equal(new URL(claudeUrl(prompt)).searchParams.get('q'), prompt);
+});
+
+test('empty selection question requests a simple explanation in the chosen language', () => {
+  assert.ok(selectionPrompt('en', '1.1', 'A passage', '  ').includes('Explain this concept in simple words'));
+  assert.ok(selectionPrompt('es', '1.1', 'Un fragmento').includes('Explícame este concepto'));
 });
