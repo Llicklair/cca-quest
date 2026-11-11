@@ -2,7 +2,7 @@
 // contestar y sin comillas invertidas.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { claudePrompt, claudeUrl, conceptPrompt } from '../src/ask.ts';
+import { claudePrompt, claudeUrl, conceptPrompt, selectionPrompt } from '../src/ask.ts';
 import { QUESTIONS } from '../src/questions.ts';
 import { QUESTIONS_ES } from '../src/questions-es.ts';
 
@@ -49,4 +49,24 @@ test('respuesta múltiple: las dos buenas, las dos elegidas y el porqué de cada
   assert.ok(prompt.includes('Right answer(s): B, E'));
   assert.ok(prompt.includes('My answer(s): A, E'));
   assert.equal(prompt.split('Explanation in my study app').length - 1, 2);
+});
+
+test('un trozo de lección: la lección de contexto, el trozo y la duda al final', () => {
+  const passage = 'Use tool_use, then append the tool_result.';
+  const lines = ['Full lesson summary', '- Key idea: keep history', '✗ Trap: do not discard results'];
+  const prompt = selectionPrompt('en', '1.1 Agentic loops', `  ${passage}\n`, '  Why append?  ', lines);
+  for (const part of ['1.1 Agentic loops', ...lines]) assert.ok(prompt.includes(part), part);
+  assert.ok(prompt.includes(`passage from the lesson:\n${passage}\n`));
+  assert.ok(prompt.endsWith('\n\nWhy append?'));
+  // Una sola petición: no pide además que explique la lección entera.
+  assert.ok(!prompt.includes('Explain this concept'));
+  assert.equal(new URL(claudeUrl(prompt)).searchParams.get('q'), prompt);
+});
+
+test('un trozo sin duda: que lo explique, en el idioma elegido y sin comillas invertidas', () => {
+  assert.ok(selectionPrompt('en', '1.1', 'A passage', '  ').endsWith('Explain it in simple words, with a concrete example and how it usually shows up in exam questions.'));
+  const es = selectionPrompt('es', '1.1', 'Un `fragmento`', '', ['Una idea con `código`.']);
+  assert.ok(es.startsWith('Estoy preparando'));
+  assert.ok(es.endsWith('Explícamelo con palabras sencillas, con un ejemplo concreto y cómo suele salir en las preguntas del examen.'));
+  assert.ok(!es.includes('`'));
 });
