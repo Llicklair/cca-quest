@@ -255,7 +255,7 @@ function LessonSelection({ children, lang, title, context }: { children: React.R
       const rect = selected.getRangeAt(0).getBoundingClientRect();
       const width = Math.min(340, window.innerWidth - 24);
       setSelection({ text, x: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)),
-        y: Math.max(12, Math.min(rect.bottom + 10, window.innerHeight - 250)) });
+        y: Math.max(12, Math.min(rect.bottom + 10, window.innerHeight - 160)) });
       setQuestion('');
     };
     const schedule = () => { clearTimeout(timer); timer = setTimeout(read, 300); };
@@ -292,15 +292,12 @@ function LessonSelection({ children, lang, title, context }: { children: React.R
     {selection && <form ref={popup} aria-label={es ? 'Preguntar sobre el fragmento' : 'Ask about selected text'}
       onSubmit={(event) => { event.preventDefault(); window.open(claudeUrl(selectionPrompt(lang, title, selection.text, question, context)), '_blank', 'noopener'); }}
       style={{ position: 'fixed', left: selection.x, top: selection.y, width: 'min(340px, calc(100vw - 24px))', boxSizing: 'border-box', zIndex: 100, background: c.panel, color: c.text, border: `1px solid ${c.cyan}`, padding: 12, borderRadius: 5, font: '13px monospace', boxShadow: '0 4px 20px #0006' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-        <strong>{es ? 'Fragmento seleccionado' : 'Selected passage'}</strong>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: 8 }}>
         <button type="button" aria-label={es ? 'Cerrar' : 'Dismiss'} onClick={() => setSelection(null)} style={button}>×</button>
       </div>
-      <blockquote style={{ margin: '8px 0', maxHeight: 54, overflow: 'auto', whiteSpace: 'pre-wrap' }}>{selection.text}</blockquote>
       <input aria-label={es ? 'Pregunta opcional' : 'Optional question'} placeholder={es ? 'Pregunta opcional…' : 'Optional question…'} value={question}
         onChange={(event) => setQuestion(event.target.value)} style={{ width: '100%', boxSizing: 'border-box', background: c.bg, color: c.text, border: `1px solid ${c.lineHi}`, padding: 8, marginBottom: 8, font: 'inherit' }} />
       <button type="submit" style={button}>{STR[lang].askClaude} ↗</button>
-      <div style={{ marginTop: 8, color: c.muted, fontSize: 11 }}>{es ? 'Enter abre Claude. Sin pregunta: explica el fragmento.' : 'Enter opens Claude. No question: explain this passage.'}</div>
     </form>}
   </div>;
 }
