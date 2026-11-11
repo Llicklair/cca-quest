@@ -99,7 +99,8 @@ export function LessonView({
   return (
     <View style={{ flex: 1 }}>
       <TermContext.Provider value={terms}>
-        <LessonSelection key={lesson.ts} lang={L} title={`${lesson.ts} ${lesson.title[L]}`}>
+        <LessonSelection key={lesson.ts} lang={L} title={`${lesson.ts} ${lesson.title[L]}`}
+          context={[...(extra ? [extra.plain[L]] : []), lesson.tldr[L], ...lesson.ideas.map((x) => `- ${x[L]}`), ...lesson.traps.map((x) => `✗ ${x[L]}`), lesson.example[L]]}>
         <ScrollView contentContainerStyle={s.page}>
           <View style={s.head}>
             <Pressable onPress={onBack} hitSlop={12}>
@@ -231,7 +232,7 @@ const s = themed(() =>
 );
 
 /** Web selection UI. Native lessons retain their existing layout and sharing action. */
-function LessonSelection({ children, lang, title }: { children: React.ReactNode; lang: Progress['lang']; title: string }) {
+function LessonSelection({ children, lang, title, context }: { children: React.ReactNode; lang: Progress['lang']; title: string; context: string[] }) {
   const root = useRef<HTMLDivElement>(null);
   const popup = useRef<HTMLFormElement>(null);
   const [selection, setSelection] = useState<{ text: string; x: number; y: number } | null>(null);
@@ -289,7 +290,7 @@ function LessonSelection({ children, lang, title }: { children: React.ReactNode;
   return <div ref={root} data-lesson-copy="" style={{ display: 'flex', flex: 1, minHeight: 0, flexDirection: 'column' }}>
     {children}
     {selection && <form ref={popup} aria-label={es ? 'Preguntar sobre el fragmento' : 'Ask about selected text'}
-      onSubmit={(event) => { event.preventDefault(); window.open(claudeUrl(selectionPrompt(lang, title, selection.text, question)), '_blank', 'noopener'); }}
+      onSubmit={(event) => { event.preventDefault(); window.open(claudeUrl(selectionPrompt(lang, title, selection.text, question, context)), '_blank', 'noopener'); }}
       style={{ position: 'fixed', left: selection.x, top: selection.y, width: 'min(340px, calc(100vw - 24px))', boxSizing: 'border-box', zIndex: 100, background: c.panel, color: c.text, border: `1px solid ${c.cyan}`, padding: 12, borderRadius: 5, font: '13px monospace', boxShadow: '0 4px 20px #0006' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <strong>{es ? 'Fragmento seleccionado' : 'Selected passage'}</strong>
