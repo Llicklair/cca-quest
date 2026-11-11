@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { claudeUrl, selectionPrompt } from '../ask.ts';
 import { EXTRAS } from '../extras.ts';
 import { DOMAINS, mastery, type Lesson, type Progress, type Term } from '../game.ts';
 import { TERMS } from '../glossary.ts';
@@ -98,6 +99,7 @@ export function LessonView({
   return (
     <View style={{ flex: 1 }}>
       <TermContext.Provider value={terms}>
+        <LessonSelection key={lesson.ts} lang={L} title={`${lesson.ts} ${lesson.title[L]}`}>
         <ScrollView contentContainerStyle={s.page}>
           <View style={s.head}>
             <Pressable onPress={onBack} hitSlop={12}>
@@ -186,6 +188,7 @@ export function LessonView({
             />
           </View>
         </ScrollView>
+      </LessonSelection>
       </TermContext.Provider>
       {term && (
         <Pressable style={s.sheetBack} onPress={() => setTerm(null)}>
@@ -226,3 +229,77 @@ const s = themed(() =>
     sheetBack: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end', padding: 16 },
   }),
 );
+
+/** Web selection UI. Native lessons retain their existing layout and sharing action. */
+function LessonSelection({ children, lang, title }: { children: React.ReactNode; lang: Progress['lang']; title: string }) {
+  const root = useRef<HTMLDivElement>(null);
+  const popup = useRef<HTMLFormElement>(null);
+  const [selection, setSelection] = useState<{ text: string; x: number; y: number } | null>(null);
+  const [question, setQuestion] = useState('');
+  const es = lang === 'es';
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    let dragging = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const insidePopup = (target: EventTarget | null) => target instanceof Node && popup.current?.contains(target);
+    const read = () => {
+      if (dragging || popup.current?.contains(document.activeElement)) return;
+      const selected = window.getSelection();
+      if (!selected || selected.isCollapsed || !root.current?.contains(selected.anchorNode) || !root.current.contains(selected.focusNode)) {
+        setSelection(null);
+        return;
+      }
+      const text = selected.toString().trim();
+      if (!text) { setSelection(null); return; }
+      const rect = selected.getRangeAt(0).getBoundingClientRect();
+      const width = Math.min(340, window.innerWidth - 24);
+      setSelection({ text, x: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)),
+        y: Math.max(12, Math.min(rect.bottom + 10, window.innerHeight - 250)) });
+      setQuestion('');
+    };
+    const schedule = () => { clearTimeout(timer); timer = setTimeout(read, 300); };
+    const down = (event: PointerEvent) => {
+      if (insidePopup(event.target)) return;
+      dragging = true;
+      setSelection(null);
+    };
+    const up = () => { dragging = false; schedule(); };
+    const hide = () => { if (!popup.current?.contains(document.activeElement)) setSelection(null); };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setSelection(null); };
+    document.addEventListener('pointerdown', down);
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', up);
+    document.addEventListener('selectionchange', schedule);
+    document.addEventListener('keydown', escape);
+    window.addEventListener('resize', hide);
+    document.addEventListener('scroll', hide, true);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('pointerdown', down);
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', up);
+      document.removeEventListener('selectionchange', schedule);
+      document.removeEventListener('keydown', escape);
+      window.removeEventListener('resize', hide);
+      document.removeEventListener('scroll', hide, true);
+    };
+  }, []);
+  if (Platform.OS !== 'web') return <>{children}</>;
+  const button = { background: c.bg, color: c.cyan, border: `1px solid ${c.cyan}`, borderRadius: 3, padding: '8px 12px', cursor: 'pointer', font: 'inherit' };
+  return <div ref={root} data-lesson-copy="" style={{ display: 'flex', flex: 1, minHeight: 0, flexDirection: 'column' }}>
+    {children}
+    {selection && <form ref={popup} aria-label={es ? 'Preguntar sobre el fragmento' : 'Ask about selected text'}
+      onSubmit={(event) => { event.preventDefault(); window.open(claudeUrl(selectionPrompt(lang, title, selection.text, question)), '_blank', 'noopener'); }}
+      style={{ position: 'fixed', left: selection.x, top: selection.y, width: 'min(340px, calc(100vw - 24px))', boxSizing: 'border-box', zIndex: 100, background: c.panel, color: c.text, border: `1px solid ${c.cyan}`, padding: 12, borderRadius: 5, font: '13px monospace', boxShadow: '0 4px 20px #0006' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+        <strong>{es ? 'Fragmento seleccionado' : 'Selected passage'}</strong>
+        <button type="button" aria-label={es ? 'Cerrar' : 'Dismiss'} onClick={() => setSelection(null)} style={button}>×</button>
+      </div>
+      <blockquote style={{ margin: '8px 0', maxHeight: 54, overflow: 'auto', whiteSpace: 'pre-wrap' }}>{selection.text}</blockquote>
+      <input aria-label={es ? 'Pregunta opcional' : 'Optional question'} placeholder={es ? 'Pregunta opcional…' : 'Optional question…'} value={question}
+        onChange={(event) => setQuestion(event.target.value)} style={{ width: '100%', boxSizing: 'border-box', background: c.bg, color: c.text, border: `1px solid ${c.lineHi}`, padding: 8, marginBottom: 8, font: 'inherit' }} />
+      <button type="submit" style={button}>{STR[lang].askClaude} ↗</button>
+      <div style={{ marginTop: 8, color: c.muted, fontSize: 11 }}>{es ? 'Enter abre Claude. Sin pregunta: explica el fragmento.' : 'Enter opens Claude. No question: explain this passage.'}</div>
+    </form>}
+  </div>;
+}
