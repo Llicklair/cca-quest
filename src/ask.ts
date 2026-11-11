@@ -82,3 +82,10 @@ export function conceptPrompt(lang: Lang, title: string, lines: string[]): strin
 
 /** Abre un chat nuevo de claude.ai con el prompt ya escrito. */
 export const claudeUrl = (prompt: string) => `https://claude.ai/new?q=${encodeURIComponent(prompt)}`;
+
+/** A selected lesson passage; the optional question stays separate from the quoted source. */
+export function selectionPrompt(lang: Lang, title: string, passage: string, question = '', context: string[] = []): string {
+  const t = TEXT[lang];
+  return [conceptPrompt(lang, title, context), '', lang === 'es' ? 'Céntrate en este fragmento de la lección:' : 'Focus on this selected passage from the lesson:', passage,
+    '', question.trim() || t.concept].join('\n');
+}
