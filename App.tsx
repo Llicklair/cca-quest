@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { JetBrainsMono_400Regular, JetBrainsMono_700Bold } from '@expo-google-fonts/jetbrains-mono';
 import { useFonts } from 'expo-font';
 import { StatusBar, setStatusBarStyle } from 'expo-status-bar';
@@ -56,6 +57,7 @@ type PlayView = 'status' | 'round' | 'done' | 'exam' | 'misses' | 'live';
 const TABS: Tab[] = ['play', 'learn', 'cards', 'grep', 'config'];
 
 const PUBLISH_MS = 5_000;
+const WRAP_KEY = 'cca-quest:question-wrap';
 
 // El QR de una partida en grupo abre la web con ?quiz=CÓDIGO: se va directo a entrar, sin arranque.
 const quizLink = Platform.OS === 'web' && typeof window !== 'undefined' ? parseRoom(window.location.search) : null;
@@ -84,6 +86,13 @@ function Main() {
   const [deckRunning, setDeckRunning] = useState(false);
   const [examRunning, setExamRunning] = useState(false);
   const [liveRunning, setLiveRunning] = useState(false);
+  const [wrap, setWrap] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      AsyncStorage.getItem(WRAP_KEY).then((value) => setWrap(value === 'true')).catch(() => {});
+    }
+  }, []);
   const [booted, setBooted] = useState(quizLink !== null);
   const [boom, setBoom] = useState(0);
   const [update, setUpdate] = useState<UpdateInfo | null | undefined>(undefined);
@@ -286,6 +295,13 @@ function Main() {
   };
 
   const inRound = tab === 'play' && view === 'round';
+  const questionScreen = inRound || (tab === 'play' && examRunning);
+  const wrapped = Platform.OS === 'web' && wrap && questionScreen;
+  const toggleWrap = () => {
+    const next = !wrap;
+    setWrap(next);
+    AsyncStorage.setItem(WRAP_KEY, String(next)).catch(() => {});
+  };
   const open = lesson ? LESSONS.find((l) => l.ts === lesson) : undefined;
 
   // El logo de arriba a la izquierda lleva siempre al inicio. Si hay algo a medias, se pregunta antes.
@@ -316,11 +332,22 @@ function Main() {
           </Txt>
         </Pressable>
         <View style={s.toggles}>
+          {Platform.OS === 'web' && questionScreen && (
+            <Pressable
+              onPress={toggleWrap}
+              accessibilityRole="switch"
+              accessibilityLabel={T.wrapQuestions}
+              aria-checked={wrap}
+              style={[s.wrapToggle, wrap && { borderColor: c.green, backgroundColor: c.greenBg }]}
+            >
+              <Txt size={12} bold color={wrap ? c.green : c.muted}>{T.wrap} [{wrap ? 'ON' : 'OFF'}]</Txt>
+            </Pressable>
+          )}
           <ThemeToggle theme={p.theme} onChange={changeTheme} labels={T.themeNames} />
           <LangToggle lang={p.lang} onChange={setLang} />
         </View>
       </View>
-      <View style={s.fill}>
+      <View style={[s.fill, wrapped && s.wrapped]}>
         {tab === 'play' && view === 'status' && (
           <Status
             p={p}
@@ -360,6 +387,7 @@ function Main() {
         {tab === 'play' && view === 'exam' && (
           <Exam
             p={p}
+            wrapped={wrapped}
             onFinish={finishExam}
             // Forma funcional: el cronómetro llama a esto desde un intervalo y no debe pisar progreso más reciente.
             onSaveDraft={(examDraft) =>
@@ -474,6 +502,8 @@ function Main() {
 const s = themed(() =>
   StyleSheet.create({
     fill: { flex: 1, backgroundColor: c.bg },
+    wrapped: { width: '100%', maxWidth: 960, alignSelf: 'center' },
+    wrapToggle: { justifyContent: 'center', paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: c.lineHi, borderRadius: 3 },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
