@@ -3,7 +3,7 @@ import { JetBrainsMono_400Regular, JetBrainsMono_700Bold } from '@expo-google-fo
 import { useFonts } from 'expo-font';
 import { StatusBar, setStatusBarStyle } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, AppState, BackHandler, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, AppState, BackHandler, Platform, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import * as feel from './src/feel';
@@ -57,7 +57,10 @@ type PlayView = 'status' | 'round' | 'done' | 'exam' | 'misses' | 'live';
 const TABS: Tab[] = ['play', 'learn', 'cards', 'grep', 'config'];
 
 const PUBLISH_MS = 5_000;
+// Centrar las preguntas en una columna: solo en la web y guardado en este navegador, no en el progreso.
 const WRAP_KEY = 'cca-quest:question-wrap';
+// Más estrecho ya va en una columna (y el simulacro no se parte en dos): el botón no cambiaría nada.
+const WRAP_MIN_WIDTH = 900;
 
 // El QR de una partida en grupo abre la web con ?quiz=CÓDIGO: se va directo a entrar, sin arranque.
 const quizLink = Platform.OS === 'web' && typeof window !== 'undefined' ? parseRoom(window.location.search) : null;
@@ -87,11 +90,9 @@ function Main() {
   const [examRunning, setExamRunning] = useState(false);
   const [liveRunning, setLiveRunning] = useState(false);
   const [wrap, setWrap] = useState(false);
-
+  const { width } = useWindowDimensions();
   useEffect(() => {
-    if (Platform.OS === 'web') {
-      AsyncStorage.getItem(WRAP_KEY).then((value) => setWrap(value === 'true')).catch(() => {});
-    }
+    if (Platform.OS === 'web') AsyncStorage.getItem(WRAP_KEY).then((value) => setWrap(value === 'true')).catch(() => {});
   }, []);
   const [booted, setBooted] = useState(quizLink !== null);
   const [boom, setBoom] = useState(0);
@@ -295,8 +296,8 @@ function Main() {
   };
 
   const inRound = tab === 'play' && view === 'round';
-  const questionScreen = inRound || (tab === 'play' && examRunning);
-  const wrapped = Platform.OS === 'web' && wrap && questionScreen;
+  const canWrap = Platform.OS === 'web' && width >= WRAP_MIN_WIDTH && (inRound || (tab === 'play' && examRunning));
+  const wrapped = canWrap && wrap;
   const toggleWrap = () => {
     const next = !wrap;
     setWrap(next);
@@ -332,7 +333,7 @@ function Main() {
           </Txt>
         </Pressable>
         <View style={s.toggles}>
-          {Platform.OS === 'web' && questionScreen && (
+          {canWrap && (
             <Pressable
               onPress={toggleWrap}
               accessibilityRole="switch"
