@@ -95,7 +95,7 @@ export function LessonView({
   const T = STR[L];
   const [term, setTerm] = useState<Term | null>(null);
   const terms = { isTerm: (code: string) => Boolean(termOf(code)), open: (code: string) => setTerm(termOf(code) ?? null) };
-  // Lo que se le cuenta a Claude de la lección. Al preguntar por un trozo va también la explicación sencilla.
+  // Lo que se le cuenta a Claude de la lección al preguntar por un trozo (con la explicación sencilla, si la hay).
   const title = `${lesson.ts} ${lesson.title[L]}`;
   const about = [lesson.tldr[L], ...lesson.ideas.map((x) => `- ${x[L]}`), ...lesson.traps.map((x) => `✗ ${x[L]}`), lesson.example[L]];
 
@@ -184,7 +184,11 @@ export function LessonView({
               <Btn kind="amber" label={T.markRead} onPress={onRead} />
             )}
             {nQs > 0 && <Btn kind="primary" label={T.practice(lesson.ts, Math.min(nQs, 5))} onPress={onPractice} />}
-            <AskConcept lang={L} title={title} lines={about} />
+            <AskConcept
+              lang={L}
+              title={`${lesson.ts} ${lesson.title[L]}`}
+              lines={[lesson.tldr[L], ...lesson.ideas.map((x) => `- ${x[L]}`), ...lesson.traps.map((x) => `✗ ${x[L]}`), lesson.example[L]]}
+            />
           </View>
         </ScrollView>
         </LessonSelection>
