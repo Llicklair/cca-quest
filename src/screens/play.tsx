@@ -54,6 +54,7 @@ export type Round = {
   gain: number;
   levelUp: Level | null;
   goalMet: boolean;
+  lessonTs?: string;
   label: string; // “daily” o la tarea que se practica
   picks: number[]; // lo elegido en cada pregunta, en orden (índice original, o máscara en las de respuesta múltiple)
 };
@@ -418,7 +419,16 @@ export function RoundView({
 
 // --- Resultado ---
 
-export function Done({ round, p, onAgain, onHome }: { round: Round; p: Progress; onAgain: () => void; onHome: () => void }) {
+export function Done({ round, p, onAgain, onHome, onLesson, onLessons, nextLesson, onNextLesson }: {
+  round: Round;
+  p: Progress;
+  onAgain: () => void;
+  onHome: () => void;
+  onLesson?: () => void;
+  onLessons?: () => void;
+  nextLesson?: string;
+  onNextLesson?: () => void;
+}) {
   const total = round.items.length;
   const perfect = round.right === total;
   const streak = liveStreak(p, dayKey(new Date()));
@@ -484,8 +494,10 @@ export function Done({ round, p, onAgain, onHome }: { round: Round; p: Progress;
         );
       })()}
       <View style={{ gap: 10, marginTop: 16 }}>
-        <Btn kind="primary" label={T.anotherRound} onPress={onAgain} />
-        <Btn label="$ cd ~" onPress={onHome} />
+        {nextLesson && onNextLesson && <Btn kind="primary" label={T.nextLesson(nextLesson)} onPress={onNextLesson} />}
+        <Btn kind={onLesson ? 'ghost' : 'primary'} label={round.lessonTs ? T.practiceAgain(round.lessonTs) : T.anotherRound} onPress={onAgain} />
+        {onLesson && <Btn label={T.reviewLesson} onPress={onLesson} />}
+        {onLessons ? <Btn label={T.allLessons} onPress={onLessons} /> : <Btn label="$ cd ~" onPress={onHome} />}
       </View>
     </ScrollView>
   );
