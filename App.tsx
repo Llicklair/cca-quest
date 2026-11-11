@@ -94,6 +94,14 @@ function Main() {
   useEffect(() => {
     if (Platform.OS === 'web') AsyncStorage.getItem(WRAP_KEY).then((value) => setWrap(value === 'true')).catch(() => {});
   }, []);
+  // El botón sale en las rondas y en el simulacro en marcha, si la ventana es ancha.
+  const canWrap = Platform.OS === 'web' && width >= WRAP_MIN_WIDTH && tab === 'play' && (view === 'round' || examRunning);
+  const wrapped = canWrap && wrap;
+  const toggleWrap = () => {
+    const next = !wrap;
+    setWrap(next);
+    AsyncStorage.setItem(WRAP_KEY, String(next)).catch(() => {});
+  };
   const [booted, setBooted] = useState(quizLink !== null);
   const [boom, setBoom] = useState(0);
   const [update, setUpdate] = useState<UpdateInfo | null | undefined>(undefined);
@@ -296,13 +304,6 @@ function Main() {
   };
 
   const inRound = tab === 'play' && view === 'round';
-  const canWrap = Platform.OS === 'web' && width >= WRAP_MIN_WIDTH && (inRound || (tab === 'play' && examRunning));
-  const wrapped = canWrap && wrap;
-  const toggleWrap = () => {
-    const next = !wrap;
-    setWrap(next);
-    AsyncStorage.setItem(WRAP_KEY, String(next)).catch(() => {});
-  };
   const open = lesson ? LESSONS.find((l) => l.ts === lesson) : undefined;
 
   // El logo de arriba a la izquierda lleva siempre al inicio. Si hay algo a medias, se pregunta antes.
