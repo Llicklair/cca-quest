@@ -506,6 +506,8 @@ const s = themed(() =>
     wrapToggle: { justifyContent: 'center', paddingHorizontal: 8, paddingVertical: 4, borderWidth: 1, borderColor: c.lineHi, borderRadius: 3 },
     header: {
       flexDirection: 'row',
+      flexWrap: 'wrap',
+      rowGap: 6,
       alignItems: 'center',
       justifyContent: 'space-between',
       paddingHorizontal: 16,
