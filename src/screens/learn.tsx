@@ -79,12 +79,16 @@ export function LessonView({
   onBack,
   onRead,
   onPractice,
+  onNext,
+  nextTs,
 }: {
   lesson: Lesson;
   p: Progress;
   onBack: () => void;
   onRead: () => void;
   onPractice: () => void;
+  onNext?: () => void;
+  nextTs?: string;
 }) {
   const L = p.lang;
   const domain = DOMAINS.find((d) => lesson.ts.startsWith(`${d.n}.`))!;
@@ -178,6 +182,8 @@ export function LessonView({
             ) : (
               <Btn kind="amber" label={T.markRead} onPress={onRead} />
             )}
+            {read && nextTs && onNext && <Btn label={T.nextLesson(nextTs)} onPress={onNext} />}
+            <Btn label={T.allLessons} onPress={onBack} />
             {nQs > 0 && <Btn kind="primary" label={T.practice(lesson.ts, Math.min(nQs, 5))} onPress={onPractice} />}
             <AskConcept
               lang={L}
