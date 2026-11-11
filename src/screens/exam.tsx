@@ -67,8 +67,10 @@ export function Exam({
   onSaveDraft,
   onExit,
   onRunning,
+  wrapped = false,
 }: {
   p: Progress;
+  wrapped?: boolean;
   onFinish: (slots: Slot[], secs: number, label: string) => { result: ExamResult; gained: number };
   onSaveDraft: (draft: ExamDraft | null) => void;
   onExit: () => void;
@@ -81,7 +83,7 @@ export function Exam({
   const elapsedRef = useRef(0);
   const [noteOpen, setNoteOpen] = useState(false);
   const { width } = useWindowDimensions();
-  const wide = width >= 900;
+  const wide = width >= 900 && !wrapped;
   const T = STR[p.lang];
   const text = (q: Question) => inLang(q, p.lang);
 

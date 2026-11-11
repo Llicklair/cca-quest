@@ -51,6 +51,8 @@ const en = {
   // el logo de arriba a la izquierda lleva al inicio
   home: 'home',
   themeNames: { dark: 'dark mode', light: 'light mode' },
+  wrap: 'Wrap',
+  wrapQuestions: 'Wrap questions in a centered reading column',
   homeTitle: 'Go back home?',
   homeAction: 'Go home',
   homeSaved: 'Everything you answered is already saved.',
@@ -358,6 +360,8 @@ const es: Strings = {
   cancel: 'Cancelar',
   home: 'inicio',
   themeNames: { dark: 'modo oscuro', light: 'modo claro' },
+  wrap: 'Centrar',
+  wrapQuestions: 'Centrar las preguntas en una columna de lectura',
   homeTitle: '¿Volver al inicio?',
   homeAction: 'Volver',
   homeSaved: 'Todo lo que has contestado ya está guardado.',
