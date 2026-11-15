@@ -33,6 +33,7 @@ import { BANK, LEVEL_BANK, LEVEL_BANK_60 } from '../bank.ts';
 import { QUESTIONS } from '../questions.ts';
 import { useGuard } from '../shield.tsx';
 import { studyRecord } from '../study.ts';
+import { trapPrompt } from '../trap.ts';
 import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer, confirmAction } from '../term.tsx';
 import { c, domainColor, font, themed } from '../theme.ts';
 
@@ -383,6 +384,12 @@ export function Exam({
           <Txt size={11} color={c.muted} style={{ marginTop: 6 }}>
             {T.targetNote(EXAM.target * 100)}
           </Txt>
+        </Panel>
+        <Panel title={T.trapTitle} color={c.amber} titleColor={c.amber}>
+          <Txt size={12} color={c.muted} style={{ marginBottom: 8 }}>
+            {T.trapBody}
+          </Txt>
+          <AskButton lang={p.lang} label={T.trapBtn} prompt={() => trapPrompt(p.lang, answered > 0 ? studyRecord(p, p.lang) : undefined)} />
         </Panel>
         {(answered > 0 || p.exams.length > 0) && (
           <Panel title={T.weakTitle} color={c.cyan} titleColor={c.cyan}>

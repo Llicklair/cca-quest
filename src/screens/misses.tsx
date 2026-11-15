@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { claudePrompt, conceptPrompt, missesPrompt } from '../ask.ts';
-import { ChatLinker, openChat, sendToClaude, sentLine, useClaudeChat, type Sent } from '../chat.tsx';
+import { ChatLinker, SentBox, sendToClaude, useClaudeChat, type Sent } from '../chat.tsx';
 import { BANK, BANK_ES, LEVEL_BANK } from '../bank.ts';
 import { misses, pickedOf, rightOf, roundPool, type Lang, type Progress, type Question } from '../game.ts';
 import { STR, type Strings } from '../i18n.ts';
@@ -14,10 +14,10 @@ import { c, domainColor } from '../theme.ts';
 export const inLang = (q: Question, lang: Lang) => (lang === 'es' && BANK_ES[q.id]) || q;
 
 /**
- * El botón "pregúntale a Claude", el mismo en toda la app. Con tu chat de Claude vinculado, todo va
- * a ese chat: copia el prompt para pegarlo allí (en el móvil, además, lo abre). Sin chat, en la web
- * abre uno nuevo con el prompt escrito y además lo copia; en el móvil abre el menú de compartir (la
- * app de Claude, Codex, copiar…); y después ofrece vincular ese chat para las siguientes.
+ * El botón "pregúntale a Claude", el mismo en toda la app (ver sendToClaude). Con tu chat de Claude
+ * vinculado, o si el prompt no cabe en un enlace, lo copia y debajo sale el aviso con el botón para
+ * abrir Claude y pegarlo. Si no, en la web abre un chat nuevo con el prompt escrito y en el móvil el
+ * menú de compartir (la app de Claude, Codex, copiar…); y después ofrece vincular ese chat.
  * `inline`: como enlace de texto, para listas largas como el glosario. `label`: otro texto.
  */
 export function AskButton({ prompt, lang, inline, label }: { prompt: () => string; lang: Lang; inline?: boolean; label?: string }) {
@@ -27,7 +27,6 @@ export function AskButton({ prompt, lang, inline, label }: { prompt: () => strin
   const go = () => {
     sendToClaude(prompt(), chat).then(setSent);
   };
-  const line = sentLine(sent, lang);
   return (
     <View style={{ gap: 4 }}>
       {inline ? (
@@ -37,17 +36,8 @@ export function AskButton({ prompt, lang, inline, label }: { prompt: () => strin
       ) : (
         <Btn label={label ?? T.askClaude} onPress={go} style={{ borderColor: c.cyan }} />
       )}
-      {line && (
-        <Txt size={11} color={sent === 'failed' ? c.red : c.muted}>
-          {line}
-        </Txt>
-      )}
-      {sent === 'pasteChat' && chat && Platform.OS === 'web' && (
-        <Txt size={11} bold color={c.cyan} onPress={() => openChat(chat)}>
-          {T.askOpenChat}
-        </Txt>
-      )}
-      {sent && sent !== 'pasteChat' && sent !== 'pasteApp' && <ChatLinker lang={lang} compact />}
+      <SentBox sent={sent} lang={lang} />
+      {sent && !chat && <ChatLinker lang={lang} compact />}
     </View>
   );
 }

@@ -41,16 +41,25 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
   el prompt escrito (y lo copia, por si se abre vacío); en el móvil abre el menú de compartir.
   En el informe de un simulacro (al entregar o abierto desde el historial), **un solo botón manda el
   simulacro entero**: las falladas primero y a fondo, las acertadas para confirmarlas en una línea y al
-  final qué repasar. No cabe en un enlace, así que se copia y se pega.
+  final qué repasar. En el móvil va por el menú de compartir, como todo. En la web no cabe en un
+  enlace de claude.ai, así que se copia y se pega: debajo del botón sale
+  "✓ copiado · N caracteres", cómo pegarlo y el botón para abrir Claude (no se abre un chat vacío por
+  sorpresa). Si el navegador no deja copiar, sale el texto en un cuadro para copiarlo a mano.
   En **fallos**, otro manda todas las falladas a la vez. Y en la lista de simulacros, **dónde fallo**
   manda todo tu historial: los simulacros con su nota, los aciertos por dominio (en simulacros y en toda
   la práctica) y por task statement, las falladas la última vez enteras y el resto en una línea con la
   regla que evalúan; Claude te dice dónde fallas, tus áreas más débiles y qué estudiar primero. Sale de
   la ficha de cada pregunta, así que cuenta también los simulacros antiguos y las rondas.
+  **Examen de trampas con Claude** (en la lista de simulacros): Claude pone 20 preguntas como las del
+  examen, con parejas de contraste y cada opción mala hecha con una de 10 trampas típicas (función
+  inventada, forzar de más o de menos, más capacidad…); al corregir dice en qué trampa caíste y, con tus
+  resultados, las cuenta por trampa y pone otras 20 sobre las que repites. El prompt
+  ([src/trap.ts](src/trap.ts)) lleva tus task statements más flojos y cabe en el enlace, así que se abre
+  ya escrito.
   **Todo al mismo chat**: claude.ai no deja escribir desde un enlace en un chat que ya existe ni reutilizar
   su pestaña desde otra web, así que en `config → chat de claude` (o debajo del botón la primera vez) se
-  pega el enlace del chat (`claude.ai/chat/…`). Desde entonces cada ✦ copia el prompt para pegarlo
-  allí, y en el móvil además abre ese chat. Viaja con la sincronización.
+  pega el enlace del chat (`claude.ai/chat/…`). Desde entonces cada ✦ copia el prompt y debajo sale el
+  botón para abrir ese chat y pegarlo. Viaja con la sincronización.
 - **`learn`**: una lección por *task statement* (30), como una página de `man`: resumen, ideas clave,
   trampas típicas del examen y un ejemplo. Desde cada una se practican sus preguntas. Para que se entienda
   a cualquier nivel, cada lección trae además una analogía cotidiana ("dicho sencillo"), un diagrama que

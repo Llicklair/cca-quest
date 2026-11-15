@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { selectionPrompt } from '../ask.ts';
-import { sendToClaude, sentLine, useClaudeChat } from '../chat.tsx';
+import { SentBox, sendToClaude, useClaudeChat, type Sent } from '../chat.tsx';
 import { EXTRAS } from '../extras.ts';
 import { DOMAINS, mastery, type Lesson, type Progress, type Term } from '../game.ts';
 import { TERMS } from '../glossary.ts';
@@ -250,7 +250,7 @@ function LessonSelection({ children, lang, title, lines }: { children: React.Rea
   const popup = useRef<HTMLFormElement>(null);
   const [selection, setSelection] = useState<{ text: string; x: number; y: number } | null>(null);
   const [question, setQuestion] = useState('');
-  const [notice, setNotice] = useState<string | null>(null); // lo que pasó al mandarlo, unos segundos
+  const [notice, setNotice] = useState<Sent | null>(null); // lo que pasó al mandarlo, si hay que pegarlo
   const { chat } = useClaudeChat();
   const es = lang === 'es';
 
@@ -315,13 +315,11 @@ function LessonSelection({ children, lang, title, lines }: { children: React.Rea
   const ask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selection) return;
-    // Con tu chat vinculado se copia para pegarlo allí; sin él, un chat nuevo con el prompt escrito.
-    sendToClaude(selectionPrompt(lang, title, selection.text, question, lines), chat).then((sent) => {
-      const line = sent === 'copied' ? null : sentLine(sent, lang);
-      if (!line) return;
-      setNotice(line);
-      setTimeout(() => setNotice(null), 6000);
-    });
+    // Con tu chat vinculado se copia para pegarlo allí (y sale el aviso con el botón para abrirlo);
+    // sin él, un chat nuevo con el prompt escrito.
+    sendToClaude(selectionPrompt(lang, title, selection.text, question, lines), chat).then((sent) =>
+      setNotice(sent.kind === 'copied' || sent.kind === 'failed' ? sent : null),
+    );
     setSelection(null);
   };
   const text = { fontFamily: font.regular, fontSize: 13 };
@@ -374,11 +372,11 @@ function LessonSelection({ children, lang, title, lines }: { children: React.Rea
         </form>
       )}
       {notice && (
-        <div
-          role="status"
-          style={{ ...text, fontSize: 12, position: 'fixed', left: 12, right: 12, bottom: 72, zIndex: 100, padding: 10, background: c.panel, color: c.cyan, border: `1px solid ${c.cyan}`, borderRadius: 5 }}
-        >
-          {notice}
+        <div role="status" style={{ position: 'fixed', left: 12, right: 12, bottom: 72, zIndex: 100, background: c.bg, borderRadius: 5, boxShadow: '0 4px 20px #0006' }}>
+          <SentBox sent={notice} lang={lang} />
+          <button type="button" onClick={() => setNotice(null)} style={{ ...button, position: 'absolute', top: 6, right: 6, padding: '2px 8px', color: c.muted, borderColor: c.lineHi }}>
+            ×
+          </button>
         </div>
       )}
     </div>
