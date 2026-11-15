@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { claudeUrl, selectionPrompt } from '../ask.ts';
+import { selectionPrompt } from '../ask.ts';
+import { sendToClaude, sentLine, useClaudeChat } from '../chat.tsx';
 import { EXTRAS } from '../extras.ts';
 import { DOMAINS, mastery, type Lesson, type Progress, type Term } from '../game.ts';
 import { TERMS } from '../glossary.ts';
@@ -249,6 +250,8 @@ function LessonSelection({ children, lang, title, lines }: { children: React.Rea
   const popup = useRef<HTMLFormElement>(null);
   const [selection, setSelection] = useState<{ text: string; x: number; y: number } | null>(null);
   const [question, setQuestion] = useState('');
+  const [notice, setNotice] = useState<string | null>(null); // lo que pasó al mandarlo, unos segundos
+  const { chat } = useClaudeChat();
   const es = lang === 'es';
 
   useEffect(() => {
@@ -312,7 +315,13 @@ function LessonSelection({ children, lang, title, lines }: { children: React.Rea
   const ask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selection) return;
-    window.open(claudeUrl(selectionPrompt(lang, title, selection.text, question, lines)), '_blank', 'noopener');
+    // Con tu chat vinculado se copia para pegarlo allí; sin él, un chat nuevo con el prompt escrito.
+    sendToClaude(selectionPrompt(lang, title, selection.text, question, lines), chat).then((sent) => {
+      const line = sent === 'copied' ? null : sentLine(sent, lang);
+      if (!line) return;
+      setNotice(line);
+      setTimeout(() => setNotice(null), 6000);
+    });
     setSelection(null);
   };
   const text = { fontFamily: font.regular, fontSize: 13 };
@@ -363,6 +372,14 @@ function LessonSelection({ children, lang, title, lines }: { children: React.Rea
             </button>
           </div>
         </form>
+      )}
+      {notice && (
+        <div
+          role="status"
+          style={{ ...text, fontSize: 12, position: 'fixed', left: 12, right: 12, bottom: 72, zIndex: 100, padding: 10, background: c.panel, color: c.cyan, border: `1px solid ${c.cyan}`, borderRadius: 5 }}
+        >
+          {notice}
+        </div>
       )}
     </div>
   );

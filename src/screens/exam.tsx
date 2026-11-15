@@ -16,6 +16,8 @@ import {
   isRight,
   isWeighted,
   levelExam,
+  pickedOf,
+  replayExam,
   rightOf,
   scoreOf,
   shuffle,
@@ -24,8 +26,9 @@ import {
   type Progress,
   type Question,
 } from '../game.ts';
+import { examPrompt } from '../ask.ts';
 import { STR } from '../i18n.ts';
-import { AskClaude, MissCard, inLang } from './misses.tsx';
+import { AskButton, AskClaude, MissCard, inLang } from './misses.tsx';
 import { BANK, LEVEL_BANK, LEVEL_BANK_60 } from '../bank.ts';
 import { QUESTIONS } from '../questions.ts';
 import { useGuard } from '../shield.tsx';
@@ -35,13 +38,27 @@ import { c, domainColor, font, themed } from '../theme.ts';
 // picked = índice original, o máscara en las de respuesta múltiple; flag y note, lo marcado y comentado para revisar.
 export type Slot = { q: Question; order: number[]; picked: number | null; flag?: boolean; note?: string };
 type Run = { label: string; slots: Slot[]; i: number; per: number; limit: number };
-type Phase = { kind: 'menu' } | { kind: 'run' } | { kind: 'report'; result: ExamResult; slots: Slot[]; gained: number };
+// En el informe de un simulacro antiguo sin respuestas guardadas, `picked` es undefined.
+type Shown = Omit<Slot, 'picked'> & { picked?: number | null };
+// `gained`: null al abrir uno ya hecho desde el historial. `known`: si se guardaron tus respuestas.
+type Phase =
+  | { kind: 'menu' }
+  | { kind: 'run' }
+  | { kind: 'report'; result: ExamResult; slots: Shown[]; gained: number | null; known: boolean };
 
 // Los fijos salen solo de las de una respuesta, para que no cambien al crecer el banco (ver bank.ts).
 const FIXED = fixedExams(QUESTIONS);
 // Los dos de nivel real, con los 6 escenarios: el de 60 en 2 h, como el examen, y el completo con las 66.
 const LEVEL_60 = levelExam(LEVEL_BANK_60);
 const LEVEL = levelExam(LEVEL_BANK);
+// Para volver a abrir un simulacro ya hecho: todas las preguntas por id y, para los antiguos que no
+// guardaban sus preguntas, las de los fijos por etiqueta (ver replayExam).
+const BY_ID = new Map([...BANK, ...LEVEL_BANK].map((q) => [q.id, q]));
+const FIXED_BY_LABEL: Record<string, Question[]> = {
+  ...Object.fromEntries(FIXED.map((qs, n) => [`exam ${n + 1}`, qs])),
+  [EXAM_LEVEL_60_LABEL]: LEVEL_60,
+  [EXAM_LEVEL_LABEL]: LEVEL,
+};
 const LEVEL_60_PER = LEVEL_60.length / Object.keys(SETTINGS).length;
 const LEVEL_PER = LEVEL.length / Object.keys(SETTINGS).length;
 const perOf = (label: string) =>
@@ -82,6 +99,8 @@ export function Exam({
   const runRef = useRef<Run | null>(null);
   const elapsedRef = useRef(0);
   const [noteOpen, setNoteOpen] = useState(false);
+  const [showRight, setShowRight] = useState(false); // en el informe, las acertadas también
+  const [allExams, setAllExams] = useState(false); // el historial entero y no solo los últimos
   const { width } = useWindowDimensions();
   const wide = width >= 900 && !wrapped;
   const T = STR[p.lang];
@@ -110,8 +129,18 @@ export function Exam({
     const secs = Math.min(r.limit, elapsedRef.current);
     const { result, gained } = onFinish(r.slots, secs, r.label);
     runRef.current = null;
-    setPhase({ kind: 'report', result, slots: r.slots, gained });
+    setShowRight(false);
+    setPhase({ kind: 'report', result, slots: r.slots, gained, known: true });
     onRunning(false);
+  };
+
+  // Un intento del historial: su informe otra vez, para repasarlo o mandárselo a Claude.
+  const openPast = (e: ExamResult) => {
+    const r = replayExam(e, BY_ID, FIXED_BY_LABEL);
+    if (!r) return;
+    setShowRight(false);
+    setPhase({ kind: 'report', result: e, slots: r.slots, gained: null, known: r.known });
+    feel.tap();
   };
 
   // Cronómetro: cuenta mientras la pantalla está abierta, guarda cada 15 s y entrega al acabar el tiempo.
@@ -147,9 +176,8 @@ export function Exam({
   };
 
   const resume = (d: ExamDraft) => {
-    const byId = new Map([...BANK, ...LEVEL_BANK].map((q) => [q.id, q]));
     const slots = d.ids.flatMap((id, k) => {
-      const q = byId.get(id);
+      const q = BY_ID.get(id);
       return q ? [{ q, order: d.orders[k], picked: d.picked[k], flag: d.flags?.[k], note: d.notes?.[k] || undefined }] : [];
     });
     update({ label: d.label, slots, i: Math.min(d.i, slots.length - 1), per: perOf(d.label), limit: d.limit });
@@ -221,8 +249,10 @@ export function Exam({
   // --- Menú de simulacros ---
   if (phase.kind === 'menu') {
     const d = p.examDraft;
+    const shown = allExams ? p.exams : p.exams.slice(0, 8);
+    const canOpen = (e: ExamResult) => replayExam(e, BY_ID, FIXED_BY_LABEL) !== null;
     return (
-      <ScrollView contentContainerStyle={s.page}>
+      <ScrollView key="menu" contentContainerStyle={s.page}>
         <Typer text="$ cca-quest exam --list" bold color={c.green} />
 
         {d && (
@@ -308,12 +338,20 @@ export function Exam({
           {p.exams.length === 0 ? (
             <Txt color={c.muted}>{T.noAttempts}</Txt>
           ) : (
-            p.exams.slice(0, 8).map((e, k) => {
+            shown.map((e, k) => {
               const frac = scoreOf(e);
               const score = pct(frac);
               const ok = score >= EXAM.target * 100;
+              const open = canOpen(e);
               return (
-                <View key={k} style={s.histRow}>
+                <Pressable
+                  key={k}
+                  onPress={() => openPast(e)}
+                  disabled={!open}
+                  accessibilityRole="button"
+                  accessibilityHint={open ? T.openPast : T.noReplay}
+                  style={({ pressed }) => [s.histRow, s.histPress, pressed && { backgroundColor: c.greenBg }]}
+                >
                   <Txt color={c.muted} style={{ width: 52 }}>
                     {e.day.slice(5)}
                   </Txt>
@@ -322,9 +360,22 @@ export function Exam({
                   <Txt bold color={ok ? c.green : c.amber}>
                     {String(score).padStart(3)}%
                   </Txt>
-                </View>
+                  <Txt bold color={open ? c.cyan : c.line} style={{ marginLeft: 'auto' }}>
+                    ▶
+                  </Txt>
+                </Pressable>
               );
             })
+          )}
+          {!allExams && p.exams.length > shown.length && (
+            <Txt size={12} bold color={c.cyan} onPress={() => setAllExams(true)} style={{ marginTop: 6 }}>
+              {T.showAllExams(p.exams.length)}
+            </Txt>
+          )}
+          {p.exams.some(canOpen) && (
+            <Txt size={11} color={c.muted} style={{ marginTop: 6 }}>
+              {T.openPast}
+            </Txt>
           )}
           <Txt size={11} color={c.muted} style={{ marginTop: 6 }}>
             {T.targetNote(EXAM.target * 100)}
@@ -478,20 +529,39 @@ export function Exam({
     );
   }
 
-  // --- Informe ---
+  // --- Informe (al entregar, o de uno ya hecho abierto desde el historial) ---
   if (phase.kind !== 'report') return null;
-  const { result, gained } = phase;
+  const { result, gained, known } = phase;
   const weighted = isWeighted(result.label);
   const score = pct(scoreOf(result));
   const passed = score >= EXAM.target * 100;
   // Cada pregunta con su número en el examen, para que el índice de marcadas y las fichas casen.
-  const numbered = phase.slots.map((x, k) => ({ ...x, n: k + 1, ok: isRight(x.q, x.picked) }));
-  const wrong = numbered.filter((x) => !x.ok);
+  const numbered = phase.slots.map((x, k) => ({ ...x, n: k + 1, ok: known && isRight(x.q, x.picked ?? null) }));
+  const wrong = known ? numbered.filter((x) => !x.ok) : [];
   const marked = numbered.filter((x) => x.flag || x.note);
+  // Las acertadas que no salen ya entre las marcadas.
+  const rightRest = numbered.filter((x) => x.ok && !(x.flag || x.note));
   const headOf = (x: (typeof numbered)[number]) => `${T.qN(x.n)}${x.flag ? ' · ⚑' : ''}`;
+  // Todo el simulacro en un solo mensaje para Claude, con las letras como se vieron.
+  const askAll = () =>
+    examPrompt(
+      p.lang,
+      `${T.examLabel(result.label)} · ${result.day} · ${score}%`,
+      numbered.map((x) => ({
+        n: x.n,
+        tx: inLang(x.q, p.lang),
+        rights: rightOf(x.q),
+        ok: x.ok,
+        order: x.order,
+        picked: !known ? undefined : x.picked === null || x.picked === undefined ? null : pickedOf(x.q, x.picked),
+        ts: x.q.ts,
+        flag: x.flag,
+        note: x.note,
+      })),
+    );
   return (
-    <ScrollView contentContainerStyle={s.page}>
-      <Typer text={`$ cca-quest exam --report "${result.label}"`} bold color={c.green} />
+    <ScrollView key="report" contentContainerStyle={s.page}>
+      <Typer text={`$ cca-quest exam --report "${result.label}"${gained === null ? ` --day ${result.day}` : ''}`} bold color={c.green} />
       <BounceIn>
         <Panel title={T.score} color={passed ? c.green : c.amber} titleColor={passed ? c.green : c.amber}>
           <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
@@ -532,7 +602,24 @@ export function Exam({
           );
         })}
       </Panel>
-      {marked.length > 0 && (
+      <Panel title={T.examAskTitle} color={c.cyan} titleColor={c.cyan}>
+        <Txt size={12} color={c.muted} style={{ marginBottom: 8 }}>
+          {known ? T.examAskBody(wrong.length, numbered.length - wrong.length) : T.examAskBodyUnknown(numbered.length)}
+        </Txt>
+        <AskButton lang={p.lang} label={T.examAskBtn} prompt={askAll} />
+      </Panel>
+      {!known && (
+        <>
+          <Txt size={12} color={c.muted}>
+            {T.pastUnknown}
+          </Txt>
+          <Cmd>{T.allQuestions(numbered.length)}</Cmd>
+          {numbered.map((x) => (
+            <MissCard key={x.q.id} q={x.q} picked={undefined} lang={p.lang} T={T} full head={T.qN(x.n)} />
+          ))}
+        </>
+      )}
+      {known && marked.length > 0 && (
         <>
           <Cmd>{T.marked(marked.length)}</Cmd>
           <Panel color={c.cyan}>
@@ -564,6 +651,16 @@ export function Exam({
       {wrong.map((x) => (
         <MissCard key={x.q.id} q={x.q} picked={x.picked} lang={p.lang} T={T} full note={x.note} head={headOf(x)} />
       ))}
+      {rightRest.length > 0 && (
+        <Txt bold color={c.cyan} onPress={() => setShowRight(!showRight)} style={{ marginTop: 4 }}>
+          {showRight ? T.hideRight(rightRest.length) : T.showRight(rightRest.length)}
+        </Txt>
+      )}
+      {showRight && rightRest.length > 0 && <Cmd>{T.rightOnes(rightRest.length)}</Cmd>}
+      {showRight &&
+        rightRest.map((x) => (
+          <MissCard key={`r${x.q.id}`} q={x.q} picked={x.picked} lang={p.lang} T={T} full head={`✓ ${headOf(x)}`} />
+        ))}
       <View style={{ gap: 10, marginTop: 6 }}>
         <Btn kind="amber" label={T.examList} onPress={() => setPhase({ kind: 'menu' })} />
         <Btn label="$ cd ~" onPress={onExit} />
@@ -620,6 +717,7 @@ const s = themed(() =>
     bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: c.panel, borderTopWidth: 1, borderTopColor: c.lineHi, padding: 12, gap: 8 },
     dots: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, justifyContent: 'center' },
     histRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
+    histPress: { paddingVertical: 4, borderRadius: 3 },
     row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.line },
   }),
 );

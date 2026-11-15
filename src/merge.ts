@@ -47,12 +47,15 @@ export function merge(local: Progress, remote: Shared): Progress {
         ? local
         : remote;
 
-  // Más recientes primero; dentro del mismo día, primero los de la copia más nueva.
-  const seen = new Set<string>();
-  const exams = [...newer.exams, ...(remoteNewer ? local : remote).exams]
-    .filter((e) => !seen.has(examKey(e)) && (seen.add(examKey(e)), true))
-    .sort((a, b) => (a.day === b.day ? 0 : a.day > b.day ? -1 : 1))
-    .slice(0, 30);
+  // Más recientes primero; dentro del mismo día, primero los de la copia más nueva. Si el mismo
+  // simulacro está en las dos, gana la copia que guardó sus preguntas (la otra pudo pasar por una
+  // versión de la app que aún no las guardaba).
+  const byKey = new Map<string, ExamResult>();
+  for (const e of [...newer.exams, ...(remoteNewer ? local : remote).exams]) {
+    const had = byKey.get(examKey(e));
+    if (!had || (!had.slots && e.slots)) byKey.set(examKey(e), e);
+  }
+  const exams = [...byKey.values()].sort((a, b) => (a.day === b.day ? 0 : a.day > b.day ? -1 : 1)).slice(0, 30);
 
   return {
     xp: Math.max(local.xp, remote.xp),
@@ -75,7 +78,18 @@ export function merge(local: Progress, remote: Shared): Progress {
     // El de la copia más nueva; un perfil ya creado no se pierde aunque la otra copia no lo tenga
     // (o venga de una versión de la app anterior al perfil).
     profile: (remoteNewer ? (remote.profile ?? local.profile) : (local.profile ?? remote.profile)) ?? null,
+    ...chatOf(newer, remoteNewer ? local : remote),
   };
+}
+
+/**
+ * Tu chat de Claude: el de la copia más nueva, o el de la otra si la nueva no lo tiene. Olvidarlo
+ * (null) también viaja. Sin chat, ni la clave: así una versión anterior de la app, que no la
+ * conoce, no ve diferencias y no se ponen a reenviar el progreso una y otra vez.
+ */
+function chatOf(newer: Shared, older: Shared): Pick<Progress, 'claudeChat'> {
+  const chat = newer.claudeChat === undefined ? older.claudeChat : newer.claudeChat;
+  return chat === undefined ? {} : { claudeChat: chat };
 }
 
 /** JSON con las claves ordenadas, para comparar dos copias aunque se construyeran en otro orden. */
