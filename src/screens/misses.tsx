@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Platform, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 
-import { claudePrompt, claudeUrl, conceptPrompt } from '../ask.ts';
+import { claudePrompt, conceptPrompt } from '../ask.ts';
+import { ChatLinker, openChat, sendToClaude, sentLine, useClaudeChat, type Sent } from '../chat.tsx';
 import { BANK, BANK_ES, LEVEL_BANK } from '../bank.ts';
 import { misses, pickedOf, rightOf, roundPool, type Lang, type Progress, type Question } from '../game.ts';
 import { STR, type Strings } from '../i18n.ts';
@@ -12,39 +13,40 @@ import { c, domainColor } from '../theme.ts';
 export const inLang = (q: Question, lang: Lang) => (lang === 'es' && BANK_ES[q.id]) || q;
 
 /**
- * El botón "pregúntale a Claude", el mismo en toda la app. En la web abre claude.ai con el prompt
- * escrito y además lo copia; en el móvil abre el menú de compartir (la app de Claude, Codex, copiar…).
- * `inline`: como enlace de texto, para listas largas como el glosario.
+ * El botón "pregúntale a Claude", el mismo en toda la app. Con tu chat de Claude vinculado, todo va
+ * a ese chat: copia el prompt para pegarlo allí (en el móvil, además, lo abre). Sin chat, en la web
+ * abre uno nuevo con el prompt escrito y además lo copia; en el móvil abre el menú de compartir (la
+ * app de Claude, Codex, copiar…); y después ofrece vincular ese chat para las siguientes.
+ * `inline`: como enlace de texto, para listas largas como el glosario. `label`: otro texto.
  */
-export function AskButton({ prompt, lang, inline }: { prompt: () => string; lang: Lang; inline?: boolean }) {
-  const [copied, setCopied] = useState(false);
+export function AskButton({ prompt, lang, inline, label }: { prompt: () => string; lang: Lang; inline?: boolean; label?: string }) {
+  const { chat } = useClaudeChat();
+  const [sent, setSent] = useState<Sent | null>(null);
   const T = STR[lang];
   const go = () => {
-    const text = prompt();
-    if (Platform.OS !== 'web') {
-      Share.share({ message: text }).catch(() => {});
-      return;
-    }
-    navigator.clipboard
-      ?.writeText(text)
-      .then(() => setCopied(true))
-      .catch(() => {});
-    window.open(claudeUrl(text), '_blank', 'noopener');
+    sendToClaude(prompt(), chat).then(setSent);
   };
+  const line = sentLine(sent, lang);
   return (
     <View style={{ gap: 4 }}>
       {inline ? (
         <Txt size={12} bold color={c.cyan} onPress={go}>
-          {T.askClaude}
+          {label ?? T.askClaude}
         </Txt>
       ) : (
-        <Btn label={T.askClaude} onPress={go} style={{ borderColor: c.cyan }} />
+        <Btn label={label ?? T.askClaude} onPress={go} style={{ borderColor: c.cyan }} />
       )}
-      {copied && (
-        <Txt size={11} color={c.muted}>
-          {T.askCopied}
+      {line && (
+        <Txt size={11} color={sent === 'failed' ? c.red : c.muted}>
+          {line}
         </Txt>
       )}
+      {sent === 'pasteChat' && chat && Platform.OS === 'web' && (
+        <Txt size={11} bold color={c.cyan} onPress={() => openChat(chat)}>
+          {T.askOpenChat}
+        </Txt>
+      )}
+      {sent && sent !== 'pasteChat' && sent !== 'pasteApp' && <ChatLinker lang={lang} compact />}
     </View>
   );
 }

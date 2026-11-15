@@ -18,7 +18,10 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
   repetirlos y ver si mejoras; cada uno respeta los pesos por dominio y entre ellos casi no se repiten
   preguntas), uno aleatorio de 60 y uno rápido de 20 (estos dos sacan primero las que aún no has
   acertado). Se pueden pausar y retomar con el reloj parado. Al
-  final, nota por dominio, repaso de los fallos e historial de intentos.
+  final, nota por dominio, repaso de los fallos (y, si quieres, de las acertadas) e historial de intentos.
+  Cada intento guarda sus preguntas y lo que contestaste: tocándolo en el historial vuelve su informe.
+  De los fijos anteriores a esto salen sus preguntas con la buena, sin las tuyas; de los aleatorios
+  antiguos no queda nada que abrir.
 - **Simulacro nivel real**, con preguntas largas como las del examen y los 6 escenarios, en dos versiones: la de
   60 preguntas en 2 horas, como el examen (10 de cada escenario, una de ellas de "elige 2"), y la completa con
   las 66 en 2h12 (11 de cada escenario).
@@ -36,6 +39,13 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
   simulacro), por qué la buena es la buena y las otras no. En el quiz en grupo no sale. En lecciones, fichas y
   glosario explica el concepto con un ejemplo y cómo sale en el examen. En la web abre claude.ai con
   el prompt escrito (y lo copia, por si se abre vacío); en el móvil abre el menú de compartir.
+  En el informe de un simulacro (al entregar o abierto desde el historial), **un solo botón manda el
+  simulacro entero**: las falladas primero y a fondo, las acertadas para confirmarlas en una línea y al
+  final qué repasar. No cabe en un enlace, así que se copia y se pega.
+  **Todo al mismo chat**: claude.ai no deja escribir desde un enlace en un chat que ya existe ni reutilizar
+  su pestaña desde otra web, así que en `config → chat de claude` (o debajo del botón la primera vez) se
+  pega el enlace del chat (`claude.ai/chat/…`). Desde entonces cada ✦ copia el prompt para pegarlo
+  allí, y en el móvil además abre ese chat. Viaja con la sincronización.
 - **`learn`**: una lección por *task statement* (30), como una página de `man`: resumen, ideas clave,
   trampas típicas del examen y un ejemplo. Desde cada una se practican sus preguntas. Para que se entienda
   a cualquier nivel, cada lección trae además una analogía cotidiana ("dicho sencillo"), un diagrama que
@@ -54,7 +64,8 @@ Las preguntas van siempre en inglés, como el examen.
 
 - **Repetición espaciada**: lo fallado vuelve al día siguiente; lo acertado a los 3, 7 y 16 días, pero
   solo cuando ya has visto todo el banco: mientras queden preguntas nuevas, las rondas no repiten aciertos.
-- **Juego**: XP, combos, niveles (de `prompt_rookie` a `certified_legend`), racha diaria con meta de 5
+- **Juego**: XP, combos, 1000 niveles (de `prompt_rookie` a `claude_ascendant`; hasta el 10 como
+  siempre y después 1000 XP por nivel, con título nuevo en el 25, el 50 y cada 100), racha diaria con meta de 5
   preguntas, vibración y una lluvia de caracteres al subir de nivel o hacer una ronda perfecta.
 - **Avisos**: recordatorio diario a la hora elegida y un último aviso a las 22:00 si la racha está en
   peligro. Son notificaciones locales; desaparecen en cuanto se cumple la meta del día.

@@ -14,6 +14,7 @@ import {
   EXAM,
   dayKey,
   examResult,
+  savedSlots,
   scoreOf,
   isRight,
   levelOf,
@@ -29,6 +30,7 @@ import {
   type Question,
   type Theme,
 } from './src/game';
+import { ChatContext } from './src/chat';
 import { FLASHCARDS } from './src/flashcards';
 import { TERMS } from './src/glossary';
 import { STR } from './src/i18n';
@@ -288,7 +290,8 @@ function Main() {
     let next = p;
     // Lo no contestado cuenta como fallo en la nota, pero no da XP ni suma a la meta del día.
     for (const { q, picked } of slots) if (picked !== null) next = answer(next, q.id, isRight(q, picked), 0, today(), picked).progress;
-    const result = examResult(slots, today(), secs, label);
+    // Con sus preguntas y lo que contestaste, para volver a verlo desde el historial.
+    const result = { ...examResult(slots, today(), secs, label), slots: savedSlots(slots) };
     next = { ...next, exams: [result, ...next.exams].slice(0, 30), examDraft: null };
     commit(next);
     remind(next);
@@ -332,191 +335,196 @@ function Main() {
     else leave();
   };
 
-  return (
-    <View style={[s.fill, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      {/* A la izquierda, el logo que vuelve al inicio; a la derecha, el tema y el idioma, que cambian toda la app. */}
-      <View style={s.header}>
-        <Pressable onPress={goHome} hitSlop={12} accessibilityRole="button" accessibilityLabel={T.home}>
-          <Txt size={12} color={c.muted}>
-            ~/cca-quest
-          </Txt>
-        </Pressable>
-        <View style={s.toggles}>
-          {canWrap && (
-            <Pressable
-              onPress={toggleWrap}
-              accessibilityRole="switch"
-              accessibilityLabel={T.wrapQuestions}
-              aria-checked={wrap}
-              style={[s.wrapToggle, wrap && { borderColor: c.green, backgroundColor: c.greenBg }]}
-            >
-              <Txt size={12} bold color={wrap ? c.green : c.muted}>{T.wrap} [{wrap ? 'ON' : 'OFF'}]</Txt>
-            </Pressable>
-          )}
-          <ThemeToggle theme={p.theme} onChange={changeTheme} labels={T.themeNames} />
-          <LangToggle lang={p.lang} onChange={setLang} />
-        </View>
-      </View>
-      <View style={[s.fill, wrapped && s.wrapped]}>
-        {tab === 'play' && view === 'status' && (
-          <Status
-            p={p}
-            update={update?.available ? update.latest : null}
-            onUpdate={() => setTab('config')}
-            onPlay={() => start()}
-            onExam={() => setView('exam')}
-            onLesson={(ts) => {
-              setLesson(ts);
-              setTab('learn');
-            }}
-            onCards={() => setTab('cards')}
-            onMisses={() => setView('misses')}
-            onLive={() => setView('live')}
-            onProfile={setProfile}
-          />
-        )}
-        {tab === 'play' && view === 'live' && (
-          <Live
-            lang={p.lang}
-            code={quizLink}
-            profile={p.profile}
-            onProfile={setProfile}
-            onExit={() => setView('status')}
-            onRunning={setLiveRunning}
-            // La partida en grupo da XP como una ronda; no toca las preguntas ni la racha.
-            onXp={(n) => {
-              const r = addXp(p, n);
-              commit(r.progress);
-              if (r.levelUp) celebrate();
-            }}
-          />
-        )}
-        {tab === 'play' && view === 'misses' && (
-          <Misses p={p} onPractice={(qs) => start(qs, 'misses')} onBack={() => setView('status')} />
-        )}
-        {tab === 'play' && view === 'exam' && (
-          <Exam
-            p={p}
-            wrapped={wrapped}
-            onFinish={finishExam}
-            // Forma funcional: el cronómetro llama a esto desde un intervalo y no debe pisar progreso más reciente.
-            onSaveDraft={(examDraft) =>
-              setP((cur) => {
-                if (!cur) return cur;
-                const next = { ...cur, examDraft, stamp: Date.now() };
-                latest.current = next;
-                save(next);
-                schedule();
-                return next;
-              })
-            }
-            onExit={() => setView('status')}
-            onRunning={setExamRunning}
-          />
-        )}
-        {tab === 'play' && view === 'round' && round && (
-          <RoundView
-            key={round.i}
-            round={round}
-            lang={p.lang}
-            onAnswer={pick}
-            onNext={next}
-            onQuit={quit}
-            onLesson={(ts) => {
-              setLesson(ts);
-              setTab('learn');
-            }}
-          />
-        )}
-        {tab === 'play' && view === 'done' && round && (
-          <Done
-            round={round}
-            p={p}
-            onAgain={() => (practiced ? practice(practiced) : start())}
-            onHome={() => setView('status')}
-            onLesson={practiced ? () => openLesson(practiced) : undefined}
-            onLessons={practiced ? () => openLesson(null) : undefined}
-            nextLesson={afterPracticed}
-            onNextLesson={afterPracticed ? () => openLesson(afterPracticed) : undefined}
-          />
-        )}
-        {tab === 'learn' &&
-          (open ? (
-            <LessonView
-              key={open.ts}
-              lesson={open}
-              p={p}
-              onBack={() => setLesson(null)}
-              onRead={() => markRead(open.ts)}
-              onPractice={() => practice(open.ts)}
-              nextTs={nextLesson(open.ts)}
-              onNext={() => setLesson(nextLesson(open.ts) ?? null)}
-            />
-          ) : (
-            <LessonList p={p} onOpen={setLesson} />
-          ))}
-        {tab === 'cards' && <Cards p={p} onReview={gradeCard} onRunning={setDeckRunning} />}
-        {tab === 'grep' && <Glossary p={p} />}
-        {tab === 'config' && (
-          <Config
-            p={p}
-            sync={sync}
-            onReminder={updateReminder}
-            update={update}
-            checking={checking}
-            onCheck={() => {
-              setChecking(true);
-              checkUpdate().then((u) => {
-                setUpdate(u);
-                setChecking(false);
-              });
-            }}
-            onTest={async () => {
-              if (!(await testNotification(p.lang))) Alert.alert(T.notifOffTitle, T.notifOffBody);
-            }}
-            onReset={() =>
-              confirmAction(T.resetTitle, sync.channel ? `${T.resetBody} ${T.resetLinked}` : T.resetBody, T.resetAction, T.cancel, async () => {
-                // Se desvincula antes de borrar: si no, la siguiente sincronización traería el progreso de vuelta.
-                await sync.unlink();
-                await wipe();
-                const blank = await load(today());
-                commit(blank);
-                remind(blank);
-                setRound(null);
-                setView('status');
-                setTab('play');
-              })
-            }
-          />
-        )}
-      </View>
+  // Tu chat de Claude, para que todos los "pregúntale a Claude" vayan al mismo (src/chat.tsx).
+  const claudeChat = { chat: p.claudeChat ?? null, setChat: (claudeChat: string | null) => commit({ ...p, claudeChat }) };
 
-      {!inRound && !deckRunning && !examRunning && !liveRunning && (
-        <View style={s.tabs}>
-          {TABS.map((t) => {
-            const on = tab === t;
-            const label = t === 'play' && view === 'round' && round ? `▶ ${T.tabs.play}` : T.tabs[t];
-            return (
+  return (
+    <ChatContext.Provider value={claudeChat}>
+      <View style={[s.fill, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+        {/* A la izquierda, el logo que vuelve al inicio; a la derecha, el tema y el idioma, que cambian toda la app. */}
+        <View style={s.header}>
+          <Pressable onPress={goHome} hitSlop={12} accessibilityRole="button" accessibilityLabel={T.home}>
+            <Txt size={12} color={c.muted}>
+              ~/cca-quest
+            </Txt>
+          </Pressable>
+          <View style={s.toggles}>
+            {canWrap && (
               <Pressable
-                key={t}
-                onPress={() => {
-                  feel.tap();
-                  if (t === 'learn' && tab === 'learn') setLesson(null);
-                  setTab(t);
-                }}
-                style={[s.tab, on && { backgroundColor: c.green }]}
+                onPress={toggleWrap}
+                accessibilityRole="switch"
+                accessibilityLabel={T.wrapQuestions}
+                aria-checked={wrap}
+                style={[s.wrapToggle, wrap && { borderColor: c.green, backgroundColor: c.greenBg }]}
               >
-                <Txt bold size={12} color={on ? c.bg : c.muted}>
-                  {label}
-                </Txt>
+                <Txt size={12} bold color={wrap ? c.green : c.muted}>{T.wrap} [{wrap ? 'ON' : 'OFF'}]</Txt>
               </Pressable>
-            );
-          })}
+            )}
+            <ThemeToggle theme={p.theme} onChange={changeTheme} labels={T.themeNames} />
+            <LangToggle lang={p.lang} onChange={setLang} />
+          </View>
         </View>
-      )}
-      {boom > 0 && <Rain key={boom} />}
-      <Shield lang={p.lang} />
-    </View>
+        <View style={[s.fill, wrapped && s.wrapped]}>
+          {tab === 'play' && view === 'status' && (
+            <Status
+              p={p}
+              update={update?.available ? update.latest : null}
+              onUpdate={() => setTab('config')}
+              onPlay={() => start()}
+              onExam={() => setView('exam')}
+              onLesson={(ts) => {
+                setLesson(ts);
+                setTab('learn');
+              }}
+              onCards={() => setTab('cards')}
+              onMisses={() => setView('misses')}
+              onLive={() => setView('live')}
+              onProfile={setProfile}
+            />
+          )}
+          {tab === 'play' && view === 'live' && (
+            <Live
+              lang={p.lang}
+              code={quizLink}
+              profile={p.profile}
+              onProfile={setProfile}
+              onExit={() => setView('status')}
+              onRunning={setLiveRunning}
+              // La partida en grupo da XP como una ronda; no toca las preguntas ni la racha.
+              onXp={(n) => {
+                const r = addXp(p, n);
+                commit(r.progress);
+                if (r.levelUp) celebrate();
+              }}
+            />
+          )}
+          {tab === 'play' && view === 'misses' && (
+            <Misses p={p} onPractice={(qs) => start(qs, 'misses')} onBack={() => setView('status')} />
+          )}
+          {tab === 'play' && view === 'exam' && (
+            <Exam
+              p={p}
+              wrapped={wrapped}
+              onFinish={finishExam}
+              // Forma funcional: el cronómetro llama a esto desde un intervalo y no debe pisar progreso más reciente.
+              onSaveDraft={(examDraft) =>
+                setP((cur) => {
+                  if (!cur) return cur;
+                  const next = { ...cur, examDraft, stamp: Date.now() };
+                  latest.current = next;
+                  save(next);
+                  schedule();
+                  return next;
+                })
+              }
+              onExit={() => setView('status')}
+              onRunning={setExamRunning}
+            />
+          )}
+          {tab === 'play' && view === 'round' && round && (
+            <RoundView
+              key={round.i}
+              round={round}
+              lang={p.lang}
+              onAnswer={pick}
+              onNext={next}
+              onQuit={quit}
+              onLesson={(ts) => {
+                setLesson(ts);
+                setTab('learn');
+              }}
+            />
+          )}
+          {tab === 'play' && view === 'done' && round && (
+            <Done
+              round={round}
+              p={p}
+              onAgain={() => (practiced ? practice(practiced) : start())}
+              onHome={() => setView('status')}
+              onLesson={practiced ? () => openLesson(practiced) : undefined}
+              onLessons={practiced ? () => openLesson(null) : undefined}
+              nextLesson={afterPracticed}
+              onNextLesson={afterPracticed ? () => openLesson(afterPracticed) : undefined}
+            />
+          )}
+          {tab === 'learn' &&
+            (open ? (
+              <LessonView
+                key={open.ts}
+                lesson={open}
+                p={p}
+                onBack={() => setLesson(null)}
+                onRead={() => markRead(open.ts)}
+                onPractice={() => practice(open.ts)}
+                nextTs={nextLesson(open.ts)}
+                onNext={() => setLesson(nextLesson(open.ts) ?? null)}
+              />
+            ) : (
+              <LessonList p={p} onOpen={setLesson} />
+            ))}
+          {tab === 'cards' && <Cards p={p} onReview={gradeCard} onRunning={setDeckRunning} />}
+          {tab === 'grep' && <Glossary p={p} />}
+          {tab === 'config' && (
+            <Config
+              p={p}
+              sync={sync}
+              onReminder={updateReminder}
+              update={update}
+              checking={checking}
+              onCheck={() => {
+                setChecking(true);
+                checkUpdate().then((u) => {
+                  setUpdate(u);
+                  setChecking(false);
+                });
+              }}
+              onTest={async () => {
+                if (!(await testNotification(p.lang))) Alert.alert(T.notifOffTitle, T.notifOffBody);
+              }}
+              onReset={() =>
+                confirmAction(T.resetTitle, sync.channel ? `${T.resetBody} ${T.resetLinked}` : T.resetBody, T.resetAction, T.cancel, async () => {
+                  // Se desvincula antes de borrar: si no, la siguiente sincronización traería el progreso de vuelta.
+                  await sync.unlink();
+                  await wipe();
+                  const blank = await load(today());
+                  commit(blank);
+                  remind(blank);
+                  setRound(null);
+                  setView('status');
+                  setTab('play');
+                })
+              }
+            />
+          )}
+        </View>
+
+        {!inRound && !deckRunning && !examRunning && !liveRunning && (
+          <View style={s.tabs}>
+            {TABS.map((t) => {
+              const on = tab === t;
+              const label = t === 'play' && view === 'round' && round ? `▶ ${T.tabs.play}` : T.tabs[t];
+              return (
+                <Pressable
+                  key={t}
+                  onPress={() => {
+                    feel.tap();
+                    if (t === 'learn' && tab === 'learn') setLesson(null);
+                    setTab(t);
+                  }}
+                  style={[s.tab, on && { backgroundColor: c.green }]}
+                >
+                  <Txt bold size={12} color={on ? c.bg : c.muted}>
+                    {label}
+                  </Txt>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+        {boom > 0 && <Rain key={boom} />}
+        <Shield lang={p.lang} />
+      </View>
+    </ChatContext.Provider>
   );
 }
 

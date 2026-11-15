@@ -2,6 +2,7 @@ import { Linking, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
 import type { Progress } from '../game.ts';
 import { BUILD } from '../build.ts';
+import { ChatLinker } from '../chat.tsx';
 import { STR } from '../i18n.ts';
 import { APK_URL, type UpdateInfo } from '../update.ts';
 import type { useSync } from '../sync.ts';
@@ -43,6 +44,10 @@ export function Config({
       <Typer text="$ cca-quest config" bold color={c.green} />
 
       <SyncPanel lang={p.lang} sync={sync} />
+
+      <Panel title={T.chatTitle} color={p.claudeChat ? c.cyan : c.lineHi} titleColor={p.claudeChat ? c.cyan : c.muted}>
+        <ChatLinker lang={p.lang} />
+      </Panel>
 
       <Panel title={T.reminders}>
         <View style={s.row}>

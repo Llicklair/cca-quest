@@ -150,6 +150,7 @@ export type Progress = {
   examDraft: ExamDraft | null; // simulacro a medias, para seguir otro rato
   stamp: number; // hora (ms) del último cambio, para saber qué copia es la más reciente al sincronizar
   profile: Profile | null; // quién eres en el quiz en grupo y en la clasificación; viaja con la sincronización
+  claudeChat?: string | null; // tu chat de claude.ai, para mandar ahí todos los "pregúntale a Claude"; viaja con la sincronización
 };
 
 /** El mismo id en todos tus dispositivos vinculados. `public`: si sales en la clasificación con tu progreso. */
@@ -162,7 +163,46 @@ export type ExamResult = {
   total: number;
   secs: number;
   byDomain: Partial<Record<Domain, [number, number]>>; // [aciertos, preguntas]
+  slots?: SavedSlot[]; // las preguntas y lo que contestaste, para volver a verlas (no está en los simulacros antiguos)
 };
+
+/** Una pregunta de un simulacro hecho: cuál, en qué orden salieron sus opciones y qué elegiste. */
+export type SavedSlot = { id: string; order: number[]; picked: number | null; flag?: boolean; note?: string };
+
+/** Lo que se guarda de cada pregunta al entregar: sin marcas ni notas vacías, para que ocupe poco. */
+export function savedSlots(slots: { q: Question; order: number[]; picked: number | null; flag?: boolean; note?: string }[]): SavedSlot[] {
+  return slots.map(({ q, order, picked, flag, note }) => ({
+    id: q.id,
+    order,
+    picked,
+    ...(flag ? { flag: true } : {}),
+    ...(note?.trim() ? { note: note.trim() } : {}),
+  }));
+}
+
+/**
+ * Las preguntas de un simulacro ya hecho, para repasarlo. Con lo guardado al entregar, tal cual
+ * (`known`). Los antiguos no guardaban nada: si era uno fijo (`fixed`, por su etiqueta) y cuadra en
+ * número de preguntas por dominio, salen sus preguntas sin tus respuestas (`picked` undefined).
+ */
+export function replayExam(
+  e: ExamResult,
+  byId: Map<string, Question>,
+  fixed: Record<string, Question[]>,
+): { known: boolean; slots: { q: Question; order: number[]; picked?: number | null; flag?: boolean; note?: string }[] } | null {
+  if (e.slots) {
+    const slots = e.slots.flatMap((x) => {
+      const q = byId.get(x.id);
+      return q ? [{ q, order: x.order, picked: x.picked, flag: x.flag, note: x.note }] : [];
+    });
+    return slots.length ? { known: true, slots } : null;
+  }
+  const qs = fixed[e.label];
+  if (!qs || qs.length !== e.total) return null;
+  const count = (d: Domain) => qs.filter((q) => q.domain === d).length;
+  if (DOMAINS.some((d) => count(d.id) !== (e.byDomain[d.id]?.[1] ?? 0))) return null;
+  return { known: false, slots: qs.map((q) => ({ q, order: q.options.map((_, k) => k) })) };
+}
 
 export function fresh(today: string): Progress {
   return {
@@ -217,6 +257,7 @@ export const XP = {
   again: 1, // ficha que hay que repasar
 };
 
+/** Un título por nivel del 1 al 10; a partir de ahí, uno por tramo (TIERS). */
 export const LEVELS = [
   'Prompt Rookie',
   'Token Tinkerer',
@@ -230,18 +271,44 @@ export const LEVELS = [
   'Certified Legend',
 ];
 
-/** El nivel n (desde 1) empieza en 50·n·(n−1) XP: 0, 100, 300, 600, 1000… */
-const levelStart = (n: number) => 50 * n * (n - 1);
+/** [primer nivel, título] de cada tramo después del 10: el título vale hasta que empieza el siguiente. */
+export const TIERS: [number, string][] = [
+  [10, 'Certified Legend'],
+  [25, 'Agent Whisperer'],
+  [50, 'MCP Maestro'],
+  [100, 'Context Sage'],
+  [200, 'Swarm Conductor'],
+  [300, 'Eval Oracle'],
+  [400, 'Prompt Alchemist'],
+  [500, 'Token Titan'],
+  [600, 'Harness Sovereign'],
+  [700, 'Loop Grandmaster'],
+  [800, 'Model Whisperer'],
+  [900, 'Grand Architect'],
+  [1000, 'Claude Ascendant'],
+];
+
+export const MAX_LEVEL = 1000;
+
+/**
+ * XP con la que empieza el nivel n (desde 1). Hasta el 10, 50·n·(n−1): 0, 100, 300, 600… 4500.
+ * Después, 1000 por nivel, lo mismo que costaba pasar del 9 al 10: el 11 en 5500, el 100 en 94 500
+ * y el 1000 en 994 500.
+ */
+export const levelStart = (n: number) => (n <= 10 ? 50 * n * (n - 1) : 4500 + 1000 * (n - 10));
 
 export type Level = { n: number; title: string; from: number; to: number | null };
 
 /** El nivel como nombre de usuario de terminal: 'Tool Smith' → 'tool_smith'. */
 export const handle = (title: string) => title.toLowerCase().replace(/ /g, '_');
 
+const titleOf = (n: number) => (n <= LEVELS.length ? LEVELS[n - 1] : TIERS.filter(([from]) => from <= n).pop()![1]);
+
 export function levelOf(xp: number): Level {
   let n = 1;
-  while (n < LEVELS.length && xp >= levelStart(n + 1)) n++;
-  return { n, title: LEVELS[n - 1], from: levelStart(n), to: n < LEVELS.length ? levelStart(n + 1) : null };
+  if (xp >= levelStart(10)) n = Math.min(MAX_LEVEL, 10 + Math.floor((xp - levelStart(10)) / 1000));
+  else while (xp >= levelStart(n + 1)) n++;
+  return { n, title: titleOf(n), from: levelStart(n), to: n < MAX_LEVEL ? levelStart(n + 1) : null };
 }
 
 export type Outcome = {
