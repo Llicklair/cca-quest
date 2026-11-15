@@ -42,6 +42,11 @@ Con pinta de terminal (JetBrains Mono, verde fósforo sobre negro) y cinco pesta
   En el informe de un simulacro (al entregar o abierto desde el historial), **un solo botón manda el
   simulacro entero**: las falladas primero y a fondo, las acertadas para confirmarlas en una línea y al
   final qué repasar. No cabe en un enlace, así que se copia y se pega.
+  En **fallos**, otro manda todas las falladas a la vez. Y en la lista de simulacros, **dónde fallo**
+  manda todo tu historial: los simulacros con su nota, los aciertos por dominio (en simulacros y en toda
+  la práctica) y por task statement, las falladas la última vez enteras y el resto en una línea con la
+  regla que evalúan; Claude te dice dónde fallas, tus áreas más débiles y qué estudiar primero. Sale de
+  la ficha de cada pregunta, así que cuenta también los simulacros antiguos y las rondas.
   **Todo al mismo chat**: claude.ai no deja escribir desde un enlace en un chat que ya existe ni reutilizar
   su pestaña desde otra web, así que en `config → chat de claude` (o debajo del botón la primera vez) se
   pega el enlace del chat (`claude.ai/chat/…`). Desde entonces cada ✦ copia el prompt para pegarlo

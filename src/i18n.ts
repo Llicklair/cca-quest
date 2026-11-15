@@ -137,6 +137,8 @@ const en = {
   noMissesLeft: 'nothing to review: every question you missed has since been answered right',
   practiceMisses: (n: number) => `▶ PRACTICE MISSES (${n})`,
   missesHint: 'a miss leaves this list once you get it right',
+  askMisses: (n: number) => `✦ ask claude about all ${n} at once`,
+  askMissesHint: '// in one message: why each right answer is right, why yours was wrong, and the patterns at the end.',
 
   // actualizaciones
   update: 'update',
@@ -258,6 +260,10 @@ const en = {
   openPast: '// tap an attempt to see its questions and send them to claude',
   noReplay: '// no questions saved for this one (random or quick, from before the app saved them)',
   showAllExams: (n: number) => `▸ show all ${n}`,
+  weakTitle: 'where you fail, to claude',
+  weakBody: (exams: number, questions: number) =>
+    `// your whole record in one message: ${plural(exams, 'exam', 'exams')} and ${plural(questions, 'question', 'questions')} answered (in exams and rounds), with your score by domain and task statement. claude tells you where you fail, your weakest areas and what to study first.`,
+  weakBtn: '✦ ask claude where i fail',
 
   // contra las trampas (solo en la web)
   shieldTitle: '[ hidden ]',
@@ -473,6 +479,8 @@ const es: Strings = {
   noMissesLeft: 'nada que repasar: ya acertaste todas las que habías fallado',
   practiceMisses: (n) => `▶ PRACTICAR FALLOS (${n})`,
   missesHint: 'una pregunta sale de esta lista cuando la aciertas',
+  askMisses: (n) => `✦ pregúntale a claude por las ${n} a la vez`,
+  askMissesHint: '// en un solo mensaje: por qué la buena es la buena, por qué la tuya no y los patrones al final.',
 
   update: 'actualizar',
   checking: 'consultando github…',
@@ -591,6 +599,10 @@ const es: Strings = {
   openPast: '// toca un intento para ver sus preguntas y mandárselas a claude',
   noReplay: '// de este no hay preguntas guardadas (aleatorio o rápido, de antes de que se guardaran)',
   showAllExams: (n) => `▸ ver los ${n}`,
+  weakTitle: 'dónde fallas, a claude',
+  weakBody: (exams, questions) =>
+    `// todo tu historial en un solo mensaje: ${plural(exams, 'simulacro', 'simulacros')} y ${plural(questions, 'pregunta contestada', 'preguntas contestadas')} (en simulacros y rondas), con tus aciertos por dominio y por task statement. claude te dice dónde fallas, tus áreas más débiles y qué estudiar primero.`,
+  weakBtn: '✦ pregúntale a claude dónde fallo',
 
   shieldTitle: '[ oculto ]',
   shieldAway: '// la pregunta se oculta mientras esta ventana no está activa. vuelve para seguir.',

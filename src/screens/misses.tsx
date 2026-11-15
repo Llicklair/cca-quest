@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 
-import { claudePrompt, conceptPrompt } from '../ask.ts';
+import { claudePrompt, conceptPrompt, missesPrompt } from '../ask.ts';
 import { ChatLinker, openChat, sendToClaude, sentLine, useClaudeChat, type Sent } from '../chat.tsx';
 import { BANK, BANK_ES, LEVEL_BANK } from '../bank.ts';
 import { misses, pickedOf, rightOf, roundPool, type Lang, type Progress, type Question } from '../game.ts';
 import { STR, type Strings } from '../i18n.ts';
 import { Btn, Cmd, Panel, Rich, Txt, Typer } from '../term.tsx';
+import { recordItem } from '../study.ts';
 import { c, domainColor } from '../theme.ts';
 
 /** La pregunta en el idioma elegido (las opciones y explicaciones van en el mismo orden). */
@@ -143,6 +144,14 @@ export function Misses({ p, onPractice, onBack }: { p: Progress; onPractice: (qs
         {list.length === 0 ? T.noMissesLeft : T.missesCount(list.length)}
       </Txt>
       {list.length > 0 && <Btn kind="amber" label={T.practiceMisses(Math.min(5, list.length))} onPress={() => onPractice(list)} />}
+      {list.length > 0 && (
+        <View style={{ gap: 4 }}>
+          <AskButton lang={p.lang} label={T.askMisses(list.length)} prompt={() => missesPrompt(p.lang, list.flatMap((q) => recordItem(q, p, p.lang) ?? []))} />
+          <Txt size={11} color={c.muted}>
+            {T.askMissesHint}
+          </Txt>
+        </View>
+      )}
       {list.map((q) => (
         <MissCard key={q.id} q={q} picked={p.cards[q.id]?.last} lang={p.lang} T={T} />
       ))}

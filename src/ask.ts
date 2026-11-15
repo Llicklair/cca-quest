@@ -4,7 +4,9 @@
 // - una pregunta ya contestada: por qué la buena es la buena y las otras no;
 // - un concepto (lección, ficha o término del glosario): con un ejemplo y cómo sale en el examen;
 // - un trozo de una lección (en la web, al seleccionarlo): la lección de contexto y la duda sobre él;
-// - un simulacro entero: todas sus preguntas en un solo mensaje, las falladas primero.
+// - un simulacro entero: todas sus preguntas en un solo mensaje, las falladas primero;
+// - todas las falladas (las que fallaste la última vez que salieron), en un solo mensaje;
+// - todo tu historial (simulacros y todo lo contestado) para que diga dónde fallas y qué estudiar.
 import type { Lang, QuestionText } from './game.ts';
 
 const TEXT = {
@@ -36,6 +38,25 @@ const TEXT = {
     q: 'Q',
     flagged: 'flagged for review',
     note: 'My note during the exam',
+    missesAsk: (n: number) =>
+      `These are the ${n} questions I got wrong the last time they came up in my study app (daily rounds and practice exams). Go through them in order: for each one, explain in simple words why the right answer is right, why my answer is wrong and the concept behind it. At the end, list the concepts I should review, grouped by the patterns in my mistakes.`,
+    lastAnswer: 'My last answer(s)',
+    times: (seen: number, right: number) => `answered ${seen} ${seen === 1 ? 'time' : 'times'}, ${right} right`,
+    studyIntro: (exams: number, questions: number, answers: number) =>
+      `Below is my whole practice record from my study app: ${exams} practice ${exams === 1 ? 'exam' : 'exams'} and ${questions} different questions answered (${answers} answers in total, in practice exams and daily rounds).`,
+    studyAsk:
+      'Analyse it and tell me: 1) my weakest domains and task statements, taking into account how much each domain weighs in the real exam; 2) the patterns behind my mistakes (traps I keep falling for, concepts I confuse), using the questions I got wrong; 3) what I already master; 4) a prioritized study plan for the coming days. Be concrete and refer to the task statements.',
+    examsHead: (n: number) => `=== PRACTICE EXAMS (${n}, most recent first) ===`,
+    weighted: 'weighted by domain',
+    noExams: '(none yet)',
+    domainsHead: '=== BY DOMAIN ===',
+    inExams: 'in practice exams',
+    allPractice: 'all practice',
+    ofExam: (w: number) => `${w}% of the exam`,
+    tasksHead: '=== BY TASK STATEMENT (all practice) ===',
+    wrongNowHead: (n: number) => `=== QUESTIONS I GOT WRONG THE LAST TIME (${n}) ===`,
+    shakyHead: (n: number) => `=== RIGHT THE LAST TIME, BUT I HAVE FAILED THEM BEFORE (${n}) ===`,
+    solidHead: (n: number) => `=== ALWAYS RIGHT (${n}) ===`,
   },
   es: {
     exam: 'Estoy preparando el examen Claude Certified Architect – Foundations.',
@@ -65,6 +86,25 @@ const TEXT = {
     q: 'P',
     flagged: 'marcada para revisar',
     note: 'Mi nota durante el simulacro',
+    missesAsk: (n: number) =>
+      `Estas son las ${n} preguntas que fallé la última vez que me salieron en mi app de estudio (rondas diarias y simulacros). Repásalas en orden: en cada una, explícame con palabras sencillas por qué la buena es la buena, por qué la mía está mal y el concepto que hay detrás. Al final, dime qué conceptos debo repasar, agrupados por los patrones de mis fallos.`,
+    lastAnswer: 'Mi última respuesta',
+    times: (seen: number, right: number) => `contestada ${seen} ${seen === 1 ? 'vez' : 'veces'}, ${right} bien`,
+    studyIntro: (exams: number, questions: number, answers: number) =>
+      `Abajo está todo mi historial de práctica de mi app de estudio: ${exams} ${exams === 1 ? 'simulacro' : 'simulacros'} y ${questions} preguntas distintas contestadas (${answers} respuestas en total, entre simulacros y rondas diarias).`,
+    studyAsk:
+      'Analízalo y dime: 1) mis dominios y task statements más débiles, teniendo en cuenta cuánto pesa cada dominio en el examen real; 2) los patrones de mis fallos (trampas en las que caigo, conceptos que confundo), a partir de las preguntas que fallé; 3) lo que ya domino; 4) un plan de estudio priorizado para los próximos días. Sé concreto y cita los task statements.',
+    examsHead: (n: number) => `=== SIMULACROS (${n}, el más reciente primero) ===`,
+    weighted: 'ponderada por dominio',
+    noExams: '(aún ninguno)',
+    domainsHead: '=== POR DOMINIO ===',
+    inExams: 'en simulacros',
+    allPractice: 'en toda la práctica',
+    ofExam: (w: number) => `${w} % del examen`,
+    tasksHead: '=== POR TASK STATEMENT (toda la práctica) ===',
+    wrongNowHead: (n: number) => `=== LAS QUE FALLÉ LA ÚLTIMA VEZ (${n}) ===`,
+    shakyHead: (n: number) => `=== BIEN LA ÚLTIMA VEZ, PERO LAS HE FALLADO ANTES (${n}) ===`,
+    solidHead: (n: number) => `=== SIEMPRE BIEN (${n}) ===`,
   },
 };
 
@@ -152,6 +192,78 @@ export function examPrompt(lang: Lang, title: string, items: ExamItem[]): string
     `${t.exam} ${t.examIntro(title)} ${t.examAsk}`,
     ...(wrong.length ? ['', t.wrong(wrong.length), ...wrong.flatMap(one)] : []),
     ...(right.length ? ['', t.gotRight(right.length), ...right.flatMap(one)] : []),
+  ]);
+}
+
+/**
+ * Una pregunta según tu historial: cuántas veces la contestaste y cuántas bien, si la última vez
+ * la fallaste y qué elegiste entonces (índices originales; null si no se sabe).
+ */
+export type RecordItem = { tx: QuestionText; rights: number[]; ts?: string; seen: number; right: number; lastWrong: boolean; last: number[] | null };
+
+const pct = (r: number, t: number) => (t ? Math.round((100 * r) / t) : 0);
+const frac = (r: number, t: number) => `${r}/${t} (${pct(r, t)}%)`;
+
+/** Una fallada de tu historial: el escenario, la pregunta, las opciones, la buena y tu última respuesta. */
+function recordBlock(t: (typeof TEXT)[Lang], x: RecordItem, head: string): string[] {
+  const order = x.tx.options.map((_, k) => k);
+  const lines = block(t, x.tx, x.rights, order, { picked: undefined, reveal: true, why: true });
+  const letters = (origs: number[]) => origs.map((o) => 'ABCDE'[o]).sort().join(', ');
+  // La última respuesta va justo después de la buena, antes de las explicaciones.
+  const at = lines.findIndex((l) => l.startsWith(`${t.right}:`)) + 1;
+  if (x.last?.length) lines.splice(at, 0, `${t.lastAnswer}: ${letters(x.last)}`);
+  return ['', head, ...lines];
+}
+
+/** Todas las falladas en un solo mensaje, cada una con su escenario, lo que elegiste y el porqué de la buena. */
+export function missesPrompt(lang: Lang, items: RecordItem[]): string {
+  const t = TEXT[lang];
+  return clean([
+    `${t.exam} ${t.missesAsk(items.length)}`,
+    ...items.flatMap((x, k) => recordBlock(t, x, `${k + 1}.${x.ts ? ` [task ${x.ts}]` : ''} ${t.times(x.seen, x.right)}`)),
+  ]);
+}
+
+/**
+ * Todo tu historial para que Claude diga dónde fallas: los simulacros con su nota, los aciertos por
+ * dominio (en simulacros y en toda la práctica) y por task statement, las falladas la última vez
+ * enteras y el resto en una línea con su regla. Los números vienen ya contados (ver study.ts).
+ */
+export type StudyRecord = {
+  exams: { day: string; label: string; score: number; right: number; total: number; weighted: boolean; byDomain: [number, number, number][] }[]; // [n, aciertos, preguntas]
+  domains: { n: number; name: string; weight: number; exam: [number, number]; all: [number, number] }[];
+  tasks: { ts: string; title: string; right: number; seen: number }[];
+  items: RecordItem[];
+};
+
+export function studyPrompt(lang: Lang, r: StudyRecord): string {
+  const t = TEXT[lang];
+  const answers = r.items.reduce((sum, x) => sum + x.seen, 0);
+  const wrongNow = r.items.filter((x) => x.lastWrong);
+  const shaky = r.items.filter((x) => !x.lastWrong && x.right < x.seen);
+  const solid = r.items.filter((x) => !x.lastWrong && x.right === x.seen);
+  const tag = (x: RecordItem) => (x.ts ? `[task ${x.ts}] ` : '');
+  // En una línea, la regla que evalúa (el concepto), que dice más que el enunciado suelto.
+  const oneLine = (x: RecordItem) => `- ${tag(x)}${x.right}/${x.seen} · ${x.tx.rule}`;
+  const examLine = (e: StudyRecord['exams'][number]) =>
+    `${e.day} · ${e.label} · ${e.score}%${e.weighted ? ` (${t.weighted})` : ''} · ${e.right}/${e.total}` +
+    e.byDomain.map(([n, ok, all]) => ` · D${n} ${ok}/${all}`).join('');
+  const domainLine = (d: StudyRecord['domains'][number]) =>
+    `D${d.n} ${d.name} (${t.ofExam(d.weight)}): ${t.inExams} ${d.exam[1] ? frac(d.exam[0], d.exam[1]) : '-'} · ${t.allPractice} ${d.all[1] ? frac(d.all[0], d.all[1]) : '-'}`;
+  return clean([
+    `${t.exam} ${t.studyIntro(r.exams.length, r.items.length, answers)} ${t.studyAsk}`,
+    '',
+    t.examsHead(r.exams.length),
+    ...(r.exams.length ? r.exams.map(examLine) : [t.noExams]),
+    '',
+    t.domainsHead,
+    ...r.domains.map(domainLine),
+    '',
+    t.tasksHead,
+    ...r.tasks.map((x) => `${x.ts} ${x.title}: ${frac(x.right, x.seen)}`),
+    ...(wrongNow.length ? ['', t.wrongNowHead(wrongNow.length), ...wrongNow.flatMap((x) => recordBlock(t, x, `${tag(x)}${t.times(x.seen, x.right)}`))] : []),
+    ...(shaky.length ? ['', t.shakyHead(shaky.length), ...shaky.map(oneLine)] : []),
+    ...(solid.length ? ['', t.solidHead(solid.length), ...solid.map(oneLine)] : []),
   ]);
 }
 

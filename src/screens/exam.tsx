@@ -26,12 +26,13 @@ import {
   type Progress,
   type Question,
 } from '../game.ts';
-import { examPrompt } from '../ask.ts';
+import { examPrompt, studyPrompt } from '../ask.ts';
 import { STR } from '../i18n.ts';
 import { AskButton, AskClaude, MissCard, inLang } from './misses.tsx';
 import { BANK, LEVEL_BANK, LEVEL_BANK_60 } from '../bank.ts';
 import { QUESTIONS } from '../questions.ts';
 import { useGuard } from '../shield.tsx';
+import { studyRecord } from '../study.ts';
 import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer, confirmAction } from '../term.tsx';
 import { c, domainColor, font, themed } from '../theme.ts';
 
@@ -251,6 +252,8 @@ export function Exam({
     const d = p.examDraft;
     const shown = allExams ? p.exams : p.exams.slice(0, 8);
     const canOpen = (e: ExamResult) => replayExam(e, BY_ID, FIXED_BY_LABEL) !== null;
+    // Preguntas que has contestado alguna vez, en simulacros o en rondas: lo que lee "dónde fallo".
+    const answered = [...BANK, ...LEVEL_BANK].filter((q) => p.cards[q.id]?.seen).length;
     return (
       <ScrollView key="menu" contentContainerStyle={s.page}>
         <Typer text="$ cca-quest exam --list" bold color={c.green} />
@@ -381,6 +384,14 @@ export function Exam({
             {T.targetNote(EXAM.target * 100)}
           </Txt>
         </Panel>
+        {(answered > 0 || p.exams.length > 0) && (
+          <Panel title={T.weakTitle} color={c.cyan} titleColor={c.cyan}>
+            <Txt size={12} color={c.muted} style={{ marginBottom: 8 }}>
+              {T.weakBody(p.exams.length, answered)}
+            </Txt>
+            <AskButton lang={p.lang} label={T.weakBtn} prompt={() => studyPrompt(p.lang, studyRecord(p, p.lang))} />
+          </Panel>
+        )}
         <Btn label="$ cd ~" onPress={onExit} />
       </ScrollView>
     );
