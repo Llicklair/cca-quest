@@ -231,19 +231,20 @@ const en = {
   // pregúntale a claude
   askClaude: '✦ ask claude',
   askCopied: '// also copied: if claude.ai opens empty, paste it',
-  askPasteNew: '// too long for the link: copied. paste it in the new chat (ctrl+v) and send',
-  askPasteChat: '// copied: paste it in your claude chat (ctrl+v) and send',
-  askPasteApp: '// copied: paste it in the chat that just opened and send',
-  askFailed: '// could not copy it. try again',
-  askOpenChat: 'open my claude chat ↗',
+  askCopiedN: (n: string) => `✓ copied · ${n} characters`,
+  askPasteHow: (chat: boolean) =>
+    `${chat ? 'claude.ai cannot write into an existing chat, so: open your claude chat' : 'it is too long for a claude.ai link: open a new claude chat'}, paste it and send. ctrl+v on the pc; on the phone, long-press the message box → paste.`,
+  askCopyByHand: '✗ could not copy it. tap the box, copy all the text and paste it in claude:',
+  askOpen: 'OPEN CLAUDE ↗',
+  askOpenChat: 'OPEN MY CLAUDE CHAT ↗',
   // tu chat de claude
   chatTitle: 'claude chat',
-  chatOn: '// every ask claude goes to this chat: the app copies the prompt and you paste it there.',
-  chatOff: '// each ask claude opens a new chat. to send them all to one, paste its link here (claude.ai/chat/…). on the pc, it is in the address bar; with sync it reaches your phone too.',
-  chatLinkHint: '→ want the next ones in this same chat? paste its link (claude.ai/chat/…):',
+  chatOn: '// every ask claude goes to this chat. claude.ai does not let an app write into an existing chat, so the app copies the prompt and you paste it. to have it sent by itself again (a new chat each time), unlink it.',
+  chatOff: '// each ask claude opens a new chat with the prompt already in it. to send them all to one instead, paste its link here (claude.ai/chat/…; on the pc, it is in the address bar; with sync it reaches your phone too). then you paste each prompt yourself: claude.ai does not let apps write into an existing chat.',
+  chatLinkHint: '→ want the next ones in this same chat? (you would paste them yourself) paste its link (claude.ai/chat/…):',
   chatPh: 'https://claude.ai/chat/…',
   chatSave: 'LINK',
-  chatForget: 'NEW CHATS AGAIN',
+  chatForget: 'UNLINK: SEND BY ITSELF AGAIN',
   chatBad: '// that is not a chat link. it looks like https://claude.ai/chat/ and a long id (share links do not work)',
   chatSaved: '// done: the next ones go to this chat',
   // simulacro entero a claude
@@ -264,6 +265,10 @@ const en = {
   weakBody: (exams: number, questions: number) =>
     `// your whole record in one message: ${plural(exams, 'exam', 'exams')} and ${plural(questions, 'question', 'questions')} answered (in exams and rounds), with your score by domain and task statement. claude tells you where you fail, your weakest areas and what to study first.`,
   weakBtn: '✦ ask claude where i fail',
+  trapTitle: 'trap exam, with claude',
+  trapBody:
+    '// claude writes 20 questions like the real ones, with contrast pairs and wrong options built on 10 typical traps (made-up feature, over-enforcing, more capacity…). marking tells you which traps you fall into; paste your results and it counts them by trap and gives you another 20 on the ones you repeat. it leans on your weak spots.',
+  trapBtn: '✦ trap exam with claude',
 
   // contra las trampas (solo en la web)
   shieldTitle: '[ hidden ]',
@@ -572,18 +577,19 @@ const es: Strings = {
 
   askClaude: '✦ pregúntale a claude',
   askCopied: '// también copiada: si claude.ai se abre vacío, pégala',
-  askPasteNew: '// muy larga para el enlace: copiada. pégala en el chat nuevo (ctrl+v) y envía',
-  askPasteChat: '// copiada: pégala en tu chat de claude (ctrl+v) y envía',
-  askPasteApp: '// copiada: pégala en el chat que se acaba de abrir y envía',
-  askFailed: '// no se pudo copiar. prueba otra vez',
-  askOpenChat: 'abrir mi chat de claude ↗',
+  askCopiedN: (n) => `✓ copiado · ${n} caracteres`,
+  askPasteHow: (chat) =>
+    `${chat ? 'claude.ai no deja escribir en un chat que ya existe, así que: abre tu chat de claude' : 'es demasiado largo para un enlace de claude.ai: abre un chat nuevo de claude'}, pégalo y envía. ctrl+v en el pc; en el móvil, mantén pulsado el cuadro de texto → pegar.`,
+  askCopyByHand: '✗ no se pudo copiar. toca el cuadro, copia todo el texto y pégalo en claude:',
+  askOpen: 'ABRIR CLAUDE ↗',
+  askOpenChat: 'ABRIR MI CHAT DE CLAUDE ↗',
   chatTitle: 'chat de claude',
-  chatOn: '// todos los pregúntale a claude van a este chat: la app copia el prompt y tú lo pegas allí.',
-  chatOff: '// cada pregúntale a claude abre un chat nuevo. para mandarlos todos al mismo, pega aquí su enlace (claude.ai/chat/…). en el pc está en la barra de direcciones; con la sincronización llega también al móvil.',
-  chatLinkHint: '→ ¿las siguientes a este mismo chat? pega su enlace (claude.ai/chat/…):',
+  chatOn: '// todos los pregúntale a claude van a este chat. claude.ai no deja que una app escriba en un chat que ya existe, así que la app copia el prompt y tú lo pegas. para que vuelva a mandarse solo (un chat nuevo cada vez), desvincúlalo.',
+  chatOff: '// cada pregúntale a claude abre un chat nuevo con el prompt ya escrito. para mandarlos todos al mismo, pega aquí su enlace (claude.ai/chat/…; en el pc está en la barra de direcciones; con la sincronización llega también al móvil). entonces cada prompt lo pegas tú: claude.ai no deja que una app escriba en un chat que ya existe.',
+  chatLinkHint: '→ ¿las siguientes a este mismo chat? (las pegarías tú) pega su enlace (claude.ai/chat/…):',
   chatPh: 'https://claude.ai/chat/…',
   chatSave: 'VINCULAR',
-  chatForget: 'OTRA VEZ CHATS NUEVOS',
+  chatForget: 'DESVINCULAR: QUE SE MANDE SOLO',
   chatBad: '// eso no es el enlace de un chat. es https://claude.ai/chat/ y un id largo (los enlaces de compartir no valen)',
   chatSaved: '// hecho: las siguientes van a este chat',
   examAskTitle: 'el simulacro entero, a claude',
@@ -603,6 +609,10 @@ const es: Strings = {
   weakBody: (exams, questions) =>
     `// todo tu historial en un solo mensaje: ${plural(exams, 'simulacro', 'simulacros')} y ${plural(questions, 'pregunta contestada', 'preguntas contestadas')} (en simulacros y rondas), con tus aciertos por dominio y por task statement. claude te dice dónde fallas, tus áreas más débiles y qué estudiar primero.`,
   weakBtn: '✦ pregúntale a claude dónde fallo',
+  trapTitle: 'examen de trampas, con claude',
+  trapBody:
+    '// claude te pone 20 preguntas como las del examen, con parejas de contraste y opciones malas hechas con 10 trampas típicas (función inventada, forzar de más, más capacidad…). al corregir te dice en qué trampas caes; pégale tus resultados y te las cuenta por trampa y te pone otras 20 sobre las que repites. insiste en tus puntos débiles.',
+  trapBtn: '✦ examen de trampas con claude',
 
   shieldTitle: '[ oculto ]',
   shieldAway: '// la pregunta se oculta mientras esta ventana no está activa. vuelve para seguir.',

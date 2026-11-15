@@ -280,10 +280,16 @@ export const claudeUrl = (prompt: string) => `https://claude.ai/new?q=${encodeUR
 export const CLAUDE_NEW = 'https://claude.ai/new';
 
 /**
- * Hasta dónde se fía uno de meter el prompt en la dirección. Un simulacro entero ocupa decenas de
- * miles de caracteres y ningún servidor acepta una dirección así: se copia y se pega.
+ * Hasta dónde se fía uno de meter el prompt en la dirección de claude.ai. Medido el 2026-11-15: su
+ * Cloudflare acepta hasta ~48 KB y a partir de 64 KB da 414; el servidor de detrás no se puede medir
+ * sin sesión, y lo habitual (Node) es un tope de 16 KB para la dirección y las cabeceras juntas, con
+ * las cookies de la sesión dentro. 10 500 deja margen y cabe el examen de trampas (trap.ts) con tus
+ * puntos débiles. Un simulacro entero, todas las falladas o "dónde fallo" con un historial de verdad
+ * ocupan decenas o cientos de KB: esos se copian y se pegan. Si alguno de los que caben se abriera
+ * vacío, también se copió (sendToClaude) y basta con pegarlo.
  */
-export const fitsUrl = (prompt: string) => claudeUrl(prompt).length <= 8000;
+export const MAX_URL = 10_500;
+export const fitsUrl = (prompt: string) => claudeUrl(prompt).length <= MAX_URL;
 
 /**
  * El enlace de tu chat de Claude, para mandarlo todo al mismo: https://claude.ai/chat/<id>, tal

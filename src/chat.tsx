@@ -1,9 +1,11 @@
 // Tu chat de Claude: para que todos los "pregúntale a Claude" vayan al mismo chat en vez de abrir
 // uno nuevo cada vez. claude.ai no deja escribir en un chat que ya existe desde un enlace (?q= solo
 // vale para chats nuevos) ni reutilizar su pestaña desde otra web (Cross-Origin-Opener-Policy), así
-// que con un chat vinculado la app copia el prompt y lo pegas tú allí. En el móvil, además, abre el
-// chat (en la app de Claude si la tienes). Sin chat vinculado, como siempre: un chat nuevo con el
-// prompt ya escrito en la web y el menú de compartir en el móvil.
+// que con un chat vinculado la app copia el prompt y lo pegas tú allí. Sin chat vinculado, como
+// siempre, sin pegar nada: en el móvil, el menú de compartir (la app de Claude recibe el prompt
+// entero, sea del tamaño que sea); en la web, un chat nuevo con el prompt ya escrito en el enlace.
+// Solo en la web y solo los que no caben en un enlace (un simulacro entero, todas las falladas,
+// dónde fallo) hay que pegarlos: claude.ai no acepta direcciones tan largas.
 import * as Clipboard from 'expo-clipboard';
 import { createContext, useContext, useState } from 'react';
 import { Linking, Platform, Share, StyleSheet, TextInput, View } from 'react-native';
@@ -21,44 +23,118 @@ export const ChatContext = createContext<ClaudeChat>({ chat: null, setChat: () =
 export const useClaudeChat = () => useContext(ChatContext);
 
 /**
- * Qué pasó al mandarlo, para decírselo a quien lo mandó: abierto con el prompt escrito (y copiado
- * por si acaso), copiado para pegarlo en un chat nuevo (muy largo para el enlace), en tu chat
- * de la web o en el que se abrió en el móvil, compartido, o no se pudo copiar.
+ * Qué pasó al mandarlo: abierto en un chat nuevo con el prompt escrito (web), compartido (móvil),
+ * copiado para pegarlo en `target` (tu chat o uno nuevo), o no se pudo copiar y hay que hacerlo a mano.
  */
-export type Sent = 'copied' | 'opened' | 'pasteNew' | 'pasteChat' | 'pasteApp' | 'shared' | 'failed';
+export type Sent =
+  | { kind: 'opened' }
+  | { kind: 'shared' }
+  | { kind: 'copied'; chars: number; target: string; chat: boolean }
+  | { kind: 'failed'; text: string; target: string; chat: boolean };
 
 /**
- * Manda un prompt a Claude. En la web, la pestaña nueva se abre antes de esperar a nada: si se
- * abriera después de copiar, el navegador ya no lo vería como respuesta al toque y la bloquearía.
+ * Copia en la web sin esperar a nada: un cuadro de texto oculto y execCommand('copy') dentro del
+ * mismo toque. navigator.clipboard comprueba el foco un momento después y, si entretanto se ha
+ * abierto una pestaña, falla sin avisar. El cuadro es un campo de texto, así que la protección
+ * anticopia (guard.ts) lo deja pasar. Devuelve el foco a donde estaba.
  */
-export function sendToClaude(text: string, chat: string | null): Promise<Sent> {
-  const copy = () => Clipboard.setStringAsync(text).catch(() => false);
-  if (Platform.OS !== 'web') {
-    if (!chat) return Share.share({ message: text }).then(() => 'shared' as const, () => 'shared' as const);
-    return copy().then(async (ok) => {
-      if (!ok) return 'failed' as const;
-      await Linking.openURL(chat).catch(() => {});
-      return 'pasteApp' as const;
-    });
+function copyNow(text: string): boolean {
+  const before = document.activeElement as HTMLElement | null;
+  const box = document.createElement('textarea');
+  box.value = text;
+  box.setAttribute('readonly', '');
+  Object.assign(box.style, { position: 'fixed', top: '0', left: '0', width: '1px', height: '1px', opacity: '0' });
+  document.body.appendChild(box);
+  box.focus();
+  box.select();
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
   }
-  const copied = copy();
-  if (chat) return copied.then((ok) => (ok ? 'pasteChat' : 'failed'));
-  const fits = fitsUrl(text);
-  window.open(fits ? claudeUrl(text) : CLAUDE_NEW, '_blank', 'noopener');
-  return copied.then((ok) => (fits ? (ok ? 'copied' : 'opened') : ok ? 'pasteNew' : 'failed'));
+  box.remove();
+  before?.focus?.();
+  return ok;
 }
 
-/** Abre tu chat en otra pestaña (en el móvil, en la app de Claude si la tienes). */
-export function openChat(chat: string) {
-  if (Platform.OS === 'web') window.open(chat, '_blank', 'noopener');
-  else Linking.openURL(chat).catch(() => {});
+/**
+ * Copia y dice si de verdad se copió. En la web no se usa expo-clipboard: si navigator.clipboard
+ * falla, su plan B (execCommand) devuelve true sin mirar si funcionó, y la app decía "copiado" con
+ * el portapapeles vacío.
+ */
+async function copy(text: string): Promise<boolean> {
+  if (Platform.OS !== 'web') return Clipboard.setStringAsync(text).catch(() => false);
+  if (copyNow(text)) return true;
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-/** El mensaje bajo el botón después de mandarlo; nada si no hace falta decir nada. */
-export function sentLine(sent: Sent | null, lang: Lang): string | null {
+/**
+ * Manda un prompt a Claude. Sin chat vinculado, automático: en el móvil el menú de compartir, con
+ * cualquier tamaño; en la web, si cabe en el enlace, un chat nuevo con él escrito (la pestaña se abre
+ * en el mismo toque o el navegador la bloquea). Si no (tu chat, o en la web uno demasiado largo), lo
+ * copia y no abre nada: quien lo manda ve el aviso de que está copiado y abre Claude con el botón del
+ * aviso, que si no se quedaría en un chat vacío sin saber por qué.
+ */
+export async function sendToClaude(text: string, chat: string | null): Promise<Sent> {
+  if (!chat && Platform.OS !== 'web') return Share.share({ message: text }).then(() => ({ kind: 'shared' as const }), () => ({ kind: 'shared' as const }));
+  if (!chat && fitsUrl(text)) {
+    copyNow(text); // por si claude.ai se abre vacío
+    window.open(claudeUrl(text), '_blank', 'noopener');
+    return { kind: 'opened' };
+  }
+  const target = chat ?? CLAUDE_NEW;
+  return (await copy(text))
+    ? { kind: 'copied', chars: text.length, target, chat: Boolean(chat) }
+    : { kind: 'failed', text, target, chat: Boolean(chat) };
+}
+
+/** Abre tu chat, o uno nuevo, en otra pestaña (en el móvil, en la app de Claude si la tienes). */
+export function openChat(url: string) {
+  if (Platform.OS === 'web') window.open(url, '_blank', 'noopener');
+  else Linking.openURL(url).catch(() => {});
+}
+
+/**
+ * El aviso de debajo del botón tras mandarlo. Copiado: cuánto, dónde pegarlo y el botón para abrir
+ * Claude. Sin poder copiar: el texto en un cuadro, para seleccionarlo y copiarlo a mano.
+ */
+export function SentBox({ sent, lang }: { sent: Sent | null; lang: Lang }) {
   const T = STR[lang];
-  if (!sent) return null;
-  return { copied: T.askCopied, opened: null, pasteNew: T.askPasteNew, pasteChat: T.askPasteChat, pasteApp: T.askPasteApp, shared: null, failed: T.askFailed }[sent];
+  if (!sent || sent.kind === 'shared') return null;
+  if (sent.kind === 'opened')
+    return (
+      <Txt size={11} color={c.muted}>
+        {T.askCopied}
+      </Txt>
+    );
+  const open = <Btn small kind="primary" label={sent.chat ? T.askOpenChat : T.askOpen} onPress={() => openChat(sent.target)} />;
+  if (sent.kind === 'copied')
+    return (
+      <View style={s.box}>
+        <Txt bold size={13} color={c.green}>
+          {T.askCopiedN(sent.chars.toLocaleString(lang === 'es' ? 'es-ES' : 'en-US'))}
+        </Txt>
+        <Txt size={12} color={c.text}>
+          {T.askPasteHow(sent.chat)}
+        </Txt>
+        {open}
+      </View>
+    );
+  return (
+    <View style={[s.box, { borderColor: c.red }]}>
+      <Txt bold size={12} color={c.red}>
+        {T.askCopyByHand}
+      </Txt>
+      <TextInput value={sent.text} onChangeText={() => {}} multiline numberOfLines={8} selectTextOnFocus style={[s.input, s.manual]} />
+      {open}
+    </View>
+  );
 }
 
 /**
@@ -125,6 +201,8 @@ export function ChatLinker({ lang, compact }: { lang: Lang; compact?: boolean })
 
 const s = themed(() =>
   StyleSheet.create({
+    box: { gap: 8, borderWidth: 1, borderColor: c.green, borderRadius: 3, padding: 10, backgroundColor: c.panel },
+    manual: { flex: 0, flexGrow: 0, flexShrink: 0, flexBasis: 'auto', height: 160, minHeight: 160, textAlignVertical: 'top' },
     input: {
       flex: 1,
       borderWidth: 1,
