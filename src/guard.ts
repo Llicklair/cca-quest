@@ -13,6 +13,12 @@
 // - se pulsa un atajo de captura (Impr Pant, Win/Cmd+Shift, Ctrl+Shift+S de Edge y Firefox): se
 //   queda tapado hasta que se toque, que en el Mac la captura se hace después de soltar las teclas.
 // Con Impr Pant, además, se pisa el portapapeles para que no quede la imagen.
+//
+// Un clic en la página quiere decir que se ha vuelto a ella: destapa, y si solo estaba tapada por
+// salir de la ventana o por Win/Cmd, el clic llega a lo que hay debajo. Antes se lo comía la tapa:
+// tras pulsar en la barra de direcciones, en otra ventana o en una notificación, el clic en la
+// segunda opción de una de "elige 2" no la marcaba. Tras un atajo de captura, el primer toque solo
+// destapa, como hasta ahora.
 // Lo que no se puede evitar: una foto con otro móvil, las capturas del propio móvil, y leer el
 // código de la web, que es público.
 
@@ -23,7 +29,7 @@ export type Guard = {
   caught: boolean; // se pulsó un atajo de captura: tapado hasta que se toque
 };
 
-export type GuardEvent = 'open' | 'close' | 'blur' | 'focus' | 'meta-down' | 'meta-up' | 'shot' | 'dismiss';
+export type GuardEvent = 'open' | 'close' | 'blur' | 'focus' | 'press' | 'meta-down' | 'meta-up' | 'shot' | 'dismiss';
 
 export const IDLE: Guard = { screens: 0, away: false, held: false, caught: false };
 
@@ -40,6 +46,9 @@ export function step(g: Guard, e: GuardEvent): Guard {
     // Al volver no llega cuándo se soltó Win/Cmd: el foco también la da por soltada.
     case 'focus':
       return { ...g, away: false, held: false };
+    // Un clic en la página: la ventana tiene el foco aunque el evento `focus` llegue tarde o no llegue.
+    case 'press':
+      return { ...g, away: false, held: false };
     case 'meta-down':
       return { ...g, held: true };
     case 'meta-up':
@@ -53,6 +62,9 @@ export function step(g: Guard, e: GuardEvent): Guard {
 
 /** Si hay que tapar la pantalla. */
 export const covered = (g: Guard) => g.screens > 0 && (g.away || g.held || g.caught);
+
+/** Si la tapa se queda con los toques. Solo tras un atajo de captura; si no, el clic llega a la pregunta. */
+export const blocks = (g: Guard) => covered(g) && g.caught;
 
 type Keys = { key: string; code: string; metaKey: boolean; ctrlKey: boolean; shiftKey: boolean };
 
@@ -122,6 +134,8 @@ export function installGuard(send: (e: GuardEvent) => void) {
     true,
   );
 
+  // En captura: llega antes que a la opción pulsada, y el foco puede llegar después del clic.
+  document.addEventListener('pointerdown', () => send('press'), true);
   window.addEventListener('blur', () => send('blur'));
   window.addEventListener('focus', () => send('focus'));
   document.addEventListener('visibilitychange', () => {
