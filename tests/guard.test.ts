@@ -1,7 +1,7 @@
 // Contra las trampas en la web: cuándo se tapa la pregunta y qué cuenta como atajo de captura.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { IDLE, covered, printKey, screenshotKey, step, type Guard, type GuardEvent } from '../src/guard.ts';
+import { IDLE, blocks, covered, printKey, screenshotKey, step, type Guard, type GuardEvent } from '../src/guard.ts';
 
 const run = (...events: GuardEvent[]): Guard => events.reduce(step, IDLE);
 const key = (k: string, code = '', mods: { meta?: boolean; ctrl?: boolean; shift?: boolean } = {}) => ({
@@ -34,6 +34,22 @@ test('un atajo de captura deja tapado hasta que se toca', () => {
   const caught = run('open', 'meta-down', 'shot', 'meta-up', 'blur', 'focus');
   assert.equal(covered(caught), true);
   assert.equal(covered(step(caught, 'dismiss')), false);
+});
+
+test('volver con un clic en la página destapa, y ese clic llega a la pregunta', () => {
+  // Tras pulsar en la barra de direcciones u otra ventana, el foco llega con el clic o después.
+  assert.equal(covered(run('open', 'blur', 'press')), false);
+  assert.equal(covered(run('open', 'meta-down', 'press')), false);
+  // Mientras está tapada por salir de la ventana o por Win/Cmd, la tapa no se queda con el clic.
+  assert.equal(blocks(run('open', 'blur')), false);
+  assert.equal(blocks(run('open', 'meta-down')), false);
+});
+
+test('tras un atajo de captura el primer toque solo destapa', () => {
+  const caught = run('open', 'shot', 'blur');
+  assert.equal(blocks(caught), true);
+  assert.equal(covered(step(caught, 'press')), true); // el clic no destapa por sí solo: lo hace la tapa
+  assert.equal(covered(step(step(caught, 'press'), 'dismiss')), false);
 });
 
 test('al cerrar la última pregunta se olvida la captura', () => {

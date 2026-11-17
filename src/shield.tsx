@@ -4,7 +4,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { Platform, Pressable, StyleSheet } from 'react-native';
 
 import type { Lang } from './game.ts';
-import { IDLE, covered, installGuard, step, type GuardEvent } from './guard.ts';
+import { IDLE, blocks, covered, installGuard, step, type GuardEvent } from './guard.ts';
 import { STR } from './i18n.ts';
 import { Txt } from './term.tsx';
 import { c, themed } from './theme.ts';
@@ -41,14 +41,17 @@ export function useGuard(on: boolean) {
   }, [on]);
 }
 
-/** Pantalla negra encima de todo mientras haga falta. Al montarse pone también el bloqueo de copiar. */
+/**
+ * Pantalla negra encima de todo mientras haga falta. Al montarse pone también el bloqueo de copiar.
+ * Los clics la atraviesan (guard.ts los usa para destapar), salvo tras un atajo de captura.
+ */
 export function Shield({ lang }: { lang: Lang }) {
   useEffect(install, []);
   const g = useSyncExternalStore(subscribe, () => state);
   if (!covered(g)) return null;
   const T = STR[lang];
   return (
-    <Pressable style={s.shield} onPress={() => send('dismiss')}>
+    <Pressable style={[s.shield, { pointerEvents: blocks(g) ? 'auto' : 'none' }]} onPress={() => send('dismiss')}>
       <Txt bold size={16} color={c.amber}>
         {T.shieldTitle}
       </Txt>
