@@ -1037,6 +1037,42 @@ export const FLASHCARDS: Flashcard[] = [
     },
   },
   {
+    id: 'f-3.6-gha-modes',
+    ts: '3.6',
+    front: {
+      en: 'Your Claude GitHub Action only answers when someone writes `@claude`. How do you make it review every PR by itself?',
+      es: 'Tu GitHub Action de Claude solo responde cuando alguien escribe `@claude`. ¿Cómo haces que revise sola todas las PR?',
+    },
+    back: {
+      en: 'Give the workflow a `prompt` (plain text or a review skill) and trigger it on `pull_request`. With a `prompt` the action runs on the event without waiting for a mention.',
+      es: 'Dale al workflow un `prompt` (texto o una skill de revisión) y lánzalo con `pull_request`. Con un `prompt`, la action se ejecuta con el evento sin esperar a una mención.',
+    },
+  },
+  {
+    id: 'f-3.6-gha-claude-args',
+    ts: '3.6',
+    front: {
+      en: 'Upgrading the GitHub Action from `@beta` to `@v1`: where do `max_turns`, `model` and `custom_instructions` go?',
+      es: 'Al pasar la GitHub Action de `@beta` a `@v1`: ¿dónde van `max_turns`, `model` y `custom_instructions`?',
+    },
+    back: {
+      en: "Into `claude_args`, as `--max-turns`, `--model` and `--append-system-prompt`. There is no flag named after `custom_instructions`, and `--system-prompt` would replace Claude Code's default prompt.",
+      es: 'En `claude_args`, como `--max-turns`, `--model` y `--append-system-prompt`. No hay ningún flag con el nombre de `custom_instructions`, y `--system-prompt` sustituiría el prompt por defecto de Claude Code.',
+    },
+  },
+  {
+    id: 'f-3.6-gha-token',
+    ts: '3.6',
+    front: {
+      en: "The commits Claude pushes from the GitHub Action never start your test workflow. Why, and what fixes it?",
+      es: 'Los commits que sube Claude desde la GitHub Action nunca lanzan tu workflow de tests. ¿Por qué y cómo se arregla?',
+    },
+    back: {
+      en: 'They were made with the default `GITHUB_TOKEN`, and GitHub starts no workflows on its commits. Use the Claude GitHub App (the default) or a custom GitHub App token.',
+      es: 'Se hicieron con el `GITHUB_TOKEN` por defecto, y GitHub no lanza workflows con sus commits. Usa la Claude GitHub App (la opción por defecto) o el token de una GitHub App propia.',
+    },
+  },
+  {
     id: 'f-4.1-explicit-vs-vague',
     ts: '4.1',
     front: {
