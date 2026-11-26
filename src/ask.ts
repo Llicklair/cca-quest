@@ -37,6 +37,8 @@ const TEXT = {
     all: (n: number) => `=== QUESTIONS (${n}) ===`,
     q: 'Q',
     flagged: 'flagged for review',
+    sure: 'I was sure',
+    unsure: 'I was unsure',
     note: 'My note during the exam',
     missesAsk: (n: number) =>
       `These are the ${n} questions I got wrong the last time they came up in my study app (daily rounds and practice exams). Go through them in order: for each one, explain in simple words why the right answer is right, why my answer is wrong and the concept behind it. At the end, list the concepts I should review, grouped by the patterns in my mistakes.`,
@@ -85,6 +87,8 @@ const TEXT = {
     all: (n: number) => `=== PREGUNTAS (${n}) ===`,
     q: 'P',
     flagged: 'marcada para revisar',
+    sure: 'estaba seguro',
+    unsure: 'dudaba',
     note: 'Mi nota durante el simulacro',
     missesAsk: (n: number) =>
       `Estas son las ${n} preguntas que fallé la última vez que me salieron en mi app de estudio (rondas diarias y simulacros). Repásalas en orden: en cada una, explícame con palabras sencillas por qué la buena es la buena, por qué la mía está mal y el concepto que hay detrás. Al final, dime qué conceptos debo repasar, agrupados por los patrones de mis fallos.`,
@@ -169,6 +173,7 @@ export type ExamItem = {
   ts?: string;
   flag?: boolean;
   note?: string;
+  sure?: boolean | null; // en la calibración: si estaba seguro (true) o dudaba (false)
 };
 
 /**
@@ -181,7 +186,7 @@ export function examPrompt(lang: Lang, title: string, items: ExamItem[]): string
   const known = items.every((x) => x.picked !== undefined);
   const one = (x: ExamItem) => [
     '',
-    `${t.q}${x.n}${x.ts ? ` [task ${x.ts}]` : ''}${x.flag ? ` (${t.flagged})` : ''}`,
+    `${t.q}${x.n}${x.ts ? ` [task ${x.ts}]` : ''}${x.flag ? ` (${t.flagged})` : ''}${x.sure === true ? ` (${t.sure})` : x.sure === false ? ` (${t.unsure})` : ''}`,
     ...block(t, x.tx, x.rights, x.order ?? x.tx.options.map((_, k) => k), { picked: x.picked, reveal: true, why: known && !x.ok }),
     ...(x.note?.trim() ? [`${t.note}: ${x.note.trim()}`] : []),
   ];

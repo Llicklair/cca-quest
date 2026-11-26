@@ -179,7 +179,8 @@ const en = {
   discard: 'DISCARD',
   fullMock: (clock: string) => `full mock · 60 q · ${clock}`,
   fullNote: '// like the real one: 4 of 6 scenarios, 15 questions each, no feedback until you submit. you can pause.',
-  examLabel: (label: string) => (label === EXAM_LEVEL_LABEL ? 'level · 66' : label === EXAM_LEVEL_60_LABEL ? 'level · 60' : label),
+  examLabel: (label: string) =>
+    label === EXAM_LEVEL_LABEL ? 'level · 66' : label === EXAM_LEVEL_60_LABEL ? 'level · 60' : label.replace('calibration ', 'calib · '),
   randomSub: '4 random scenarios · new every time',
   levelTitle: 'exam-level · long questions',
   levelNote:
@@ -227,6 +228,36 @@ const en = {
   checkPicks: (marked: number, n: number) => `▶ CHECK · ${marked}/${n}`,
   examList: '▶ EXAM LIST',
   bestPct: (pct: number) => `best ${pct}%`,
+  // calibración
+  calibTitle: 'calibration · before the real exam',
+  calibNote:
+    "// 20 questions that appear nowhere else in the app, built on the real exam's traps: questions in the negative, one sentence that flips the answer, wrong options that sound right. take A a few weeks before the exam and B in the last days: only the first attempt counts, because after that you remember them. mark every answer as sure or unsure.",
+  calibSub: (clock: string) => `20 q · ${clock} · 4 scenarios · questions you have never seen`,
+  firstPct: (pct: number) => `1st ${pct}%`,
+  sureAsk: 'how sure are you?',
+  sure: '✓ sure',
+  unsure: '? unsure',
+  calibReport: 'calibration',
+  sureWrong: (qs: string) => `✗ wrong while sure: ${qs}`,
+  sureWrongHint: '// the traps you do not see coming. review these first.',
+  noSureWrong: '✓ no wrong answer while sure',
+  unsureRight: (qs: string) => `? right while unsure: ${qs}`,
+  unsureRightHint: '// either you know more than you think or it was luck: reread why.',
+  unmarked: (n: number) => `// ${plural(n, 'answer', 'answers')} without sure or unsure`,
+  trapsFell: 'traps you fell into',
+  noTraps: '// none: you did not fall into any trap.',
+  pairsTitle: 'twins: same case, one sentence changes the answer',
+  pairLine: (a: number, b: number) => `Q${a} and Q${b}`,
+  pairBoth: '✓ both right',
+  pairOne: '✗ one wrong: compare the highlighted sentence in each',
+  pairNone: '✗ both wrong',
+  calibRepeat:
+    '// you had already taken this calibration: this score no longer tells you if you are ready, because you remember the questions. the first attempt is the one that counts.',
+  clueHint: '// highlighted in each case: the phrase that decides it.',
+  trapTag: (name: string) => `trap: ${name}`,
+  wasSure: 'you were sure',
+  wasUnsure: 'you were unsure',
+  twinOf: (n: number) => `twin of Q${n}`,
 
   // pregúntale a claude
   askClaude: '✦ ask claude',
@@ -528,7 +559,7 @@ const es: Strings = {
       ? 'nivel · 66'
       : label === EXAM_LEVEL_60_LABEL
         ? 'nivel · 60'
-        : label.replace('exam', 'examen').replace('random', 'aleatorio').replace('quick', 'rápido'),
+        : label.replace('calibration ', 'calib · ').replace('exam', 'examen').replace('random', 'aleatorio').replace('quick', 'rápido'),
   randomSub: '4 escenarios al azar · distinto cada vez',
   levelTitle: 'nivel real · preguntas largas',
   levelNote:
@@ -574,6 +605,36 @@ const es: Strings = {
   checkPicks: (marked, n) => `▶ COMPROBAR · ${marked}/${n}`,
   examList: '▶ LISTA DE SIMULACROS',
   bestPct: (pct) => `mejor ${pct}%`,
+  // calibración
+  calibTitle: 'calibración · antes del examen real',
+  calibNote:
+    '// 20 preguntas que no salen en ningún otro sitio de la app, hechas con las trampas del examen real: preguntas en negativo, una frase que cambia la respuesta, opciones malas que suenan bien. haz la A unas semanas antes del examen y la B en los últimos días: solo cuenta el primer intento, porque después ya las recuerdas. marca en cada respuesta si estás seguro o dudas.',
+  calibSub: (clock) => `20 preguntas · ${clock} · 4 escenarios · nunca vistas`,
+  firstPct: (pct) => `1º ${pct}%`,
+  sureAsk: '¿cómo de seguro estás?',
+  sure: '✓ seguro',
+  unsure: '? dudo',
+  calibReport: 'calibración',
+  sureWrong: (qs) => `✗ falladas estando seguro: ${qs}`,
+  sureWrongHint: '// las trampas que no ves venir. repasa estas primero.',
+  noSureWrong: '✓ ninguna fallada estando seguro',
+  unsureRight: (qs) => `? acertadas dudando: ${qs}`,
+  unsureRightHint: '// o sabes más de lo que crees o fue suerte: relee el porqué.',
+  unmarked: (n) => `// ${plural(n, 'respuesta', 'respuestas')} sin marcar seguro o dudo`,
+  trapsFell: 'trampas en las que caíste',
+  noTraps: '// ninguna: no caíste en ninguna trampa.',
+  pairsTitle: 'gemelas: el mismo caso, una frase cambia la respuesta',
+  pairLine: (a, b) => `P${a} y P${b}`,
+  pairBoth: '✓ las dos bien',
+  pairOne: '✗ una mal: compara la frase resaltada de cada una',
+  pairNone: '✗ las dos mal',
+  calibRepeat:
+    '// ya habías hecho esta calibración: esta nota ya no dice si estás listo, porque recuerdas las preguntas. la que cuenta es la del primer intento.',
+  clueHint: '// resaltada en cada caso: la frase que decide.',
+  trapTag: (name) => `trampa: ${name}`,
+  wasSure: 'estabas seguro',
+  wasUnsure: 'dudabas',
+  twinOf: (n) => `gemela de la P${n}`,
 
   askClaude: '✦ pregúntale a claude',
   askCopied: '// también copiada: si claude.ai se abre vacío, pégala',

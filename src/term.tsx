@@ -16,6 +16,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { marked } from './calibration.ts';
 import type { Lang, Theme } from './game.ts';
 import { c, font, themed } from './theme.ts';
 
@@ -45,22 +46,45 @@ export function Txt({ children, color = c.text, size = 14, bold, style, onPress 
  */
 export const TermContext = createContext<{ isTerm: (code: string) => boolean; open: (code: string) => void } | null>(null);
 
-/** Texto con `código` entre comillas invertidas resaltado. */
-export function Rich({ text, color = c.text, size = 14, bold, style }: { text: string } & Omit<TxtProps, 'children'>) {
+/**
+ * Texto con `código` entre comillas invertidas resaltado. `mark`: frases que pintar en ámbar sobre
+ * fondo (la palabra que da la vuelta a una pregunta, la pista de un caso), con o sin código dentro.
+ */
+export function Rich({ text, color = c.text, size = 14, bold, style, mark }: { text: string; mark?: (string | undefined)[] } & Omit<TxtProps, 'children'>) {
   const terms = useContext(TermContext);
   const parts = text.split('`');
+  // Qué caracteres del texto (contando las comillas invertidas) van resaltados.
+  const on: boolean[] = [];
+  if (mark?.some(Boolean)) for (const seg of marked(text, mark)) for (let k = 0; k < seg.text.length; k++) on.push(seg.on);
+  // Dónde empieza cada trozo en el texto original (cada comilla invertida ocupa un carácter).
+  const starts = parts.map((_, i) => parts.slice(0, i).reduce((n, x) => n + x.length + 1, 0));
   return (
     <Txt color={color} size={size} bold={bold} style={style}>
       {parts.map((part, i) => {
-        if (i % 2 === 0) return part;
-        const tappable = terms?.isTerm(part);
+        const start = starts[i];
+        const code = i % 2 === 1;
+        const tappable = code && terms?.isTerm(part);
+        const base = code ? [{ color: c.cyan, fontFamily: font.bold }, tappable && s.term] : [];
+        // Trozos seguidos con el mismo resaltado.
+        const runs: { text: string; hi: boolean }[] = [];
+        for (let k = 0; k < part.length; k++) {
+          const hi = on[start + k] ?? false;
+          const last = runs[runs.length - 1];
+          if (last && last.hi === hi) last.text += part[k];
+          else runs.push({ text: part[k], hi });
+        }
+        if (!code && runs.every((r) => !r.hi)) return part;
         return (
-          <Text
-            key={i}
-            onPress={tappable ? () => terms!.open(part) : undefined}
-            style={[{ color: c.cyan, fontFamily: font.bold }, tappable && s.term]}
-          >
-            {part}
+          <Text key={i} onPress={tappable ? () => terms!.open(part) : undefined} style={base}>
+            {runs.map((r, k) =>
+              r.hi ? (
+                <Text key={k} style={s.mark}>
+                  {r.text}
+                </Text>
+              ) : (
+                r.text
+              ),
+            )}
           </Text>
         );
       })}
@@ -376,6 +400,7 @@ export function Tag({ label, color = c.muted }: { label: string; color?: string 
 const s = themed(() =>
   StyleSheet.create({
     term: { textDecorationLine: 'underline', textDecorationStyle: 'dotted', textDecorationColor: c.cyan },
+    mark: { color: c.amber, backgroundColor: c.amberBg, fontFamily: font.bold },
     panel: { borderWidth: 1, borderRadius: 4, padding: 14, paddingTop: 16, backgroundColor: c.panel, marginTop: 8 },
     panelTitle: { alignSelf: 'flex-start', marginTop: -26, marginHorizontal: -4, marginBottom: 8 },
     panelGap: { position: 'absolute', left: 0, right: 0, top: 8, height: 2, backgroundColor: c.bg },
