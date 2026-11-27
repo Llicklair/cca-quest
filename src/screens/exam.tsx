@@ -34,7 +34,7 @@ import { examPrompt, studyPrompt } from '../ask.ts';
 import { STR } from '../i18n.ts';
 import { AskButton, AskClaude, MissCard, inLang } from './misses.tsx';
 import { BANK, CALIBRATION, LEVEL_BANK, LEVEL_BANK_60 } from '../bank.ts';
-import { TRAPS, calibReport } from '../calibration.ts';
+import { TRAPS, calibReport, canCheck, trapOf } from '../calibration.ts';
 import { QUESTIONS } from '../questions.ts';
 import { useGuard } from '../shield.tsx';
 import { studyRecord } from '../study.ts';
@@ -43,8 +43,8 @@ import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer, confirmAction } 
 import { c, domainColor, font, themed } from '../theme.ts';
 
 // picked = índice original, o máscara en las de respuesta múltiple; flag y note, lo marcado y comentado para revisar;
-// sure, en la calibración: seguro (true), dudo (false) o sin marcar.
-export type Slot = { q: Question; order: number[]; picked: number | null; flag?: boolean; note?: string; sure?: boolean | null };
+// sure, en la calibración: seguro (true), dudo (false) o sin marcar; shown, ya corregida (la respuesta queda fija).
+export type Slot = { q: Question; order: number[]; picked: number | null; flag?: boolean; note?: string; sure?: boolean | null; shown?: boolean };
 type Run = { label: string; slots: Slot[]; i: number; per: number; limit: number };
 // En el informe de un simulacro antiguo sin respuestas guardadas, `picked` es undefined.
 type Shown = Omit<Slot, 'picked'> & { picked?: number | null };
@@ -126,7 +126,7 @@ export function Exam({
     limit: r.limit,
     flags: r.slots.map((s) => Boolean(s.flag)),
     notes: r.slots.map((s) => s.note ?? ''),
-    ...(isCalibration(r.label) ? { sure: r.slots.map((s) => s.sure ?? null) } : {}),
+    ...(isCalibration(r.label) ? { sure: r.slots.map((s) => s.sure ?? null), shown: r.slots.map((s) => Boolean(s.shown)) } : {}),
   });
 
   const update = (r: Run) => {
@@ -155,16 +155,18 @@ export function Exam({
   };
 
   // Cronómetro: cuenta mientras la pantalla está abierta, guarda cada 15 s y entrega al acabar el tiempo.
+  // En la calibración se para mientras está abierta una pregunta ya corregida: leer la corrección no gasta tiempo.
   const running = phase.kind === 'run';
-  // Hasta entregar no se ve ninguna corrección: todo el simulacro cuenta como sin contestar.
+  // Mientras dura se tapan las capturas: hasta entregar todo cuenta como sin contestar (en la calibración,
+  // cada pregunta se corrige al contestarla, pero las preguntas tienen que seguir sin verse fuera).
   useGuard(running);
   useEffect(() => {
     if (!running) return;
     const id = setInterval(() => {
+      const r = runRef.current;
+      if (!r || r.slots[r.i]?.shown) return;
       elapsedRef.current += 1;
       setElapsed(elapsedRef.current);
-      const r = runRef.current;
-      if (!r) return;
       if (elapsedRef.current >= r.limit) {
         clearInterval(id);
         finish();
@@ -189,7 +191,9 @@ export function Exam({
   const resume = (d: ExamDraft) => {
     const slots = d.ids.flatMap((id, k) => {
       const q = BY_ID.get(id);
-      return q ? [{ q, order: d.orders[k], picked: d.picked[k], flag: d.flags?.[k], note: d.notes?.[k] || undefined, sure: d.sure?.[k] ?? null }] : [];
+      return q
+        ? [{ q, order: d.orders[k], picked: d.picked[k], flag: d.flags?.[k], note: d.notes?.[k] || undefined, sure: d.sure?.[k] ?? null, shown: d.shown?.[k] || undefined }]
+        : [];
     });
     update({ label: d.label, slots, i: Math.min(d.i, slots.length - 1), per: perOf(d.label), limit: d.limit });
     elapsedRef.current = d.elapsed;
@@ -210,6 +214,7 @@ export function Exam({
   const choose = (orig: number) => {
     if (!run) return;
     const slot = run.slots[run.i];
+    if (slot.shown) return;
     let picked: number | null = orig;
     if (isMulti(slot.q)) {
       const mask = slot.picked ?? 0;
@@ -245,11 +250,23 @@ export function Exam({
     feel.tap();
   };
 
-  // Seguro o dudo: otro toque en el mismo lo desmarca.
+  // Seguro o dudo: otro toque en el mismo lo desmarca. Una vez corregida ya no se cambia.
   const markSure = (sure: boolean) => {
-    const next = patchSlot({ sure: run?.slots[run.i].sure === sure ? null : sure });
+    if (!run || run.slots[run.i].shown) return;
+    const next = patchSlot({ sure: run.slots[run.i].sure === sure ? null : sure });
     if (next) onSaveDraft(draftOf(next, elapsedRef.current));
     feel.tap();
+  };
+
+  // En la calibración, la corrección de la pregunta al momento; a partir de ahí la respuesta queda fija.
+  const check = () => {
+    if (!run) return;
+    const slot = run.slots[run.i];
+    if (slot.shown || !canCheck(slot.q, slot.picked, slot.sure)) return;
+    const next = patchSlot({ shown: true });
+    if (next) onSaveDraft(draftOf(next, elapsedRef.current));
+    if (isRight(slot.q, slot.picked)) feel.good();
+    else feel.bad();
   };
 
   // Como en el examen, "Flag" es para volver antes de entregar: si quedan marcadas, se avisa.
@@ -453,6 +470,14 @@ export function Exam({
     const last = run.i + 1 === run.slots.length;
     const showNote = noteOpen || Boolean(slot.note);
     const calib = isCalibration(run.label);
+    // En la calibración, ya corregida: la buena, lo tuyo, la trampa y la frase del caso que decide.
+    const shown = calib && Boolean(slot.shown);
+    const ok = isRight(slot.q, slot.picked);
+    const trap = shown ? trapOf(slot.q, slot.picked) : null;
+    // La gemela solo se nombra en la segunda que sale: avisar en la primera estropearía la trampa.
+    const twinAt = slot.q.pair ? run.slots.findIndex((x) => x.q.id === slot.q.pair) : -1;
+    // Contestada y sin corregir: el botón de abajo corrige en vez de pasar a la siguiente.
+    const pending = calib && !shown && slot.picked !== null;
 
     const scenario = (
       <>
@@ -465,7 +490,7 @@ export function Exam({
           <Txt bold size={13} color={domainColor[slot.q.domain]} style={{ marginBottom: 8 }}>
             {T.domainOf(dom.n, dom.name)}
           </Txt>
-          <Rich text={text(slot.q).scenario} size={15} />
+          <Rich text={text(slot.q).scenario} size={15} mark={shown ? [text(slot.q).clue] : undefined} />
         </Panel>
       </>
     );
@@ -505,46 +530,92 @@ export function Exam({
         {isMulti(slot.q) && <Tag label={T.selectN(rightOf(slot.q).length)} color={c.cyan} />}
         {slot.order.map((orig, pos) => {
           const on = isMulti(slot.q) ? ((slot.picked ?? 0) & (1 << orig)) !== 0 : slot.picked === orig;
+          // Ya corregida: la buena en verde, lo tuyo en rojo si falló y, debajo de cada una, su porqué.
+          const right = shown && rightOf(slot.q).includes(orig);
+          const miss = shown && on && !right;
           return (
             <Pressable
               key={pos}
+              disabled={shown}
               onPress={() => choose(orig)}
-              style={({ pressed }) => [s.opt, on && { borderColor: c.amber, backgroundColor: c.amberBg }, pressed && { backgroundColor: c.greenBg }]}
+              style={({ pressed }) => [
+                s.opt,
+                on && { borderColor: c.amber, backgroundColor: c.amberBg },
+                right && { borderColor: c.green, backgroundColor: c.greenBg },
+                miss && { borderColor: c.red, backgroundColor: c.redBg },
+                shown && !right && !on && { opacity: 0.6 },
+                pressed && { backgroundColor: c.greenBg },
+              ]}
             >
               <View style={s.optRow}>
-                <Txt bold color={on ? c.amber : c.muted}>
-                  [{on ? (isMulti(slot.q) ? '■' : '●') : 'ABCDE'[pos]}]
+                <Txt bold color={right ? c.green : miss ? c.red : on ? c.amber : c.muted}>
+                  [{right ? '✓' : miss ? '✗' : on ? (isMulti(slot.q) ? '■' : '●') : 'ABCDE'[pos]}]
                 </Txt>
                 <Rich text={text(slot.q).options[orig]} style={{ flex: 1 }} />
               </View>
+              {shown && <Rich text={`└ ${text(slot.q).why[orig]}`} size={12} color={right ? c.text : c.muted} style={{ marginLeft: 36 }} />}
             </Pressable>
           );
         })}
         {calib ? (
-          // En la calibración no hay ayuda de Claude: la nota tiene que ser solo tuya, como en el examen.
-          <View style={s.sureRow}>
-            <Txt size={12} color={c.muted}>
-              {T.sureAsk}
-            </Txt>
-            {[true, false].map((v) => {
-              const on = slot.sure === v;
-              const tone = v ? c.green : c.amber;
-              return (
-                <Pressable
-                  key={String(v)}
-                  onPress={() => markSure(v)}
-                  hitSlop={6}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: on }}
-                  style={[s.sure, { borderColor: on ? tone : c.lineHi }, on && { backgroundColor: v ? c.greenBg : c.amberBg }]}
-                >
-                  <Txt bold size={12} color={on ? tone : c.muted}>
-                    {v ? T.sure : T.unsure}
+          // En la calibración Claude no ayuda a contestar: la nota tiene que ser solo tuya, como en el examen.
+          // Primero seguro o dudo, después la corrección; una vez corregida, nada de eso se cambia.
+          <>
+            <View style={s.sureRow}>
+              <Txt size={12} color={c.muted}>
+                {T.sureAsk}
+              </Txt>
+              {[true, false].map((v) => {
+                const on = slot.sure === v;
+                const tone = v ? c.green : c.amber;
+                return (
+                  <Pressable
+                    key={String(v)}
+                    onPress={() => markSure(v)}
+                    disabled={shown}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: on, disabled: shown }}
+                    style={[s.sure, { borderColor: on ? tone : c.lineHi }, on && { backgroundColor: v ? c.greenBg : c.amberBg }, shown && !on && { opacity: 0.5 }]}
+                  >
+                    <Txt bold size={12} color={on ? tone : c.muted}>
+                      {v ? T.sure : T.unsure}
+                    </Txt>
+                  </Pressable>
+                );
+              })}
+            </View>
+            {pending && typeof slot.sure !== 'boolean' && (
+              <Txt size={12} color={c.muted}>
+                {T.checkNeedsSure}
+              </Txt>
+            )}
+            {shown && (
+              // El acierto o fallo va en la barra de abajo, siempre a la vista; aquí, lo que lo explica.
+              <View style={{ gap: 6, marginTop: 4 }}>
+                {trap && (
+                  <View>
+                    <Txt size={12} bold color={c.red}>
+                      [{T.trapTag(TRAPS[trap].name[p.lang])}]
+                    </Txt>
+                    <Rich text={TRAPS[trap].tip[p.lang]} size={12} color={c.muted} />
+                  </View>
+                )}
+                <Txt size={12} color={c.muted}>
+                  {T.clueNow}
+                </Txt>
+                {twinAt >= 0 && twinAt < run.i && (
+                  <Txt size={12} color={c.cyan}>
+                    {T.twinNow(twinAt + 1)}
                   </Txt>
-                </Pressable>
-              );
-            })}
-          </View>
+                )}
+                <Panel title={T.remember} color={c.amber} titleColor={c.amber}>
+                  <Rich text={text(slot.q).rule} bold color={c.amber} />
+                </Panel>
+                <AskClaude q={slot.q} lang={p.lang} order={slot.order} picked={slot.picked} />
+              </View>
+            )}
+          </>
         ) : (
           // Como en el examen no hay corrección hasta entregar, Claude ayuda a entenderla sin decir la buena.
           <AskClaude q={slot.q} lang={p.lang} order={slot.order} reveal={false} />
@@ -555,9 +626,15 @@ export function Exam({
     return (
       <View style={s.fill}>
         <View style={s.top}>
-          <Txt bold color={left < 300 ? c.red : c.amber}>
-            ⏱ {clock(left)}
+          {/* Parado mientras lees una corregida: ⏸ y, si cabe, el aviso. */}
+          <Txt bold color={shown ? c.muted : left < 300 ? c.red : c.amber}>
+            {shown ? '⏸' : '⏱'} {clock(left)}
           </Txt>
+          {shown && wide && (
+            <Txt size={11} color={c.muted}>
+              {T.clockStopped}
+            </Txt>
+          )}
           <Txt bold>
             {run.i + 1}/{run.slots.length}
           </Txt>
@@ -583,23 +660,37 @@ export function Exam({
             {question}
           </ScrollView>
         )}
-        <View style={s.bottom}>
+        <View style={[s.bottom, shown && { borderTopColor: ok ? c.green : c.red }]}>
           <View style={s.dots}>
             {run.slots.map((x, k) => (
               <Pressable key={k} onPress={() => go(k)} hitSlop={3}>
-                <Txt size={12} bold color={k === run.i ? c.green : x.picked !== null ? c.amber : x.flag ? c.cyan : c.lineHi}>
+                <Txt
+                  size={12}
+                  bold
+                  color={k === run.i ? c.green : x.shown ? (isRight(x.q, x.picked) ? c.green : c.red) : x.picked !== null ? c.amber : x.flag ? c.cyan : c.lineHi}
+                >
                   {k === run.i ? '◆' : x.flag ? '⚑' : x.picked !== null ? '■' : '□'}
                 </Txt>
               </Pressable>
             ))}
           </View>
-          <Txt size={11} color={c.muted} style={{ textAlign: 'center' }}>
-            {T.answeredN(answered, run.slots.length)}
-            {flaggedCount > 0 ? ` · ${T.flaggedN(flaggedCount)}` : ''}
-          </Txt>
+          {shown ? (
+            // Ya corregida, en vez de la cuenta de contestadas: si acertaste y si estabas seguro.
+            <Txt bold size={13} color={ok ? c.green : c.red} style={{ textAlign: 'center' }}>
+              {ok ? T.calibOk : T.calibWrong}
+              {slot.sure === true ? ` · ${T.wasSure}` : slot.sure === false ? ` · ${T.wasUnsure}` : ''}
+            </Txt>
+          ) : (
+            <Txt size={11} color={c.muted} style={{ textAlign: 'center' }}>
+              {T.answeredN(answered, run.slots.length)}
+              {flaggedCount > 0 ? ` · ${T.flaggedN(flaggedCount)}` : ''}
+            </Txt>
+          )}
           <View style={[{ flexDirection: 'row', gap: 10 }, wide && { alignSelf: 'flex-end', width: 420 }]}>
             <Btn label={T.prev} onPress={() => go(Math.max(0, run.i - 1))} disabled={run.i === 0} style={{ flex: 1 }} />
-            {last ? (
+            {pending ? (
+              <Btn kind="amber" label={T.checkAnswer} onPress={check} disabled={!canCheck(slot.q, slot.picked, slot.sure)} style={{ flex: 1 }} />
+            ) : last ? (
               <Btn kind="amber" label={T.submit} onPress={submit} style={{ flex: 1 }} />
             ) : (
               <Btn kind="primary" label={T.next} onPress={() => go(run.i + 1)} style={{ flex: 1 }} />

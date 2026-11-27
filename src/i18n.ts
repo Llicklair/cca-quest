@@ -231,7 +231,7 @@ const en = {
   // calibración
   calibTitle: 'calibration · before the real exam',
   calibNote:
-    "// 20 questions that appear nowhere else in the app, built on the real exam's traps: questions in the negative, one sentence that flips the answer, wrong options that sound right. take A a few weeks before the exam and B in the last days: only the first attempt counts, because after that you remember them. mark every answer as sure or unsure.",
+    "// 20 questions that appear nowhere else in the app, built on the real exam's traps: questions in the negative, one sentence that flips the answer, wrong options that sound right. take A a few weeks before the exam and B in the last days: only the first attempt counts, because after that you remember them. mark every answer as sure or unsure, then check it: you see the right answer and the sentence that decides it, with the clock stopped while you read.",
   calibSub: (clock: string) => `20 q · ${clock} · 4 scenarios · questions you have never seen`,
   firstPct: (pct: number) => `1st ${pct}%`,
   sureAsk: 'how sure are you?',
@@ -258,6 +258,13 @@ const en = {
   wasSure: 'you were sure',
   wasUnsure: 'you were unsure',
   twinOf: (n: number) => `twin of Q${n}`,
+  checkAnswer: 'CHECK ✓',
+  checkNeedsSure: '// mark sure or unsure to check your answer.',
+  calibOk: '✓ correct',
+  calibWrong: '✗ wrong',
+  clueNow: '// highlighted in the case: the sentence that decides it.',
+  twinNow: (n: number) => `// twin of Q${n}: the same case with one sentence changed. compare them.`,
+  clockStopped: 'stopped while you read',
 
   // pregúntale a claude
   askClaude: '✦ ask claude',
@@ -608,7 +615,7 @@ const es: Strings = {
   // calibración
   calibTitle: 'calibración · antes del examen real',
   calibNote:
-    '// 20 preguntas que no salen en ningún otro sitio de la app, hechas con las trampas del examen real: preguntas en negativo, una frase que cambia la respuesta, opciones malas que suenan bien. haz la A unas semanas antes del examen y la B en los últimos días: solo cuenta el primer intento, porque después ya las recuerdas. marca en cada respuesta si estás seguro o dudas.',
+    '// 20 preguntas que no salen en ningún otro sitio de la app, hechas con las trampas del examen real: preguntas en negativo, una frase que cambia la respuesta, opciones malas que suenan bien. haz la A unas semanas antes del examen y la B en los últimos días: solo cuenta el primer intento, porque después ya las recuerdas. marca en cada respuesta si estás seguro o dudas y corrígela: verás la buena y la frase que decide, con el reloj parado mientras lees.',
   calibSub: (clock) => `20 preguntas · ${clock} · 4 escenarios · nunca vistas`,
   firstPct: (pct) => `1º ${pct}%`,
   sureAsk: '¿cómo de seguro estás?',
@@ -635,6 +642,13 @@ const es: Strings = {
   wasSure: 'estabas seguro',
   wasUnsure: 'dudabas',
   twinOf: (n) => `gemela de la P${n}`,
+  checkAnswer: 'CORREGIR ✓',
+  checkNeedsSure: '// marca seguro o dudo para corregirla.',
+  calibOk: '✓ correcta',
+  calibWrong: '✗ fallada',
+  clueNow: '// resaltada en el caso: la frase que decide.',
+  twinNow: (n) => `// gemela de la P${n}: el mismo caso con una frase cambiada. compáralas.`,
+  clockStopped: 'parado mientras lees',
 
   askClaude: '✦ pregúntale a claude',
   askCopied: '// también copiada: si claude.ai se abre vacío, pégala',
