@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions
 
 import * as feel from '../feel.ts';
 import {
+  CALIBRATION_LABELS,
   DOMAINS,
   EXAM,
   EXAM_LEVEL_60_LABEL,
@@ -11,8 +12,11 @@ import {
   SETTINGS,
   bestScore,
   buildExam,
+  firstScore,
   fixedExams,
+  isCalibration,
   isMulti,
+  isRepeat,
   isRight,
   isWeighted,
   levelExam,
@@ -29,7 +33,8 @@ import {
 import { examPrompt, studyPrompt } from '../ask.ts';
 import { STR } from '../i18n.ts';
 import { AskButton, AskClaude, MissCard, inLang } from './misses.tsx';
-import { BANK, LEVEL_BANK, LEVEL_BANK_60 } from '../bank.ts';
+import { BANK, CALIBRATION, LEVEL_BANK, LEVEL_BANK_60 } from '../bank.ts';
+import { TRAPS, calibReport } from '../calibration.ts';
 import { QUESTIONS } from '../questions.ts';
 import { useGuard } from '../shield.tsx';
 import { studyRecord } from '../study.ts';
@@ -37,8 +42,9 @@ import { trapPrompt } from '../trap.ts';
 import { Bar, BounceIn, Btn, Cmd, Panel, Rich, Tag, Txt, Typer, confirmAction } from '../term.tsx';
 import { c, domainColor, font, themed } from '../theme.ts';
 
-// picked = índice original, o máscara en las de respuesta múltiple; flag y note, lo marcado y comentado para revisar.
-export type Slot = { q: Question; order: number[]; picked: number | null; flag?: boolean; note?: string };
+// picked = índice original, o máscara en las de respuesta múltiple; flag y note, lo marcado y comentado para revisar;
+// sure, en la calibración: seguro (true), dudo (false) o sin marcar.
+export type Slot = { q: Question; order: number[]; picked: number | null; flag?: boolean; note?: string; sure?: boolean | null };
 type Run = { label: string; slots: Slot[]; i: number; per: number; limit: number };
 // En el informe de un simulacro antiguo sin respuestas guardadas, `picked` es undefined.
 type Shown = Omit<Slot, 'picked'> & { picked?: number | null };
@@ -55,16 +61,18 @@ const LEVEL_60 = levelExam(LEVEL_BANK_60);
 const LEVEL = levelExam(LEVEL_BANK);
 // Para volver a abrir un simulacro ya hecho: todas las preguntas por id y, para los antiguos que no
 // guardaban sus preguntas, las de los fijos por etiqueta (ver replayExam).
-const BY_ID = new Map([...BANK, ...LEVEL_BANK].map((q) => [q.id, q]));
+const BY_ID = new Map([...BANK, ...LEVEL_BANK, ...Object.values(CALIBRATION).flat()].map((q) => [q.id, q]));
 const FIXED_BY_LABEL: Record<string, Question[]> = {
   ...Object.fromEntries(FIXED.map((qs, n) => [`exam ${n + 1}`, qs])),
   [EXAM_LEVEL_60_LABEL]: LEVEL_60,
   [EXAM_LEVEL_LABEL]: LEVEL,
+  ...CALIBRATION,
 };
 const LEVEL_60_PER = LEVEL_60.length / Object.keys(SETTINGS).length;
 const LEVEL_PER = LEVEL.length / Object.keys(SETTINGS).length;
+// La calibración va como el rápido: 4 escenarios de 5 preguntas.
 const perOf = (label: string) =>
-  label === 'quick'
+  label === 'quick' || isCalibration(label)
     ? EXAM.quickPerScenario
     : label === EXAM_LEVEL_60_LABEL
       ? LEVEL_60_PER
@@ -118,6 +126,7 @@ export function Exam({
     limit: r.limit,
     flags: r.slots.map((s) => Boolean(s.flag)),
     notes: r.slots.map((s) => s.note ?? ''),
+    ...(isCalibration(r.label) ? { sure: r.slots.map((s) => s.sure ?? null) } : {}),
   });
 
   const update = (r: Run) => {
@@ -180,7 +189,7 @@ export function Exam({
   const resume = (d: ExamDraft) => {
     const slots = d.ids.flatMap((id, k) => {
       const q = BY_ID.get(id);
-      return q ? [{ q, order: d.orders[k], picked: d.picked[k], flag: d.flags?.[k], note: d.notes?.[k] || undefined }] : [];
+      return q ? [{ q, order: d.orders[k], picked: d.picked[k], flag: d.flags?.[k], note: d.notes?.[k] || undefined, sure: d.sure?.[k] ?? null }] : [];
     });
     update({ label: d.label, slots, i: Math.min(d.i, slots.length - 1), per: perOf(d.label), limit: d.limit });
     elapsedRef.current = d.elapsed;
@@ -232,6 +241,13 @@ export function Exam({
 
   const toggleFlag = () => {
     const next = patchSlot({ flag: !run?.slots[run.i].flag });
+    if (next) onSaveDraft(draftOf(next, elapsedRef.current));
+    feel.tap();
+  };
+
+  // Seguro o dudo: otro toque en el mismo lo desmarca.
+  const markSure = (sure: boolean) => {
+    const next = patchSlot({ sure: run?.slots[run.i].sure === sure ? null : sure });
     if (next) onSaveDraft(draftOf(next, elapsedRef.current));
     feel.tap();
   };
@@ -320,6 +336,26 @@ export function Exam({
             disabled={Boolean(d) || LEVEL.length === 0}
             onPress={() => begin(EXAM_LEVEL_LABEL, LEVEL, LEVEL_PER)}
           />
+        </Panel>
+
+        <Panel title={T.calibTitle} color={c.cyan} titleColor={c.cyan}>
+          <Txt size={12} color={c.muted} style={{ marginBottom: 6 }}>
+            {T.calibNote}
+          </Txt>
+          {CALIBRATION_LABELS.map((label) => {
+            const qs = CALIBRATION[label];
+            return (
+              <ExamRow
+                key={label}
+                title={T.examLabel(label)}
+                sub={T.calibSub(clock(qs.length * EXAM.secsPerQuestion))}
+                best={firstScore(p, label)}
+                bestLabel={T.firstPct}
+                disabled={Boolean(d) || qs.length === 0}
+                onPress={() => begin(label, qs, EXAM.quickPerScenario)}
+              />
+            );
+          })}
         </Panel>
 
         <Panel title={T.quickTitle(clock(20 * EXAM.secsPerQuestion))}>
@@ -416,6 +452,7 @@ export function Exam({
     const dom = DOMAINS.find((d) => d.id === slot.q.domain)!;
     const last = run.i + 1 === run.slots.length;
     const showNote = noteOpen || Boolean(slot.note);
+    const calib = isCalibration(run.label);
 
     const scenario = (
       <>
@@ -463,9 +500,8 @@ export function Exam({
             style={s.note}
           />
         )}
-        <Txt bold size={15} color={c.green}>
-          ? {text(slot.q).ask}
-        </Txt>
+        {/* En la calibración, la palabra que le da la vuelta a la pregunta (NOT, LEAST, FIRST…) sale resaltada. */}
+        <Rich text={`? ${text(slot.q).ask}`} bold size={15} color={c.green} mark={[text(slot.q).twist]} />
         {isMulti(slot.q) && <Tag label={T.selectN(rightOf(slot.q).length)} color={c.cyan} />}
         {slot.order.map((orig, pos) => {
           const on = isMulti(slot.q) ? ((slot.picked ?? 0) & (1 << orig)) !== 0 : slot.picked === orig;
@@ -484,8 +520,35 @@ export function Exam({
             </Pressable>
           );
         })}
-        {/* Como en el examen no hay corrección hasta entregar, Claude ayuda a entenderla sin decir la buena. */}
-        <AskClaude q={slot.q} lang={p.lang} order={slot.order} reveal={false} />
+        {calib ? (
+          // En la calibración no hay ayuda de Claude: la nota tiene que ser solo tuya, como en el examen.
+          <View style={s.sureRow}>
+            <Txt size={12} color={c.muted}>
+              {T.sureAsk}
+            </Txt>
+            {[true, false].map((v) => {
+              const on = slot.sure === v;
+              const tone = v ? c.green : c.amber;
+              return (
+                <Pressable
+                  key={String(v)}
+                  onPress={() => markSure(v)}
+                  hitSlop={6}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: on }}
+                  style={[s.sure, { borderColor: on ? tone : c.lineHi }, on && { backgroundColor: v ? c.greenBg : c.amberBg }]}
+                >
+                  <Txt bold size={12} color={on ? tone : c.muted}>
+                    {v ? T.sure : T.unsure}
+                  </Txt>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : (
+          // Como en el examen no hay corrección hasta entregar, Claude ayuda a entenderla sin decir la buena.
+          <AskClaude q={slot.q} lang={p.lang} order={slot.order} reveal={false} />
+        )}
       </>
     );
 
@@ -551,12 +614,19 @@ export function Exam({
   if (phase.kind !== 'report') return null;
   const { result, gained, known } = phase;
   const weighted = isWeighted(result.label);
+  const calib = isCalibration(result.label);
   const score = pct(scoreOf(result));
   const passed = score >= EXAM.target * 100;
   // Cada pregunta con su número en el examen, para que el índice de marcadas y las fichas casen.
   const numbered = phase.slots.map((x, k) => ({ ...x, n: k + 1, ok: known && isRight(x.q, x.picked ?? null) }));
   const wrong = known ? numbered.filter((x) => !x.ok) : [];
   const marked = numbered.filter((x) => x.flag || x.note);
+  // En la calibración: seguridad frente a acierto, trampas y gemelas; y las falladas estando seguro, primero.
+  const cal = calib && known ? calibReport(numbered) : null;
+  const twinOf = (x: (typeof numbered)[number]) => (x.q.pair ? numbered.find((y) => y.q.id === x.q.pair)?.n : undefined);
+  const calibOf = (x: (typeof numbered)[number]) => (calib ? { sure: x.sure, twin: twinOf(x) } : undefined);
+  if (cal) wrong.sort((a, b) => Number(b.sure === true) - Number(a.sure === true) || a.n - b.n);
+  const qList = (ns: number[]) => ns.map(T.qN).join(' · ');
   // Las acertadas que no salen ya entre las marcadas.
   const rightRest = numbered.filter((x) => x.ok && !(x.flag || x.note));
   const headOf = (x: (typeof numbered)[number]) => `${T.qN(x.n)}${x.flag ? ' · ⚑' : ''}`;
@@ -575,6 +645,7 @@ export function Exam({
         ts: x.q.ts,
         flag: x.flag,
         note: x.note,
+        sure: x.sure,
       })),
     );
   return (
@@ -601,8 +672,81 @@ export function Exam({
           <Txt size={12} color={passed ? c.green : c.amber} style={{ marginTop: 4 }}>
             {passed ? T.onTrack : T.below(EXAM.target * 100)}
           </Txt>
+          {calib && isRepeat(p, result) && (
+            <Txt size={12} color={c.amber} style={{ marginTop: 4 }}>
+              {T.calibRepeat}
+            </Txt>
+          )}
         </Panel>
       </BounceIn>
+      {cal && (
+        <Panel title={T.calibReport} color={c.cyan} titleColor={c.cyan}>
+          {cal.sureWrong.length ? (
+            <>
+              <Txt bold color={c.red}>
+                {T.sureWrong(qList(cal.sureWrong))}
+              </Txt>
+              <Txt size={11} color={c.muted}>
+                {T.sureWrongHint}
+              </Txt>
+            </>
+          ) : (
+            <Txt bold color={c.green}>
+              {T.noSureWrong}
+            </Txt>
+          )}
+          {cal.unsureRight.length > 0 && (
+            <>
+              <Txt bold color={c.amber} style={{ marginTop: 6 }}>
+                {T.unsureRight(qList(cal.unsureRight))}
+              </Txt>
+              <Txt size={11} color={c.muted}>
+                {T.unsureRightHint}
+              </Txt>
+            </>
+          )}
+          {cal.unmarked > 0 && (
+            <Txt size={11} color={c.muted} style={{ marginTop: 6 }}>
+              {T.unmarked(cal.unmarked)}
+            </Txt>
+          )}
+          <Txt bold style={{ marginTop: 10 }}>
+            {T.trapsFell}
+          </Txt>
+          {cal.traps.length === 0 ? (
+            <Txt size={12} color={c.muted}>
+              {T.noTraps}
+            </Txt>
+          ) : (
+            cal.traps.map(({ trap, n }) => (
+              <View key={trap} style={{ marginTop: 4 }}>
+                <Txt size={13} bold color={c.red}>
+                  {TRAPS[trap].name[p.lang]} ×{n.length}{' '}
+                  <Txt size={12} color={c.muted}>
+                    · {qList(n)}
+                  </Txt>
+                </Txt>
+                <Rich text={TRAPS[trap].tip[p.lang]} size={12} color={c.muted} />
+              </View>
+            ))
+          )}
+          {cal.pairs.length > 0 && (
+            <>
+              <Txt bold style={{ marginTop: 10 }}>
+                {T.pairsTitle}
+              </Txt>
+              {cal.pairs.map((x) => (
+                <Txt key={x.a} size={13} color={x.okA && x.okB ? c.green : c.red}>
+                  {T.pairLine(x.a, x.b)} · {x.okA && x.okB ? T.pairBoth : x.okA || x.okB ? T.pairOne : T.pairNone}
+                </Txt>
+              ))}
+            </>
+          )}
+          <Txt size={11} color={c.muted} style={{ marginTop: 10 }}>
+            {T.clueHint}
+          </Txt>
+        </Panel>
+      )}
       <Panel title={T.byDomain}>
         {DOMAINS.map((d) => {
           const [r, t] = result.byDomain[d.id] ?? [0, 0];
@@ -657,7 +801,7 @@ export function Exam({
           {marked
             .filter((x) => x.ok)
             .map((x) => (
-              <MissCard key={`ok${x.q.id}`} q={x.q} picked={x.picked} lang={p.lang} T={T} full note={x.note} head={`✓ ${headOf(x)}`} />
+              <MissCard key={`ok${x.q.id}`} q={x.q} picked={x.picked} lang={p.lang} T={T} full note={x.note} head={`✓ ${headOf(x)}`} calib={calibOf(x)} />
             ))}
         </>
       )}
@@ -667,7 +811,7 @@ export function Exam({
         </Cmd>
       )}
       {wrong.map((x) => (
-        <MissCard key={x.q.id} q={x.q} picked={x.picked} lang={p.lang} T={T} full note={x.note} head={headOf(x)} />
+        <MissCard key={x.q.id} q={x.q} picked={x.picked} lang={p.lang} T={T} full note={x.note} head={headOf(x)} calib={calibOf(x)} />
       ))}
       {rightRest.length > 0 && (
         <Txt bold color={c.cyan} onPress={() => setShowRight(!showRight)} style={{ marginTop: 4 }}>
@@ -677,7 +821,7 @@ export function Exam({
       {showRight && rightRest.length > 0 && <Cmd>{T.rightOnes(rightRest.length)}</Cmd>}
       {showRight &&
         rightRest.map((x) => (
-          <MissCard key={`r${x.q.id}`} q={x.q} picked={x.picked} lang={p.lang} T={T} full head={`✓ ${headOf(x)}`} />
+          <MissCard key={`r${x.q.id}`} q={x.q} picked={x.picked} lang={p.lang} T={T} full head={`✓ ${headOf(x)}`} calib={calibOf(x)} />
         ))}
       <View style={{ gap: 10, marginTop: 6 }}>
         <Btn kind="amber" label={T.examList} onPress={() => setPhase({ kind: 'menu' })} />
@@ -737,5 +881,7 @@ const s = themed(() =>
     histRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 3 },
     histPress: { paddingVertical: 4, borderRadius: 3 },
     row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: c.line },
+    sureRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginTop: 4 },
+    sure: { borderWidth: 1, borderRadius: 3, paddingHorizontal: 12, paddingVertical: 6 },
   }),
 );

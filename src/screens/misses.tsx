@@ -8,6 +8,7 @@ import { misses, pickedOf, rightOf, roundPool, type Lang, type Progress, type Qu
 import { STR, type Strings } from '../i18n.ts';
 import { Btn, Cmd, Panel, Rich, Txt, Typer } from '../term.tsx';
 import { recordItem } from '../study.ts';
+import { TRAPS, trapOf } from '../calibration.ts';
 import { c, domainColor } from '../theme.ts';
 
 /** La pregunta en el idioma elegido (las opciones y explicaciones van en el mismo orden). */
@@ -82,6 +83,7 @@ export function MissCard({
   full,
   note,
   head,
+  calib,
 }: {
   q: Question;
   picked: number | null | undefined;
@@ -90,23 +92,39 @@ export function MissCard({
   full?: boolean;
   note?: string; // el comentario que dejaste en el simulacro
   head?: string; // delante del dominio, p. ej. "P12 · ⚑" en el informe del simulacro
+  // En la calibración: la frase que decide y la palabra del giro resaltadas, la trampa de lo que
+  // elegiste, si estabas seguro y, en las gemelas, el número de la otra.
+  calib?: { sure?: boolean | null; twin?: number };
 }) {
   const tx = inLang(q, lang);
   const rights = rightOf(q);
   const wrongPicks = picked === undefined || picked === null ? [] : pickedOf(q, picked).filter((i) => !rights.includes(i));
   const scenario = !full && tx.scenario.length > 160 ? `${tx.scenario.slice(0, 160).trimEnd()}…` : tx.scenario;
+  const trap = calib ? trapOf(q, picked) : null;
+  const tags = calib
+    ? [calib.sure === true ? T.wasSure : calib.sure === false ? T.wasUnsure : '', calib.twin ? T.twinOf(calib.twin) : ''].filter(Boolean)
+    : [];
   return (
     <Panel color={c.line}>
       <Txt size={11} bold color={domainColor[q.domain]}>
         {head ? `${head} · ` : ''}
         {q.ts ? `task ${q.ts}` : q.domain}
+        {tags.length ? ` · ${tags.join(' · ')}` : ''}
       </Txt>
-      <Rich text={scenario} size={12} color={c.muted} style={{ marginTop: 2 }} />
-      <Rich text={tx.ask} bold color={c.green} style={{ marginTop: 4 }} />
+      <Rich text={scenario} size={12} color={c.muted} style={{ marginTop: 2 }} mark={calib ? [tx.clue] : undefined} />
+      <Rich text={tx.ask} bold color={c.green} style={{ marginTop: 4 }} mark={calib ? [tx.twist] : undefined} />
       {picked === null && <Rich text={`- ${T.noAnswer}`} size={13} color={c.red} style={{ marginTop: 6 }} />}
       {wrongPicks.map((i) => (
         <Rich key={`w${i}`} text={`- ${tx.options[i]}`} size={13} color={c.red} style={{ marginTop: 6 }} />
       ))}
+      {trap && (
+        <View style={{ marginTop: 4 }}>
+          <Txt size={12} bold color={c.red}>
+            [{T.trapTag(TRAPS[trap].name[lang])}]
+          </Txt>
+          <Rich text={TRAPS[trap].tip[lang]} size={12} color={c.muted} />
+        </View>
+      )}
       {rights.map((i) => (
         <View key={`r${i}`}>
           <Rich text={`+ ${tx.options[i]}`} size={13} color={c.green} style={{ marginTop: 4 }} />

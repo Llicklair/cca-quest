@@ -37,7 +37,26 @@ export type Question = {
   answers?: number[]; // solo en las de respuesta múltiple ("select 2"): todas las buenas, en orden
   why: string[]; // una explicación por opción, en el mismo orden
   rule: string; // la idea que hay que llevarse
+  // Solo en las de calibración (questions-calibration.ts):
+  twist?: string; // las palabras de `ask` que le dan la vuelta (NOT, LEAST, FIRST…), resaltadas mientras se contesta
+  clue?: string; // la frase de `scenario` que decide la respuesta, resaltada al corregir
+  traps?: (Trap | null)[]; // la trampa que representa cada opción mala (null en la buena), en el orden de options
+  pair?: string; // la gemela: el mismo caso con una frase cambiada y otra respuesta buena
 };
+
+/** Las trampas en las que se cae en el examen real (ver calibration.ts para sus nombres y explicaciones). */
+export type Trap =
+  | 'invented'
+  | 'overforce'
+  | 'underforce'
+  | 'capacity'
+  | 'overbuild'
+  | 'wrong-diagnosis'
+  | 'mixed-up'
+  | 'voting'
+  | 'ignored-clue'
+  | 'negation'
+  | 'order';
 
 // --- Respuesta múltiple ---
 // El examen real tiene preguntas de "elige 2" (guía v1.0). Lo elegido en una de ellas se guarda
@@ -114,7 +133,7 @@ export type Lang = 'en' | 'es';
 export type Theme = 'dark' | 'light';
 
 /** Lo traducible de una pregunta. */
-export type QuestionText = { scenario: string; ask: string; options: string[]; why: string[]; rule: string };
+export type QuestionText = { scenario: string; ask: string; options: string[]; why: string[]; rule: string; twist?: string; clue?: string };
 
 /** Texto en los dos idiomas: inglés como el examen, español para cuando algo no se entienda. */
 export type Bi = { en: string; es: string };
@@ -157,7 +176,7 @@ export type Progress = {
 export type Profile = { id: string; name: string; public: boolean };
 
 export type ExamResult = {
-  label: string; // 'exam 1'…'exam 4', 'random', 'quick', 'exam-level' (66) o 'exam-level 60'
+  label: string; // 'exam 1'…'exam 4', 'random', 'quick', 'exam-level' (66), 'exam-level 60', 'calibration A' o 'calibration B'
   day: string;
   right: number;
   total: number;
@@ -166,17 +185,23 @@ export type ExamResult = {
   slots?: SavedSlot[]; // las preguntas y lo que contestaste, para volver a verlas (no está en los simulacros antiguos)
 };
 
-/** Una pregunta de un simulacro hecho: cuál, en qué orden salieron sus opciones y qué elegiste. */
-export type SavedSlot = { id: string; order: number[]; picked: number | null; flag?: boolean; note?: string };
+/**
+ * Una pregunta de un simulacro hecho: cuál, en qué orden salieron sus opciones y qué elegiste.
+ * `sure`: en la calibración, si marcaste que estabas seguro (true) o que dudabas (false).
+ */
+export type SavedSlot = { id: string; order: number[]; picked: number | null; flag?: boolean; note?: string; sure?: boolean };
 
 /** Lo que se guarda de cada pregunta al entregar: sin marcas ni notas vacías, para que ocupe poco. */
-export function savedSlots(slots: { q: Question; order: number[]; picked: number | null; flag?: boolean; note?: string }[]): SavedSlot[] {
-  return slots.map(({ q, order, picked, flag, note }) => ({
+export function savedSlots(
+  slots: { q: Question; order: number[]; picked: number | null; flag?: boolean; note?: string; sure?: boolean | null }[],
+): SavedSlot[] {
+  return slots.map(({ q, order, picked, flag, note, sure }) => ({
     id: q.id,
     order,
     picked,
     ...(flag ? { flag: true } : {}),
     ...(note?.trim() ? { note: note.trim() } : {}),
+    ...(typeof sure === 'boolean' ? { sure } : {}),
   }));
 }
 
@@ -189,11 +214,11 @@ export function replayExam(
   e: ExamResult,
   byId: Map<string, Question>,
   fixed: Record<string, Question[]>,
-): { known: boolean; slots: { q: Question; order: number[]; picked?: number | null; flag?: boolean; note?: string }[] } | null {
+): { known: boolean; slots: { q: Question; order: number[]; picked?: number | null; flag?: boolean; note?: string; sure?: boolean }[] } | null {
   if (e.slots) {
     const slots = e.slots.flatMap((x) => {
       const q = byId.get(x.id);
-      return q ? [{ q, order: x.order, picked: x.picked, flag: x.flag, note: x.note }] : [];
+      return q ? [{ q, order: x.order, picked: x.picked, flag: x.flag, note: x.note, sure: x.sure }] : [];
     });
     return slots.length ? { known: true, slots } : null;
   }
@@ -633,6 +658,7 @@ export type ExamDraft = {
   limit: number; // segundos totales
   flags?: boolean[]; // marcadas para revisar, como el "Flag question" del examen (no están en borradores antiguos)
   notes?: string[]; // el comentario que dejaste en cada pregunta, que sale luego en el informe
+  sure?: (boolean | null)[]; // en la calibración: seguro (true), dudo (false) o sin marcar (null)
 };
 
 /** Nota de un simulacro. `picked` es el índice original elegido (la máscara, en las de respuesta múltiple) o null si se quedó sin contestar. */
@@ -666,8 +692,12 @@ export function weightedScore(byDomain: ExamResult['byDomain']): number {
   return weights ? sum / weights : 0;
 }
 
-/** Si la nota de este simulacro se pondera por dominio. */
-export const isWeighted = (label: string): boolean => label === EXAM_LEVEL_LABEL || label === EXAM_LEVEL_60_LABEL;
+/** Las dos tandas de calibración: preguntas que no salen en ningún otro sitio, para hacer una vez antes del examen. */
+export const CALIBRATION_LABELS = ['calibration A', 'calibration B'] as const;
+export const isCalibration = (label: string): boolean => (CALIBRATION_LABELS as readonly string[]).includes(label);
+
+/** Si la nota de este simulacro se pondera por dominio: los de nivel real y la calibración. */
+export const isWeighted = (label: string): boolean => label === EXAM_LEVEL_LABEL || label === EXAM_LEVEL_60_LABEL || isCalibration(label);
 
 /** Nota de un intento (de 0 a 1): ponderada en el nivel real, aciertos/preguntas en el resto. */
 export function scoreOf(e: ExamResult): number {
@@ -679,6 +709,18 @@ export function scoreOf(e: ExamResult): number {
 export function bestScore(p: Progress, label: string): number | null {
   const mine = p.exams.filter((e) => e.label === label);
   return mine.length ? Math.max(...mine.map(scoreOf)) : null;
+}
+
+/** Nota del primer intento (de 0 a 1), o null si no se ha hecho: en la calibración solo vale ese. */
+export function firstScore(p: Progress, label: string): number | null {
+  const mine = p.exams.filter((e) => e.label === label);
+  return mine.length ? scoreOf(mine[mine.length - 1]) : null;
+}
+
+/** Si este intento repite un simulacro que ya se había hecho antes (el historial va del más reciente al más antiguo). */
+export function isRepeat(p: Progress, e: ExamResult): boolean {
+  const k = p.exams.indexOf(e);
+  return k >= 0 && p.exams.slice(k + 1).some((x) => x.label === e.label);
 }
 
 // --- Fallos ---
