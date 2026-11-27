@@ -1,11 +1,12 @@
-// La calibración: dos tandas de 20 preguntas que no salen en ningún otro sitio de la app, para hacer
-// una sola vez antes del examen real. El examen pone trampas que el banco no entrenaba (preguntas en
+// La calibración: dos tandas de 20 preguntas que no salen en ningún otro sitio de la app, para entrenar
+// antes del examen real. El examen pone trampas que el banco no entrenaba (preguntas en
 // negativo, una frase que cambia la respuesta), y los simulacros, de tanto repetirlos, se reconocen en
 // vez de razonarse, así que su nota sale más alta de lo que toca. Es un entrenamiento: cada opción mala
 // lleva su trampa y, mientras se contesta, salen resaltadas la palabra que le da la vuelta a la pregunta
 // y la frase del caso que decide, para aprender a fijarse en ellas y reconocerlas en el examen. En cada
 // pregunta se marca si estabas seguro o dudabas y después se corrige al momento: la buena, el porqué de
-// cada opción y la trampa en la que caíste.
+// cada opción y la trampa en la que caíste. Se repite las veces que haga falta: cada informe compara
+// con el intento anterior, para ir viendo si vas calibrando.
 import type { Bi, Question, Trap } from './game.ts';
 import { isRight, pickedOf, rightOf } from './game.ts';
 

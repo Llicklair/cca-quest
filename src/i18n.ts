@@ -231,9 +231,8 @@ const en = {
   // calibración
   calibTitle: 'calibration · before the real exam',
   calibNote:
-    "// 20 questions that appear nowhere else in the app, built on the real exam's traps: questions in the negative, one sentence that flips the answer, wrong options that sound right. the twist word and the sentence that decides each case are highlighted, so you learn to spot them in the real exam. mark every answer as sure or unsure, then check it: you see the right answer and why, with the clock stopped while you read. take A a few weeks before the exam and B in the last days: only the first attempt counts, because after that you remember them.",
-  calibSub: (clock: string) => `20 q · ${clock} · 4 scenarios · questions you have never seen`,
-  firstPct: (pct: number) => `1st ${pct}%`,
+    "// 20 questions that appear nowhere else in the app, built on the real exam's traps: questions in the negative, one sentence that flips the answer, wrong options that sound right. the twist word and the sentence that decides each case are highlighted, so you learn to spot them in the question and in the case, and recognize similar ones in the real exam. mark every answer as sure or unsure, then check it: you see the right answer and why, with the clock stopped while you read. repeat them as often as you like: each report compares you with your previous attempt.",
+  calibSub: (clock: string) => `20 q · ${clock} · 4 scenarios · traps highlighted`,
   sureAsk: 'how sure are you?',
   sure: '✓ sure',
   unsure: '? unsure',
@@ -251,8 +250,8 @@ const en = {
   pairBoth: '✓ both right',
   pairOne: '✗ one wrong: compare the highlighted sentence in each',
   pairNone: '✗ both wrong',
-  calibRepeat:
-    '// you had already taken this calibration: this score no longer tells you if you are ready, because you remember the questions. the first attempt is the one that counts.',
+  calibTrend: (before: number, now: number) => `vs your previous attempt: ${before}% → ${now}%`,
+  calibTrendSure: (before: number, now: number) => `wrong while sure: ${before} → ${now}`,
   clueHint: '// highlighted in each case: the phrase that decides it.',
   trapTag: (name: string) => `trap: ${name}`,
   wasSure: 'you were sure',
@@ -615,9 +614,8 @@ const es: Strings = {
   // calibración
   calibTitle: 'calibración · antes del examen real',
   calibNote:
-    '// 20 preguntas que no salen en ningún otro sitio de la app, hechas con las trampas del examen real: preguntas en negativo, una frase que cambia la respuesta, opciones malas que suenan bien. salen resaltadas la palabra del giro y la frase que decide cada caso, para que aprendas a verlas en el examen real. marca en cada respuesta si estás seguro o dudas y corrígela: verás la buena y el porqué, con el reloj parado mientras lees. haz la A unas semanas antes del examen y la B en los últimos días: solo cuenta el primer intento, porque después ya las recuerdas.',
-  calibSub: (clock) => `20 preguntas · ${clock} · 4 escenarios · nunca vistas`,
-  firstPct: (pct) => `1º ${pct}%`,
+    '// 20 preguntas que no salen en ningún otro sitio de la app, hechas con las trampas del examen real: preguntas en negativo, una frase que cambia la respuesta, opciones malas que suenan bien. salen resaltadas la palabra del giro y la frase que decide cada caso, para que aprendas a verlas en la pregunta y en el caso, y reconozcas las parecidas en el examen real. marca en cada respuesta si estás seguro o dudas y corrígela: verás la buena y el porqué, con el reloj parado mientras lees. repítelas las veces que quieras: cada informe te compara con tu intento anterior.',
+  calibSub: (clock) => `20 preguntas · ${clock} · 4 escenarios · trampas resaltadas`,
   sureAsk: '¿cómo de seguro estás?',
   sure: '✓ seguro',
   unsure: '? dudo',
@@ -635,8 +633,8 @@ const es: Strings = {
   pairBoth: '✓ las dos bien',
   pairOne: '✗ una mal: compara la frase resaltada de cada una',
   pairNone: '✗ las dos mal',
-  calibRepeat:
-    '// ya habías hecho esta calibración: esta nota ya no dice si estás listo, porque recuerdas las preguntas. la que cuenta es la del primer intento.',
+  calibTrend: (before, now) => `frente a tu intento anterior: ${before}% → ${now}%`,
+  calibTrendSure: (before, now) => `falladas estando seguro: ${before} → ${now}`,
   clueHint: '// resaltada en cada caso: la frase que decide.',
   trapTag: (name) => `trampa: ${name}`,
   wasSure: 'estabas seguro',

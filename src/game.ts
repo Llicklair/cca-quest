@@ -712,16 +712,16 @@ export function bestScore(p: Progress, label: string): number | null {
   return mine.length ? Math.max(...mine.map(scoreOf)) : null;
 }
 
-/** Nota del primer intento (de 0 a 1), o null si no se ha hecho: en la calibración solo vale ese. */
-export function firstScore(p: Progress, label: string): number | null {
-  const mine = p.exams.filter((e) => e.label === label);
-  return mine.length ? scoreOf(mine[mine.length - 1]) : null;
-}
+/** Lo que identifica un simulacro hecho, también en la copia que llega de otro dispositivo. */
+export const examKey = (e: ExamResult) => `${e.label}|${e.day}|${e.secs}|${e.right}/${e.total}`;
 
-/** Si este intento repite un simulacro que ya se había hecho antes (el historial va del más reciente al más antiguo). */
-export function isRepeat(p: Progress, e: ExamResult): boolean {
-  const k = p.exams.indexOf(e);
-  return k >= 0 && p.exams.slice(k + 1).some((x) => x.label === e.label);
+/**
+ * El intento anterior de este mismo simulacro, o null si es el primero (el historial va del más
+ * reciente al más antiguo). En la calibración, para ver si vas mejorando de un intento a otro.
+ */
+export function previousAttempt(p: Progress, e: ExamResult): ExamResult | null {
+  const k = p.exams.findIndex((x) => examKey(x) === examKey(e));
+  return (k >= 0 ? p.exams.slice(k + 1) : p.exams).find((x) => x.label === e.label) ?? null;
 }
 
 // --- Fallos ---

@@ -1,6 +1,6 @@
 // Junta dos copias del progreso (la del móvil y la del PC) sin perder lo estudiado en
 // ninguna. Lógica pura, sin React ni Expo, para poder probarla con node --test.
-import type { Card, ExamResult, Progress } from './game.ts';
+import { examKey, type Card, type ExamResult, type Progress } from './game.ts';
 
 /** Lo que viaja al servidor: todo menos los avisos y el tema, que son de cada dispositivo. */
 export type Shared = Omit<Progress, 'reminder' | 'theme'>;
@@ -23,8 +23,6 @@ function union<T>(a: Record<string, T>, b: Record<string, T>, pick: (x: T | unde
   for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) out[k] = pick(a[k], b[k]);
   return out;
 }
-
-const examKey = (e: ExamResult) => `${e.label}|${e.day}|${e.secs}|${e.right}/${e.total}`;
 
 /**
  * Une el progreso local con el que llega del otro dispositivo. Los avisos se quedan como
