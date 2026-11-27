@@ -365,6 +365,30 @@ export const TERMS: Term[] = [
     },
   },
   {
+    term: '/install-github-app',
+    domain: 'claude-code',
+    def: {
+      en: 'Claude Code command that sets up GitHub Actions: it installs the Claude GitHub App, stores the API key (or OAuth token) as a repository secret and opens a PR with the workflow. Only for github.com repositories, and you need admin access to the repo.',
+      es: 'Comando de Claude Code que monta GitHub Actions: instala la Claude GitHub App, guarda la API key (o el token OAuth) como secreto del repositorio y abre una PR con el workflow. Solo para repositorios de github.com, y hace falta ser admin del repo.',
+    },
+  },
+  {
+    term: '@claude',
+    domain: 'claude-code',
+    def: {
+      en: "Default trigger phrase of Claude Code GitHub Actions: write it in an issue or PR comment and Claude answers there. It works when the workflow has no `prompt` (interactive mode); with a `prompt`, the action runs on the workflow's event by itself. `trigger_phrase` changes it.",
+      es: 'Frase que lanza por defecto Claude Code en GitHub Actions: escríbela en un comentario de un issue o una PR y Claude responde ahí. Funciona cuando el workflow no tiene `prompt` (modo interactivo); con un `prompt`, la action se ejecuta sola con el evento del workflow. `trigger_phrase` la cambia.',
+    },
+  },
+  {
+    term: 'claude_args',
+    domain: 'claude-code',
+    def: {
+      en: 'Input of `anthropics/claude-code-action@v1` that passes any Claude Code CLI argument: `--max-turns`, `--model`, `--allowedTools`, `--mcp-config`, `--append-system-prompt`… In v1 it replaces beta inputs such as `max_turns`, `model` and `custom_instructions`.',
+      es: 'Input de `anthropics/claude-code-action@v1` que pasa cualquier argumento de la CLI de Claude Code: `--max-turns`, `--model`, `--allowedTools`, `--mcp-config`, `--append-system-prompt`… En la v1 sustituye a inputs de la beta como `max_turns`, `model` y `custom_instructions`.',
+    },
+  },
+  {
     term: '--append-system-prompt',
     domain: 'claude-code',
     def: {

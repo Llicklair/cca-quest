@@ -1006,6 +1006,26 @@ export const LESSONS: Lesson[] = [
         en: 'Provide the existing test files in context so generated tests do not repeat scenarios the suite already covers.',
         es: 'Pasa los ficheros de test existentes en el contexto para que los tests generados no repitan escenarios que la suite ya cubre.',
       },
+      {
+        en: 'On GitHub, Claude Code runs as a GitHub Action (`anthropics/claude-code-action@v1`). Quick setup: `/install-github-app` inside `claude` (github.com repos only, repo admin) installs the Claude GitHub App, stores the `ANTHROPIC_API_KEY` secret (or `CLAUDE_CODE_OAUTH_TOKEN` for a subscription) and opens a PR with the workflow.',
+        es: 'En GitHub, Claude Code funciona como una GitHub Action (`anthropics/claude-code-action@v1`). Montaje rápido: `/install-github-app` dentro de `claude` (solo repos de github.com, siendo admin del repo) instala la Claude GitHub App, guarda el secreto `ANTHROPIC_API_KEY` (o `CLAUDE_CODE_OAUTH_TOKEN` con una suscripción) y abre una PR con el workflow.',
+      },
+      {
+        en: 'The action picks its mode by itself: with no `prompt` input it waits for `@claude` in an issue or PR comment and answers there; with a `prompt` it runs on the workflow\'s event (every `pull_request`, a `schedule`…) without anyone mentioning it.',
+        es: 'La action elige el modo sola: sin el input `prompt` espera a que alguien escriba `@claude` en un comentario de un issue o una PR y responde ahí; con un `prompt` se ejecuta con el evento del workflow (cada `pull_request`, un `schedule`…) sin que nadie la mencione.',
+      },
+      {
+        en: 'In v1 every Claude Code CLI option goes in `claude_args`: `--max-turns`, `--model`, `--allowedTools`, `--mcp-config`. The beta inputs moved there: `max_turns` → `--max-turns`, `model` → `--model`, `custom_instructions` → `--append-system-prompt`.',
+        es: 'En la v1 todas las opciones de la CLI de Claude Code van en `claude_args`: `--max-turns`, `--model`, `--allowedTools`, `--mcp-config`. Los inputs de la beta pasaron ahí: `max_turns` → `--max-turns`, `model` → `--model`, `custom_instructions` → `--append-system-prompt`.',
+      },
+      {
+        en: 'Who can start it: on issue, PR and comment events the user needs write access; bots are rejected unless listed in `allowed_bots`, and PRs from forks are skipped by default. On PRs, `CLAUDE.md` and `.claude/` come from the base branch, so a PR cannot change the rules of its own review.',
+        es: 'Quién puede lanzarla: en eventos de issues, PR y comentarios hace falta permiso de escritura; los bots se rechazan salvo que estén en `allowed_bots`, y las PR de forks se saltan por defecto. En las PR, `CLAUDE.md` y `.claude/` se toman de la rama base, así que una PR no puede cambiar las reglas de su propia revisión.',
+      },
+      {
+        en: "Commits made with the default `GITHUB_TOKEN` trigger no other workflows: if CI must run on Claude's commits, use the Claude GitHub App (the default) or a custom GitHub App token. Keep costs in check with `--max-turns`, a job-level `timeout-minutes` and concurrency limits.",
+        es: 'Los commits hechos con el `GITHUB_TOKEN` por defecto no lanzan otros workflows: si la CI tiene que correr sobre los commits de Claude, usa la Claude GitHub App (la opción por defecto) o el token de una GitHub App propia. Controla el coste con `--max-turns`, un `timeout-minutes` en el job y límites de concurrencia.',
+      },
     ],
     traps: [
       {
@@ -1035,6 +1055,18 @@ export const LESSONS: Lesson[] = [
       {
         en: 'Do not parse free-form prose output in CI; enforce structure with `--output-format json` and `--json-schema`.',
         es: 'No parsees en CI una salida en prosa libre; impón la estructura con `--output-format json` y `--json-schema`.',
+      },
+      {
+        en: 'Do not count on `@claude` to review every PR: a workflow with no `prompt` only answers mentions. For automatic reviews, give it a `prompt` and a `pull_request` trigger.',
+        es: 'No esperes que `@claude` revise todas las PR: un workflow sin `prompt` solo responde a las menciones. Para revisiones automáticas, dale un `prompt` y el evento `pull_request`.',
+      },
+      {
+        en: "Do not turn `custom_instructions` into `--system-prompt` when upgrading to v1: it replaces Claude Code's default prompt. Use `--append-system-prompt`.",
+        es: 'No conviertas `custom_instructions` en `--system-prompt` al pasar a la v1: sustituye el prompt por defecto de Claude Code. Usa `--append-system-prompt`.',
+      },
+      {
+        en: "Do not open `allowed_bots` to `'*'` so one bot can start Claude: list the specific bots. And do not share a `CLAUDE_CODE_OAUTH_TOKEN` as an organization secret: it is tied to the subscription of whoever created it, so use an API key.",
+        es: "No abras `allowed_bots` a `'*'` para que un bot pueda lanzar a Claude: pon los bots concretos. Y no compartas un `CLAUDE_CODE_OAUTH_TOKEN` como secreto de la organización: va ligado a la suscripción de quien lo creó, así que usa una API key.",
       },
     ],
     example: {

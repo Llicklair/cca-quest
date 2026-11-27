@@ -76,3 +76,15 @@ test('la lección 3.6, el glosario y las fichas cuentan --bare y --append-system
   }
   assert.ok(FLASHCARDS.some((f) => f.ts === '3.6' && f.back.en.includes('--bare')));
 });
+
+test('la lección 3.6, el glosario y las fichas cuentan GitHub Actions', () => {
+  const lesson = LESSONS.find((l) => l.ts === '3.6');
+  assert.ok(lesson);
+  const text = JSON.stringify(lesson);
+  for (const key of ['claude-code-action@v1', '/install-github-app', '`prompt`', 'claude_args', 'allowed_bots', 'GITHUB_TOKEN', '--append-system-prompt']) {
+    assert.ok(text.includes(key), `la lección 3.6 no habla de ${key}`);
+  }
+  for (const term of ['/install-github-app', '@claude', 'claude_args']) assert.ok(TERMS.some((t) => t.term === term), `${term} no está en el glosario`);
+  assert.ok(FLASHCARDS.filter((f) => f.ts === '3.6' && f.id.startsWith('f-3.6-gha-')).length >= 3);
+  assert.ok(REPORTED.filter((q) => q.id.startsWith('r-ci-gha-')).length >= 5);
+});
