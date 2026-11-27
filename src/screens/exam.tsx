@@ -470,7 +470,7 @@ export function Exam({
     const last = run.i + 1 === run.slots.length;
     const showNote = noteOpen || Boolean(slot.note);
     const calib = isCalibration(run.label);
-    // En la calibración, ya corregida: la buena, lo tuyo, la trampa y la frase del caso que decide.
+    // En la calibración, ya corregida: la buena, lo tuyo y la trampa en la que caíste.
     const shown = calib && Boolean(slot.shown);
     const ok = isRight(slot.q, slot.picked);
     const trap = shown ? trapOf(slot.q, slot.picked) : null;
@@ -490,7 +490,9 @@ export function Exam({
           <Txt bold size={13} color={domainColor[slot.q.domain]} style={{ marginBottom: 8 }}>
             {T.domainOf(dom.n, dom.name)}
           </Txt>
-          <Rich text={text(slot.q).scenario} size={15} mark={shown ? [text(slot.q).clue] : undefined} />
+          {/* En la calibración, la frase del caso que decide sale resaltada desde el principio: es un
+              entrenamiento para aprender a fijarse en ella y reconocerla cuando salga una parecida. */}
+          <Rich text={text(slot.q).scenario} size={15} mark={calib ? [text(slot.q).clue] : undefined} />
         </Panel>
       </>
     );

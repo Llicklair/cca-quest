@@ -231,7 +231,7 @@ const en = {
   // calibración
   calibTitle: 'calibration · before the real exam',
   calibNote:
-    "// 20 questions that appear nowhere else in the app, built on the real exam's traps: questions in the negative, one sentence that flips the answer, wrong options that sound right. take A a few weeks before the exam and B in the last days: only the first attempt counts, because after that you remember them. mark every answer as sure or unsure, then check it: you see the right answer and the sentence that decides it, with the clock stopped while you read.",
+    "// 20 questions that appear nowhere else in the app, built on the real exam's traps: questions in the negative, one sentence that flips the answer, wrong options that sound right. the twist word and the sentence that decides each case are highlighted, so you learn to spot them in the real exam. mark every answer as sure or unsure, then check it: you see the right answer and why, with the clock stopped while you read. take A a few weeks before the exam and B in the last days: only the first attempt counts, because after that you remember them.",
   calibSub: (clock: string) => `20 q · ${clock} · 4 scenarios · questions you have never seen`,
   firstPct: (pct: number) => `1st ${pct}%`,
   sureAsk: 'how sure are you?',
@@ -615,7 +615,7 @@ const es: Strings = {
   // calibración
   calibTitle: 'calibración · antes del examen real',
   calibNote:
-    '// 20 preguntas que no salen en ningún otro sitio de la app, hechas con las trampas del examen real: preguntas en negativo, una frase que cambia la respuesta, opciones malas que suenan bien. haz la A unas semanas antes del examen y la B en los últimos días: solo cuenta el primer intento, porque después ya las recuerdas. marca en cada respuesta si estás seguro o dudas y corrígela: verás la buena y la frase que decide, con el reloj parado mientras lees.',
+    '// 20 preguntas que no salen en ningún otro sitio de la app, hechas con las trampas del examen real: preguntas en negativo, una frase que cambia la respuesta, opciones malas que suenan bien. salen resaltadas la palabra del giro y la frase que decide cada caso, para que aprendas a verlas en el examen real. marca en cada respuesta si estás seguro o dudas y corrígela: verás la buena y el porqué, con el reloj parado mientras lees. haz la A unas semanas antes del examen y la B en los últimos días: solo cuenta el primer intento, porque después ya las recuerdas.',
   calibSub: (clock) => `20 preguntas · ${clock} · 4 escenarios · nunca vistas`,
   firstPct: (pct) => `1º ${pct}%`,
   sureAsk: '¿cómo de seguro estás?',
