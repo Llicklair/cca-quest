@@ -12,15 +12,14 @@ import {
   SETTINGS,
   bestScore,
   buildExam,
-  firstScore,
   fixedExams,
   isCalibration,
   isMulti,
-  isRepeat,
   isRight,
   isWeighted,
   levelExam,
   pickedOf,
+  previousAttempt,
   replayExam,
   rightOf,
   scoreOf,
@@ -366,8 +365,8 @@ export function Exam({
                 key={label}
                 title={T.examLabel(label)}
                 sub={T.calibSub(clock(qs.length * EXAM.secsPerQuestion))}
-                best={firstScore(p, label)}
-                bestLabel={T.firstPct}
+                best={bestScore(p, label)}
+                bestLabel={T.bestPct}
                 disabled={Boolean(d) || qs.length === 0}
                 onPress={() => begin(label, qs, EXAM.quickPerScenario)}
               />
@@ -718,6 +717,10 @@ export function Exam({
   const cal = calib && known ? calibReport(numbered) : null;
   const twinOf = (x: (typeof numbered)[number]) => (x.q.pair ? numbered.find((y) => y.q.id === x.q.pair)?.n : undefined);
   const calibOf = (x: (typeof numbered)[number]) => (calib ? { sure: x.sure, twin: twinOf(x) } : undefined);
+  // Repetir la calibración es entrenar: cada informe te compara con tu intento anterior.
+  const prev = cal ? previousAttempt(p, result) : null;
+  const prevReplay = prev ? replayExam(prev, BY_ID, FIXED_BY_LABEL) : null;
+  const prevCal = prevReplay?.known ? calibReport(prevReplay.slots.map((x, k) => ({ ...x, n: k + 1 }))) : null;
   if (cal) wrong.sort((a, b) => Number(b.sure === true) - Number(a.sure === true) || a.n - b.n);
   const qList = (ns: number[]) => ns.map(T.qN).join(' · ');
   // Las acertadas que no salen ya entre las marcadas.
@@ -765,15 +768,22 @@ export function Exam({
           <Txt size={12} color={passed ? c.green : c.amber} style={{ marginTop: 4 }}>
             {passed ? T.onTrack : T.below(EXAM.target * 100)}
           </Txt>
-          {calib && isRepeat(p, result) && (
-            <Txt size={12} color={c.amber} style={{ marginTop: 4 }}>
-              {T.calibRepeat}
-            </Txt>
-          )}
         </Panel>
       </BounceIn>
       {cal && (
         <Panel title={T.calibReport} color={c.cyan} titleColor={c.cyan}>
+          {prev && (
+            <View style={{ marginBottom: 6 }}>
+              <Txt bold color={score >= pct(scoreOf(prev)) ? c.green : c.amber}>
+                {T.calibTrend(pct(scoreOf(prev)), score)}
+              </Txt>
+              {prevCal && (
+                <Txt size={12} color={cal.sureWrong.length <= prevCal.sureWrong.length ? c.green : c.amber}>
+                  {T.calibTrendSure(prevCal.sureWrong.length, cal.sureWrong.length)}
+                </Txt>
+              )}
+            </View>
+          )}
           {cal.sureWrong.length ? (
             <>
               <Txt bold color={c.red}>

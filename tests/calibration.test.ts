@@ -10,12 +10,10 @@ import {
   DOMAINS,
   SETTINGS,
   examResult,
-  firstScore,
   fresh,
-  isRepeat,
   isWeighted,
+  previousAttempt,
   savedSlots,
-  scoreOf,
   type Question,
   type Trap,
 } from '../src/game.ts';
@@ -241,7 +239,7 @@ test('marked: trocea el texto con las frases resaltadas, todas sus apariciones',
   ]);
 });
 
-test('se guarda si estabas seguro y solo cuenta el primer intento', () => {
+test('se guarda si estabas seguro y cada intento se compara con el anterior', () => {
   const saved = savedSlots([
     { q: neg, order: [0, 1, 2, 3], picked: 1, sure: true },
     { q: first, order: [0, 1, 2, 3], picked: 1, sure: false },
@@ -254,9 +252,14 @@ test('se guarda si estabas seguro y solo cuenta el primer intento', () => {
   const p = fresh('2026-11-26');
   const old = { ...examResult([{ q: neg, picked: 1 }], '2026-11-01', 60, 'calibration A') };
   const again = { ...examResult([{ q: neg, picked: 0 }], '2026-11-20', 60, 'calibration A') };
-  const withBoth = { ...p, exams: [again, old] };
-  assert.equal(firstScore(withBoth, 'calibration A'), scoreOf(old));
-  assert.equal(firstScore(withBoth, 'calibration B'), null);
-  assert.equal(isRepeat(withBoth, again), true);
-  assert.equal(isRepeat(withBoth, old), false);
+  const other = { ...examResult([{ q: neg, picked: 0 }], '2026-11-10', 60, 'calibration B') };
+  const all = { ...p, exams: [again, other, old] };
+  assert.equal(previousAttempt(all, again), old); // salta el de la otra tanda
+  assert.equal(previousAttempt(all, old), null); // el primero no tiene anterior
+  assert.equal(previousAttempt(all, other), null);
+  // la copia que llega de otro dispositivo es otro objeto, pero el mismo intento
+  assert.equal(previousAttempt(all, { ...again }), old);
+  // recién entregado, antes de que entre en el historial: el anterior es el último de esa tanda
+  const fresher = { ...examResult([{ q: neg, picked: 0 }], '2026-11-26', 30, 'calibration A') };
+  assert.equal(previousAttempt(all, fresher), again);
 });
