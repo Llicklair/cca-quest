@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BANK, BANK_ES, CALIBRATION, LEVEL_BANK } from '../src/bank.ts';
-import { TRAPS, calibReport, marked, trapOf } from '../src/calibration.ts';
+import { TRAPS, calibReport, canCheck, marked, trapOf } from '../src/calibration.ts';
 import {
   CALIBRATION_LABELS,
   DOMAINS,
@@ -186,6 +186,18 @@ test('trapOf: la trampa de lo que elegiste, nada si acertaste o no contestaste',
   assert.equal(trapOf(neg, null), null);
   assert.equal(trapOf(neg, undefined), null);
   assert.equal(trapOf(first, 2), 'capacity');
+});
+
+test('canCheck: solo se corrige con la respuesta completa y seguro o dudo marcado antes', () => {
+  assert.equal(canCheck(neg, 1, true), true);
+  assert.equal(canCheck(neg, 0, false), true);
+  assert.equal(canCheck(neg, 1, null), false); // sin marcar la seguridad, no
+  assert.equal(canCheck(neg, 1, undefined), false);
+  assert.equal(canCheck(neg, null, true), false); // sin contestar, no
+  // en las de elegir 2, solo con las dos marcadas (máscara de bits)
+  const two: Question = { ...neg, id: 'two', answers: [0, 2] };
+  assert.equal(canCheck(two, 0b0001, true), false);
+  assert.equal(canCheck(two, 0b0101, true), true);
 });
 
 test('calibReport: seguridad frente a acierto, trampas de la más repetida y gemelas', () => {

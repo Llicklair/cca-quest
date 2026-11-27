@@ -659,6 +659,7 @@ export type ExamDraft = {
   flags?: boolean[]; // marcadas para revisar, como el "Flag question" del examen (no están en borradores antiguos)
   notes?: string[]; // el comentario que dejaste en cada pregunta, que sale luego en el informe
   sure?: (boolean | null)[]; // en la calibración: seguro (true), dudo (false) o sin marcar (null)
+  shown?: boolean[]; // en la calibración: las ya corregidas, cuya respuesta ya no se puede cambiar
 };
 
 /** Nota de un simulacro. `picked` es el índice original elegido (la máscara, en las de respuesta múltiple) o null si se quedó sin contestar. */

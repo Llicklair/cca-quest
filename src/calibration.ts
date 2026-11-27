@@ -2,10 +2,11 @@
 // una sola vez antes del examen real. El examen pone trampas que el banco no entrenaba (preguntas en
 // negativo, una frase que cambia la respuesta), y los simulacros, de tanto repetirlos, se reconocen en
 // vez de razonarse, así que su nota sale más alta de lo que toca. Aquí cada opción mala lleva
-// su trampa, la palabra que le da la vuelta a la pregunta sale resaltada mientras se contesta, la frase
-// que decide sale resaltada al corregir y en cada pregunta se marca si estabas seguro o dudabas.
+// su trampa, la palabra que le da la vuelta a la pregunta sale resaltada mientras se contesta y en cada
+// pregunta se marca si estabas seguro o dudabas. Después se corrige al momento: la buena, la trampa en
+// la que caíste y la frase del caso que decide, resaltada.
 import type { Bi, Question, Trap } from './game.ts';
-import { isRight, pickedOf } from './game.ts';
+import { isRight, pickedOf, rightOf } from './game.ts';
 
 /** Cada trampa, con su nombre y la pregunta que hay que hacerse para no caer. */
 export const TRAPS: Record<Trap, { name: Bi; tip: Bi }> = {
@@ -98,6 +99,15 @@ export type CalibReport = {
   traps: { trap: Trap; n: number[] }[]; // en qué trampas caíste, de la más repetida a la menos
   pairs: { a: number; b: number; okA: boolean; okB: boolean }[]; // las gemelas que salieron enteras
 };
+
+/**
+ * Si una pregunta de la calibración ya se puede corregir: con la respuesta completa y la seguridad
+ * marcada antes de ver la buena, para que el seguro o dudo mida lo que pensabas de verdad.
+ */
+export function canCheck(q: Question, picked: number | null | undefined, sure: boolean | null | undefined): boolean {
+  if (picked === null || picked === undefined || typeof sure !== 'boolean') return false;
+  return pickedOf(q, picked).length === rightOf(q).length;
+}
 
 /** La trampa de lo que elegiste, o null si acertaste o no contestaste. */
 export function trapOf(q: Question, picked: number | null | undefined): Trap | null {
