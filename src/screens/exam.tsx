@@ -69,11 +69,13 @@ const FIXED_BY_LABEL: Record<string, Question[]> = {
 };
 const LEVEL_60_PER = LEVEL_60.length / Object.keys(SETTINGS).length;
 const LEVEL_PER = LEVEL.length / Object.keys(SETTINGS).length;
-// La calibración va como el rápido: 4 escenarios de 5 preguntas.
+// El rápido, 4 escenarios de 5 preguntas; la calibración va por parejas de gemelas: cada caso, dos veces.
 const perOf = (label: string) =>
-  label === 'quick' || isCalibration(label)
-    ? EXAM.quickPerScenario
-    : label === EXAM_LEVEL_60_LABEL
+  isCalibration(label)
+    ? 2
+    : label === 'quick'
+      ? EXAM.quickPerScenario
+      : label === EXAM_LEVEL_60_LABEL
       ? LEVEL_60_PER
       : label === EXAM_LEVEL_LABEL
         ? LEVEL_PER
@@ -86,6 +88,12 @@ const clock = (secs: number) => {
 };
 const pct = (x: number) => Math.round(100 * x);
 const toSlots = (qs: Question[]): Slot[] => qs.map((q) => ({ q, order: shuffle(q.options.map((_, k) => k)), picked: null }));
+// En la calibración cada gemela va justo después de la otra y con las opciones en el mismo orden, para
+// que se vea que solo cambia una frase y que con ella cambia la buena.
+const twinSlots = (qs: Question[]): Slot[] => {
+  const slots = toSlots(qs);
+  return slots.map((x, k) => (k > 0 && x.q.pair === slots[k - 1].q.id ? { ...x, order: slots[k - 1].order } : x));
+};
 
 export function Exam({
   p,
@@ -177,7 +185,7 @@ export function Exam({
   }, [running]);
 
   const begin = (label: string, qs: Question[], per: number) => {
-    const r: Run = { label, slots: toSlots(qs), i: 0, per, limit: qs.length * EXAM.secsPerQuestion };
+    const r: Run = { label, slots: isCalibration(label) ? twinSlots(qs) : toSlots(qs), i: 0, per, limit: qs.length * EXAM.secsPerQuestion };
     update(r);
     elapsedRef.current = 0;
     setElapsed(0);
@@ -368,7 +376,7 @@ export function Exam({
                 best={bestScore(p, label)}
                 bestLabel={T.bestPct}
                 disabled={Boolean(d) || qs.length === 0}
-                onPress={() => begin(label, qs, EXAM.quickPerScenario)}
+                onPress={() => begin(label, qs, perOf(label))}
               />
             );
           })}
@@ -473,8 +481,10 @@ export function Exam({
     const shown = calib && Boolean(slot.shown);
     const ok = isRight(slot.q, slot.picked);
     const trap = shown ? trapOf(slot.q, slot.picked) : null;
-    // La gemela solo se nombra en la segunda que sale: avisar en la primera estropearía la trampa.
+    // La gemela: si es la de justo antes, se avisa antes de contestar; con las dos corregidas, se comparan.
     const twinAt = slot.q.pair ? run.slots.findIndex((x) => x.q.id === slot.q.pair) : -1;
+    const twin = twinAt >= 0 ? run.slots[twinAt] : null;
+    const pairRows: [number, Slot][] = twin ? ([[twinAt, twin], [run.i, slot]] as [number, Slot][]).sort((a, b) => a[0] - b[0]) : [];
     // Contestada y sin corregir: el botón de abajo corrige en vez de pasar a la siguiente.
     const pending = calib && !shown && slot.picked !== null;
 
@@ -482,7 +492,12 @@ export function Exam({
       <>
         {slot.q.setting && (
           <Txt bold size={12} color={firstOfScenario ? c.amber : c.muted}>
-            {T.scenarioOf(T.examLabel(run.label), scenarioIdx + 1, Math.ceil(run.slots.length / run.per), SETTINGS[slot.q.setting].name.toLowerCase())}
+            {(calib ? T.pairOf : T.scenarioOf)(
+              T.examLabel(run.label),
+              scenarioIdx + 1,
+              Math.ceil(run.slots.length / run.per),
+              SETTINGS[slot.q.setting].name.toLowerCase(),
+            )}
           </Txt>
         )}
         <Panel color={c.lineHi}>
@@ -525,6 +540,11 @@ export function Exam({
             multiline
             style={s.note}
           />
+        )}
+        {calib && twinAt === run.i - 1 && !shown && (
+          <Txt size={12} color={c.cyan}>
+            {T.twinAhead(run.i)}
+          </Txt>
         )}
         {/* En la calibración, la palabra que le da la vuelta a la pregunta (NOT, LEAST, FIRST…) sale resaltada. */}
         <Rich text={`? ${text(slot.q).ask}`} bold size={15} color={c.green} mark={[text(slot.q).twist]} />
@@ -605,10 +625,23 @@ export function Exam({
                 <Txt size={12} color={c.muted}>
                   {T.clueNow}
                 </Txt>
-                {twinAt >= 0 && twinAt < run.i && (
-                  <Txt size={12} color={c.cyan}>
-                    {T.twinNow(twinAt + 1)}
-                  </Txt>
+                {twin?.shown && (
+                  // El patrón: la frase que cambia en cada gemela y la buena a la que lleva (misma letra en las dos).
+                  <Panel title={T.patternTitle} color={c.cyan} titleColor={c.cyan}>
+                    {pairRows.map(([k, x], j) => {
+                      const right = rightOf(x.q)[0];
+                      const hit = isRight(x.q, x.picked);
+                      return (
+                        <View key={k} style={{ gap: 2, marginTop: j ? 10 : 0 }}>
+                          <Txt size={12} bold color={hit ? c.green : c.red}>
+                            {T.qN(k + 1)} {hit ? '✓' : '✗'}
+                          </Txt>
+                          <Rich text={text(x.q).clue ?? ''} size={13} mark={[text(x.q).clue]} />
+                          <Rich text={`→ [${'ABCDE'[x.order.indexOf(right)]}] ${text(x.q).options[right]}`} size={13} color={c.green} />
+                        </View>
+                      );
+                    })}
+                  </Panel>
                 )}
                 <Panel title={T.remember} color={c.amber} titleColor={c.amber}>
                   <Rich text={text(slot.q).rule} bold color={c.amber} />

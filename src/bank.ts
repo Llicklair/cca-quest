@@ -10,7 +10,7 @@ import { EXAM_LEVEL_ES } from './questions-exam-es.ts';
 import { EXAM_LEVEL_MULTI, EXAM_LEVEL_MULTI_ES } from './questions-exam-multi.ts';
 import { MULTI, MULTI_ES } from './questions-multi.ts';
 import { REPORTED, REPORTED_ES } from './questions-reported.ts';
-import { CALIBRATION_A, CALIBRATION_B, CALIBRATION_ES } from './questions-calibration.ts';
+import { CALIBRATION_A, CALIBRATION_B, CALIBRATION_C, CALIBRATION_D, CALIBRATION_ES } from './questions-calibration.ts';
 
 /** Rondas, repaso y simulacros aleatorio y rápido. */
 export const BANK = [...QUESTIONS, ...MULTI, ...REPORTED];
@@ -35,9 +35,14 @@ const OUT_OF_60 = new Set([
 export const LEVEL_BANK_60 = LEVEL_BANK.filter((q) => !OUT_OF_60.has(q.id));
 
 /**
- * Las dos tandas de calibración (ver calibration.ts), por etiqueta. No entran en BANK ni en LEVEL_BANK:
- * ni rondas, ni repaso, ni otros simulacros, para que sigan siendo nuevas el día que se hacen.
+ * Las cuatro tandas de calibración (ver calibration.ts), por etiqueta. No entran en BANK ni en LEVEL_BANK:
+ * ni rondas, ni repaso, ni otros simulacros, para que sigan siendo nuevas la primera vez que se hacen.
  */
-export const CALIBRATION: Record<string, Question[]> = { 'calibration A': CALIBRATION_A, 'calibration B': CALIBRATION_B };
+export const CALIBRATION: Record<string, Question[]> = {
+  'calibration A': CALIBRATION_A,
+  'calibration B': CALIBRATION_B,
+  'calibration C': CALIBRATION_C,
+  'calibration D': CALIBRATION_D,
+};
 
 export const BANK_ES: Record<string, QuestionText> = { ...QUESTIONS_ES, ...EXAM_LEVEL_ES, ...MULTI_ES, ...EXAM_LEVEL_MULTI_ES, ...REPORTED_ES, ...CALIBRATION_ES };

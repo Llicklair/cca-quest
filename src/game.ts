@@ -693,8 +693,8 @@ export function weightedScore(byDomain: ExamResult['byDomain']): number {
   return weights ? sum / weights : 0;
 }
 
-/** Las dos tandas de calibración: preguntas que no salen en ningún otro sitio, para hacer una vez antes del examen. */
-export const CALIBRATION_LABELS = ['calibration A', 'calibration B'] as const;
+/** Las cuatro tandas de calibración: parejas de gemelas que no salen en ningún otro sitio, para entrenar antes del examen. */
+export const CALIBRATION_LABELS = ['calibration A', 'calibration B', 'calibration C', 'calibration D'] as const;
 export const isCalibration = (label: string): boolean => (CALIBRATION_LABELS as readonly string[]).includes(label);
 
 /** Si la nota de este simulacro se pondera por dominio: los de nivel real y la calibración. */

@@ -1,9 +1,11 @@
-// La calibración: dos tandas de 20 preguntas que no salen en ningún otro sitio de la app, para entrenar
-// antes del examen real. El examen pone trampas que el banco no entrenaba (preguntas en
+// La calibración: cuatro tandas de 10 parejas de gemelas que no salen en ningún otro sitio de la app, para
+// entrenar antes del examen real. El examen pone trampas que el banco no entrenaba (preguntas en
 // negativo, una frase que cambia la respuesta), y los simulacros, de tanto repetirlos, se reconocen en
-// vez de razonarse, así que su nota sale más alta de lo que toca. Es un entrenamiento: cada opción mala
-// lleva su trampa y, mientras se contesta, salen resaltadas la palabra que le da la vuelta a la pregunta
-// y la frase del caso que decide, para aprender a fijarse en ellas y reconocerlas en el examen. En cada
+// vez de razonarse, así que su nota sale más alta de lo que toca. Es un entrenamiento de patrones: cada
+// pregunta sale dos veces seguidas, el mismo caso con una sola frase cambiada y otra respuesta buena, y al
+// corregir la segunda se ven las dos frases juntas, cada una con su respuesta. Cada opción mala lleva su
+// trampa y, mientras se contesta, salen resaltadas la palabra que le da la vuelta a la pregunta y la frase
+// del caso que decide, para aprender a fijarse en ellas y reconocerlas en el examen. En cada
 // pregunta se marca si estabas seguro o dudabas y después se corrige al momento: la buena, el porqué de
 // cada opción y la trampa en la que caíste. Se repite las veces que haga falta: cada informe compara
 // con el intento anterior, para ir viendo si vas calibrando.

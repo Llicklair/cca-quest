@@ -231,8 +231,8 @@ const en = {
   // calibración
   calibTitle: 'calibration · before the real exam',
   calibNote:
-    "// 20 questions that appear nowhere else in the app, built on the real exam's traps: questions in the negative, one sentence that flips the answer, wrong options that sound right. the twist word and the sentence that decides each case are highlighted, so you learn to spot them in the question and in the case, and recognize similar ones in the real exam. mark every answer as sure or unsure, then check it: you see the right answer and why, with the clock stopped while you read. repeat them as often as you like: each report compares you with your previous attempt.",
-  calibSub: (clock: string) => `20 q · ${clock} · 4 scenarios · traps highlighted`,
+    "// 10 pairs of twins that appear nowhere else in the app: the same case twice, with one sentence changed and another right answer. the twin comes right after, and when you check it you see both sentences side by side, each with its answer: that is the pattern to recognize in the real exam. the twist word (NOT, LEAST, FIRST) and the sentence that decides each case are highlighted. mark every answer as sure or unsure, then check it: the clock stops while you read. repeat them as often as you like: each report compares you with your previous attempt.",
+  calibSub: (clock: string) => `20 q · ${clock} · 10 pairs of twins`,
   sureAsk: 'how sure are you?',
   sure: '✓ sure',
   unsure: '? unsure',
@@ -262,7 +262,9 @@ const en = {
   calibOk: '✓ correct',
   calibWrong: '✗ wrong',
   clueNow: '// highlighted in the case: the sentence that decides it.',
-  twinNow: (n: number) => `// twin of Q${n}: the same case with one sentence changed. compare them.`,
+  pairOf: (label: string, i: number, n: number, name: string) => `── ${label} · pair ${i}/${n}: ${name} ──`,
+  twinAhead: (n: number) => `// the same case as Q${n} with one sentence changed (highlighted). which answer does it lead to now?`,
+  patternTitle: 'the pattern: one sentence, another answer',
   clockStopped: 'stopped while you read',
 
   // pregúntale a claude
@@ -614,8 +616,8 @@ const es: Strings = {
   // calibración
   calibTitle: 'calibración · antes del examen real',
   calibNote:
-    '// 20 preguntas que no salen en ningún otro sitio de la app, hechas con las trampas del examen real: preguntas en negativo, una frase que cambia la respuesta, opciones malas que suenan bien. salen resaltadas la palabra del giro y la frase que decide cada caso, para que aprendas a verlas en la pregunta y en el caso, y reconozcas las parecidas en el examen real. marca en cada respuesta si estás seguro o dudas y corrígela: verás la buena y el porqué, con el reloj parado mientras lees. repítelas las veces que quieras: cada informe te compara con tu intento anterior.',
-  calibSub: (clock) => `20 preguntas · ${clock} · 4 escenarios · trampas resaltadas`,
+    '// 10 parejas de gemelas que no salen en ningún otro sitio de la app: el mismo caso dos veces, con una frase cambiada y otra respuesta buena. la gemela sale justo después y, al corregirla, ves las dos frases juntas, cada una con su respuesta: ese es el patrón que tienes que reconocer en el examen real. salen resaltadas la palabra del giro (NOT, LEAST, FIRST) y la frase que decide cada caso. marca en cada respuesta si estás seguro o dudas y corrígela: el reloj se para mientras lees. repítelas las veces que quieras: cada informe te compara con tu intento anterior.',
+  calibSub: (clock) => `20 preguntas · ${clock} · 10 parejas de gemelas`,
   sureAsk: '¿cómo de seguro estás?',
   sure: '✓ seguro',
   unsure: '? dudo',
@@ -645,7 +647,9 @@ const es: Strings = {
   calibOk: '✓ correcta',
   calibWrong: '✗ fallada',
   clueNow: '// resaltada en el caso: la frase que decide.',
-  twinNow: (n) => `// gemela de la P${n}: el mismo caso con una frase cambiada. compáralas.`,
+  pairOf: (label, i, n, name) => `── ${label} · pareja ${i}/${n}: ${name} ──`,
+  twinAhead: (n) => `// el mismo caso que la P${n} con una frase cambiada (resaltada). ¿a qué respuesta lleva ahora?`,
+  patternTitle: 'el patrón: una frase, otra respuesta',
   clockStopped: 'parado mientras lees',
 
   askClaude: '✦ pregúntale a claude',
