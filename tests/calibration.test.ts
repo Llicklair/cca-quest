@@ -1,6 +1,7 @@
-// La calibración: dos tandas de 20 preguntas nuevas con trampas del examen real. Que estén bien
-// formadas en los dos idiomas, que no salgan en ningún otro sitio, que no se puedan acertar por cómo
-// están escritas y que el informe cuente bien seguridad, trampas y gemelas.
+// La calibración: cuatro tandas de 10 parejas de gemelas con trampas del examen real. Que estén bien
+// formadas en los dos idiomas, que no salgan en ningún otro sitio, que cada gemela solo cambie la frase
+// que decide, que no se puedan acertar por cómo están escritas y que el informe cuente bien seguridad,
+// trampas y gemelas.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BANK, BANK_ES, CALIBRATION, LEVEL_BANK } from '../src/bank.ts';
@@ -17,32 +18,34 @@ import {
   type Question,
   type Trap,
 } from '../src/game.ts';
-import { CALIBRATION_A, CALIBRATION_B, CALIBRATION_ES } from '../src/questions-calibration.ts';
+import { CALIBRATION_A, CALIBRATION_B, CALIBRATION_C, CALIBRATION_D, CALIBRATION_ES } from '../src/questions-calibration.ts';
 
-const FORMS = [CALIBRATION_A, CALIBRATION_B];
+const FORMS = [CALIBRATION_A, CALIBRATION_B, CALIBRATION_C, CALIBRATION_D];
 const ALL = FORMS.flat();
 const ticksOk = (s: string) => s.split('`').length % 2 === 1;
 
-test('dos tandas de 20, por etiqueta, ponderadas como el nivel real', () => {
+test('cuatro tandas de 20, por etiqueta, ponderadas como el nivel real', () => {
   assert.deepEqual(Object.keys(CALIBRATION), [...CALIBRATION_LABELS]);
-  assert.equal(CALIBRATION['calibration A'], CALIBRATION_A);
-  assert.equal(CALIBRATION['calibration B'], CALIBRATION_B);
+  CALIBRATION_LABELS.forEach((label, k) => assert.equal(CALIBRATION[label], FORMS[k], label));
   for (const label of CALIBRATION_LABELS) assert.ok(isWeighted(label), label);
   for (const form of FORMS) assert.equal(form.length, 20);
 });
 
-test('cada tanda: 4 escenarios de 5 seguidos y el reparto por dominio de la guía', () => {
+test('cada tanda: 2 escenarios de 5 parejas seguidos y todos los dominios', () => {
   for (const form of FORMS) {
     const settings = [...new Set(form.map((q) => q.setting))];
-    assert.equal(settings.length, 4);
+    assert.equal(settings.length, 2);
     settings.forEach((s, k) => {
       assert.ok(s && s in SETTINGS);
-      // Agrupadas por escenario, como el examen: las 5 de cada uno, seguidas.
-      assert.ok(form.slice(5 * k, 5 * k + 5).every((q) => q.setting === s), `${s} no va seguido`);
+      // Agrupadas por escenario, como el examen: las 10 de cada uno (5 parejas), seguidas.
+      assert.ok(form.slice(10 * k, 10 * k + 10).every((q) => q.setting === s), `${s} no va seguido`);
     });
-    const want = [5, 4, 4, 4, 3];
-    DOMAINS.forEach((d, k) => assert.equal(form.filter((q) => q.domain === d.id).length, want[k], d.id));
-    assert.ok(new Set(form.map((q) => q.ts)).size >= 15, 'pocas task statements distintas');
+    // Las gemelas comparten dominio, así que el reparto va de dos en dos; la nota se pondera igualmente.
+    for (const d of DOMAINS) {
+      const n = form.filter((q) => q.domain === d.id).length;
+      assert.ok(n >= 2 && n <= 6, `${d.id}: ${n} preguntas`);
+    }
+    assert.ok(new Set(form.map((q) => q.ts)).size >= 9, 'pocas task statements distintas');
   }
 });
 
@@ -73,7 +76,7 @@ test('cada pregunta está completa, con su trampa por opción y su pista dentro 
       assert.ok(s.trim().length > 0, q.id);
       assert.ok(ticksOk(s), `${q.id}: comillas invertidas sin cerrar`);
     }
-    assert.ok(q.scenario.length >= 250 && q.scenario.length <= 950, `${q.id}: caso de ${q.scenario.length}`);
+    assert.ok(q.scenario.length >= 250 && q.scenario.length <= 1000, `${q.id}: caso de ${q.scenario.length}`);
     for (const o of q.options) assert.ok(o.length >= 80 && o.length <= 300, `${q.id}: opción de ${o.length}`);
   }
 });
@@ -112,19 +115,25 @@ test('las trampas del examen real: en negativo, primer paso, gemelas y pistas qu
   }
 });
 
-test('las gemelas: mismo caso con una frase cambiada, mismas opciones y otra buena, separadas', () => {
+test('todas en parejas seguidas: el mismo caso con solo la frase que decide cambiada, mismas opciones y otra buena', () => {
   for (const form of FORMS) {
-    const twins = form.filter((q) => q.pair);
-    assert.ok(twins.length >= 4, 'cada tanda tiene al menos dos parejas');
-    for (const q of twins) {
-      const t = form.find((x) => x.id === q.pair);
-      assert.ok(t, `${q.id}: su gemela no está en la misma tanda`);
-      assert.equal(t.pair, q.id, q.id);
-      assert.equal(t.setting, q.setting, q.id);
-      assert.deepEqual(t.options, q.options, `${q.id}: opciones distintas`);
-      assert.deepEqual(CALIBRATION_ES[t.id].options, CALIBRATION_ES[q.id].options, `${q.id}: opciones en español distintas`);
-      assert.notEqual(t.answer, q.answer, `${q.id}: misma buena`);
-      assert.ok(Math.abs(form.indexOf(t) - form.indexOf(q)) > 1, `${q.id}: la gemela va justo al lado`);
+    for (let k = 0; k < form.length; k += 2) {
+      const [a, b] = [form[k], form[k + 1]];
+      assert.ok(b, `${a.id}: sin gemela detrás`);
+      assert.equal(a.pair, b.id, `${a.id}: su gemela no va justo detrás`);
+      assert.equal(b.pair, a.id, b.id);
+      assert.equal(b.setting, a.setting, a.id);
+      assert.equal(b.ask, a.ask, `${a.id}: otra pregunta`);
+      assert.equal(b.twist, a.twist, `${a.id}: otro giro`);
+      assert.deepEqual(b.options, a.options, `${a.id}: opciones distintas`);
+      assert.notEqual(b.answer, a.answer, `${a.id}: misma buena`);
+      assert.notEqual(b.clue, a.clue, `${a.id}: la misma frase`);
+      // Lo único que cambia del caso es la frase que decide.
+      assert.equal(a.scenario.replace(a.clue!, b.clue!), b.scenario, `${a.id}: el caso cambia en algo más que la frase que decide`);
+      const [ea, eb] = [CALIBRATION_ES[a.id], CALIBRATION_ES[b.id]];
+      assert.equal(eb.ask, ea.ask, `${a.id}: otra pregunta en español`);
+      assert.deepEqual(eb.options, ea.options, `${a.id}: opciones en español distintas`);
+      assert.equal(ea.scenario.replace(ea.clue!, eb.clue!), eb.scenario, `${a.id}: el caso en español cambia en algo más`);
     }
   }
 });
